@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { TimeBlock as TimeBlockType } from '@/types';
@@ -77,7 +78,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     const deltaY = e.clientY - dragStartRef.current.y;
 
     if (isDragging) {
-      const newTop = dragStartRef.current.initialTop + deltaY;
+      const newTop = Math.max(0, dragStartRef.current.initialTop + deltaY);
       const newMinutes = Math.round(newTop / PIXELS_PER_MINUTE / 15) * 15;
       const newStartTime = new Date(block.startTime);
       newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
@@ -91,7 +92,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         setLiveDuration(newDuration);
       }
       if (isResizing === 'top') {
-        const newTop = dragStartRef.current.initialTop + deltaY;
+        const newTop = Math.max(0, dragStartRef.current.initialTop + deltaY);
         const newHeight = dragStartRef.current.initialHeight - deltaY;
         
         if (newHeight >= 15 * PIXELS_PER_MINUTE) {
