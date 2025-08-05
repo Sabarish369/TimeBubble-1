@@ -28,11 +28,11 @@ function AppContent() {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground font-body overflow-hidden">
       <Header />
-      <div ref={mainRef} className="flex-1 overflow-y-auto">
-        <div className="flex">
-            <Sidebar />
-            <Timeline />
-        </div>
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar />
+        <main ref={mainRef} className="flex-1 overflow-y-auto">
+          <Timeline />
+        </main>
       </div>
     </div>
   );
