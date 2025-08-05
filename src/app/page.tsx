@@ -10,9 +10,7 @@ export default function Home() {
         <Header />
         <main className="flex flex-1 overflow-hidden">
           <Sidebar />
-          <div className="flex-1 overflow-y-auto">
-            <Timeline />
-          </div>
+          <Timeline />
         </main>
       </div>
     </TimeBubblesProvider>

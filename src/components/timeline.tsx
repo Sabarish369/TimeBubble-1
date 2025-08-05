@@ -1,6 +1,6 @@
 'use client';
 import type { DragEvent, MouseEvent } from 'react';
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { HOUR_HEIGHT, PIXELS_PER_MINUTE, TOTAL_HOURS, DEFAULT_BUBBLE_COLOR } from '@/lib/constants';
@@ -12,6 +12,18 @@ import { ReflectionModal } from './reflection-modal';
 export function Timeline() {
   const { timeBlocks, addBlock, isLoaded, updateBlock, reflectingBlock, setReflectingBlock } = useTimeBubbles();
   const timelineRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (timelineRef.current && isLoaded) {
+      const now = new Date();
+      const minutes = now.getHours() * 60 + now.getMinutes();
+      const scrollToPosition = minutes * PIXELS_PER_MINUTE - timelineRef.current.clientHeight / 2;
+      timelineRef.current.scrollTo({
+        top: scrollToPosition,
+        behavior: 'smooth',
+      });
+    }
+  }, [isLoaded]);
 
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -64,7 +76,7 @@ export function Timeline() {
   return (
     <div
       ref={timelineRef}
-      className="relative w-full"
+      className="relative w-full overflow-y-auto"
       style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
