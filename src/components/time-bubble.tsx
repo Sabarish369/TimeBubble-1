@@ -2,7 +2,7 @@
 
 import type { TimeBlock as TimeBlockType } from '@/types';
 import type { MouseEvent, RefObject } from 'react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { BUBBLE_COLORS, PIXELS_PER_MINUTE } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -29,64 +29,76 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const height = block.duration * PIXELS_PER_MINUTE;
 
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
     dragStartRef.current = { y: e.clientY, initialTop: top, initialHeight: 0 };
   };
 
   const handleResizeMouseDown = (e: MouseEvent<HTMLDivElement>, direction: 'top' | 'bottom') => {
+    e.preventDefault();
     e.stopPropagation();
     setIsResizing(direction);
     dragStartRef.current = { y: e.clientY, initialTop: top, initialHeight: height };
   };
 
-  useEffect(() => {
-    const handleMouseMove = (e: globalThis.MouseEvent) => {
-      if (!isDragging && !isResizing) return;
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+    setIsResizing(null);
+  }, []);
 
-      const deltaY = e.clientY - dragStartRef.current.y;
+  const handleMouseMove = useCallback((e: globalThis.MouseEvent) => {
+    if (!isDragging && !isResizing) return;
+    e.preventDefault();
 
-      if (isDragging) {
-        const newTop = dragStartRef.current.initialTop + deltaY;
-        const newMinutes = Math.round(newTop / PIXELS_PER_MINUTE / 15) * 15;
-        const newStartTime = new Date(block.startTime);
-        newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60);
-        updateBlock(block.id, { startTime: newStartTime });
+    const timeline = timelineRef.current;
+    if (!timeline) return;
+
+    const deltaY = e.clientY - dragStartRef.current.y;
+
+    if (isDragging) {
+      const newTop = dragStartRef.current.initialTop + deltaY;
+      const newMinutes = Math.round(newTop / PIXELS_PER_MINUTE / 15) * 15;
+      const newStartTime = new Date(block.startTime);
+      newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
+      updateBlock(block.id, { startTime: newStartTime });
+    }
+
+    if (isResizing) {
+      if (isResizing === 'bottom') {
+        const newHeight = dragStartRef.current.initialHeight + deltaY;
+        const newDuration = Math.max(15, Math.round(newHeight / PIXELS_PER_MINUTE / 15) * 15);
+        updateBlock(block.id, { duration: newDuration });
       }
-
-      if (isResizing) {
-        if (isResizing === 'bottom') {
-          const newHeight = dragStartRef.current.initialHeight + deltaY;
-          const newDuration = Math.max(15, Math.round(newHeight / PIXELS_PER_MINUTE / 15) * 15);
-          updateBlock(block.id, { duration: newDuration });
-        }
-        if (isResizing === 'top') {
-          const newTop = dragStartRef.current.initialTop + deltaY;
-          const newHeight = dragStartRef.current.initialHeight - deltaY;
-          if (newHeight / PIXELS_PER_MINUTE < 15) return;
-          
+      if (isResizing === 'top') {
+        const newTop = dragStartRef.current.initialTop + deltaY;
+        const newHeight = dragStartRef.current.initialHeight - deltaY;
+        
+        if (newHeight >= 15 * PIXELS_PER_MINUTE) {
           const newMinutes = Math.round(newTop / PIXELS_PER_MINUTE / 15) * 15;
           const newStartTime = new Date(block.startTime);
-          newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60);
+          newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
 
-          const newDuration = Math.max(15, Math.round(newHeight / PIXELS_PER_MINUTE / 15) * 15);
+          const originalEndTime = new Date(block.startTime);
+          originalEndTime.setMinutes(originalEndTime.getMinutes() + block.duration);
+
+          const durationDifference = (originalEndTime.getTime() - newStartTime.getTime()) / (1000 * 60);
+          const newDuration = Math.max(15, Math.round(durationDifference / 15) * 15);
+
           updateBlock(block.id, { startTime: newStartTime, duration: newDuration });
         }
       }
-    };
+    }
+  }, [isDragging, isResizing, block.id, block.startTime, block.duration, updateBlock, timelineRef]);
 
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      setIsResizing(null);
-    };
-
+  useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, isResizing, block.id, block.startTime, updateBlock]);
+  }, [handleMouseMove, handleMouseUp]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
@@ -109,7 +121,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     <div
       className={cn(
         'absolute left-16 right-4 rounded-lg p-2 flex flex-col shadow-md transition-all duration-200 z-10',
-        isDragging && 'shadow-xl scale-105 z-20',
+        'select-none', // Prevent text selection while dragging
+        isDragging && 'shadow-xl scale-105 z-20 cursor-grabbing',
         isResizing && 'z-20',
         isPast && !block.completed && 'opacity-60',
         block.completed && 'opacity-70 border-2 border-green-500'
@@ -121,10 +134,10 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       }}
       onMouseDown={handleMouseDown}
     >
-      <div className="absolute top-1 right-1">
+      <div className="absolute top-1 right-1 z-10">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100">
+            <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer">
               <MoreVertical className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -152,40 +165,40 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         </DropdownMenu>
       </div>
 
-      <div className="flex-grow overflow-hidden" onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
+      <div className="flex-grow overflow-hidden cursor-grab" onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
         {isEditing ? (
           <Input
             value={title}
             onChange={handleTitleChange}
             onBlur={handleTitleBlur}
             onKeyDown={handleTitleKeyDown}
-            className="h-full w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-sm"
+            className="h-full w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-sm cursor-text"
             autoFocus
             onClick={e => e.stopPropagation()}
           />
         ) : (
-          <p className="text-sm font-medium text-black/80">{block.title}</p>
+          <p className="text-sm font-medium text-black/80 pointer-events-none">{block.title}</p>
         )}
       </div>
 
       {isPast && !block.completed && (
-        <Button size="sm" className="mt-auto h-7" onClick={(e) => { e.stopPropagation(); setReflectingBlock(block); }}>
+        <Button size="sm" className="mt-auto h-7 z-10" onClick={(e) => { e.stopPropagation(); setReflectingBlock(block); }}>
           Reflect
         </Button>
       )}
 
       {block.completed && (
-        <div className="absolute inset-0 bg-black/20 rounded-lg flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/20 rounded-lg flex items-center justify-center pointer-events-none">
             <Check className="h-8 w-8 text-white" />
         </div>
       )}
 
       <div
-        className="absolute top-0 left-0 w-full h-1.5 cursor-n-resize"
+        className="absolute top-0 left-0 w-full h-1.5 cursor-n-resize z-10"
         onMouseDown={(e) => handleResizeMouseDown(e, 'top')}
       />
       <div
-        className="absolute bottom-0 left-0 w-full h-1.5 cursor-s-resize"
+        className="absolute bottom-0 left-0 w-full h-1.5 cursor-s-resize z-10"
         onMouseDown={(e) => handleResizeMouseDown(e, 'bottom')}
       />
     </div>
