@@ -12,8 +12,8 @@ export function TimelineGrid() {
           className="relative"
           style={{ height: `${HOUR_HEIGHT}px` }}
         >
-          <div className="absolute -left-16 top-[-0.8em] text-base text-muted-foreground w-14 text-right pr-2">
-            {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
+          <div className="absolute -left-16 top-[-0.8em] text-lg font-medium text-muted-foreground w-14 text-right pr-4">
+            {hour === 0 ? '12' : hour <= 12 ? `${hour}` : `${hour - 12}`}
           </div>
           <div className="h-full border-t border-border/60"></div>
         </div>
