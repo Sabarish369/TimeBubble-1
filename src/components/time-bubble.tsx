@@ -31,6 +31,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    if(isEditing) return;
     setIsDragging(true);
     dragStartRef.current = { y: e.clientY, initialTop: top, initialHeight: 0 };
   };
@@ -53,6 +54,9 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
     const timeline = timelineRef.current;
     if (!timeline) return;
+    
+    const timelineRect = timeline.getBoundingClientRect();
+    const relativeY = e.clientY - timelineRect.top;
 
     const deltaY = e.clientY - dragStartRef.current.y;
 
@@ -92,11 +96,11 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   }, [isDragging, isResizing, block.id, block.startTime, block.duration, updateBlock, timelineRef]);
 
   useEffect(() => {
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [handleMouseMove, handleMouseUp]);
 
@@ -110,12 +114,13 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   };
 
   const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' || e.key === 'Escape') {
       handleTitleBlur();
     }
   };
 
   const isPast = new Date() > new Date(block.startTime.getTime() + block.duration * 60000);
+  const showContent = height >= 35;
 
   return (
     <div
@@ -134,11 +139,16 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       }}
       onMouseDown={handleMouseDown}
     >
-      <div className="absolute top-1 right-1 z-10">
+      <div
+        className={cn(
+          "absolute top-1 right-1 z-10",
+          !showContent && "top-1/2 right-1/2 translate-x-1/2 -translate-y-1/2"
+        )}
+      >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer">
-              <MoreVertical className="w-4 h-4" />
+              <MoreVertical className="w-4 h-4 text-black/70" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent onClick={e => e.stopPropagation()}>
@@ -172,16 +182,17 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
             onChange={handleTitleChange}
             onBlur={handleTitleBlur}
             onKeyDown={handleTitleKeyDown}
-            className="h-full w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-sm cursor-text"
+            className="h-full w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-sm font-medium text-black/90"
             autoFocus
             onClick={e => e.stopPropagation()}
+            onMouseDown={e => e.stopPropagation()}
           />
         ) : (
-          <p className="text-sm font-medium text-black/80 pointer-events-none">{block.title}</p>
+          <p className="text-sm font-medium text-black/90 pointer-events-none">{block.title}</p>
         )}
       </div>
 
-      {isPast && !block.completed && (
+      {isPast && !block.completed && showContent && (
         <Button size="sm" className="mt-auto h-7 z-10" onClick={(e) => { e.stopPropagation(); setReflectingBlock(block); }}>
           Reflect
         </Button>
