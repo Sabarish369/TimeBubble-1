@@ -56,12 +56,16 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   };
 
   const handleMouseUp = useCallback(() => {
+    if (isDragging) {
+       const newMinutes = Math.round(dragStartRef.current.initialTop / PIXELS_PER_MINUTE / 15) * 15;
+       if (newMinutes < 0) return;
+    }
     if (isResizing) {
       updateBlock(block.id, { startTime: liveStartTime, duration: liveDuration });
     }
     setIsDragging(false);
     setIsResizing(null);
-  }, [isResizing, block.id, liveStartTime, liveDuration, updateBlock]);
+  }, [isDragging, isResizing, block.id, liveStartTime, liveDuration, updateBlock]);
 
   const handleMouseMove = useCallback((e: globalThis.MouseEvent) => {
     if (!isDragging && !isResizing) return;
@@ -78,7 +82,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     const deltaY = e.clientY - dragStartRef.current.y;
 
     if (isDragging) {
-      const newTop = Math.max(0, dragStartRef.current.initialTop + deltaY);
+      const newTop = dragStartRef.current.initialTop + deltaY;
+      if (newTop < 0) return;
       const newMinutes = Math.round(newTop / PIXELS_PER_MINUTE / 15) * 15;
       const newStartTime = new Date(block.startTime);
       newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
@@ -92,7 +97,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         setLiveDuration(newDuration);
       }
       if (isResizing === 'top') {
-        const newTop = Math.max(0, dragStartRef.current.initialTop + deltaY);
+        const newTop = dragStartRef.current.initialTop + deltaY;
+        if (newTop < 0) return;
         const newHeight = dragStartRef.current.initialHeight - deltaY;
         
         if (newHeight >= 15 * PIXELS_PER_MINUTE) {
@@ -212,16 +218,16 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
             onChange={handleTitleChange}
             onBlur={handleTitleBlur}
             onKeyDown={handleTitleKeyDown}
-            className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-sm font-medium text-black/90 text-center"
+            className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-sm font-semibold text-black/90 text-center"
             autoFocus
             onClick={e => e.stopPropagation()}
             onMouseDown={e => e.stopPropagation()}
           />
         ) : (
-          <p className="text-sm font-medium text-black/90 pointer-events-none text-center">{block.title}</p>
+          <p className="text-sm font-semibold text-slate-800 pointer-events-none text-center">{block.title}</p>
         )}
         {(showContent || block.duration < 30) && (
-           <p className="text-xs text-black/60 pointer-events-none text-center">
+           <p className="text-xs text-slate-700 pointer-events-none text-center">
              {format(startTimeToDisplay, 'p')} - {format(endTimeToDisplay, 'p')}
            </p>
         )}
