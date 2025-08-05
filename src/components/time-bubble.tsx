@@ -135,7 +135,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   };
 
   const isPast = new Date() > new Date(block.startTime.getTime() + block.duration * 60000);
-  const showContent = (isResizing ? liveDuration : block.duration) * PIXELS_PER_MINUTE >= 50;
+  const showContent = (isResizing ? liveDuration : block.duration) * PIXELS_PER_MINUTE >= 40;
   const canReflect = isPast && !block.completed;
 
   const startTimeToDisplay = isResizing ? liveStartTime : block.startTime;
@@ -148,7 +148,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   return (
     <div
       className={cn(
-        'absolute left-16 right-4 rounded-lg p-2 flex flex-col shadow-md transition-all duration-200 z-10',
+        'absolute left-24 right-4 rounded-lg p-2 flex flex-col shadow-md transition-all duration-200 z-10',
         'select-none', 
         isDragging && 'shadow-xl scale-105 z-20 cursor-grabbing',
         isResizing && 'z-20',
@@ -202,7 +202,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         </DropdownMenu>
       </div>
 
-      <div className={cn("flex-grow overflow-hidden cursor-grab flex flex-col justify-center", !showContent && "items-center")} onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
+      <div className={cn("flex-grow overflow-hidden cursor-grab flex flex-col justify-center")} onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
         {isEditing ? (
           <Input
             value={title}
@@ -224,7 +224,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         )}
       </div>
 
-      {canReflect && showContent && (
+      {canReflect && !showContent && (
         <Button size="sm" className="mt-auto h-7 z-10" onClick={(e) => { e.stopPropagation(); setReflectingBlock(block); }}>
           Reflect
         </Button>
