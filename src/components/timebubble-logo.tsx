@@ -4,7 +4,7 @@ export function TimeBubbleLogo(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 100 24"
+      viewBox="0 0 140 24"
       fill="none"
       aria-label="TimeBubble Logo"
       {...props}
@@ -25,7 +25,7 @@ export function TimeBubbleLogo(props: SVGProps<SVGSVGElement>) {
       </g>
       <defs>
         <clipPath id="clip0_10_2">
-          <rect width="100" height="24" fill="white" />
+          <rect width="140" height="24" fill="white" />
         </clipPath>
       </defs>
     </svg>
