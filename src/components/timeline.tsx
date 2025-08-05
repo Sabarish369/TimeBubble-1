@@ -17,15 +17,22 @@ export function Timeline() {
     e.preventDefault();
     if (!timelineRef.current) return;
 
-    const template = JSON.parse(e.dataTransfer.getData('application/json'));
-    const rect = timelineRef.current.getBoundingClientRect();
-    const dropY = e.clientY - rect.top + timelineRef.current.scrollTop;
-    
-    const minutesFromTop = Math.round(dropY / PIXELS_PER_MINUTE);
-    const startTime = new Date();
-    startTime.setHours(Math.floor(minutesFromTop / 60), minutesFromTop % 60, 0, 0);
+    const data = e.dataTransfer.getData('application/json');
+    if (!data) return;
 
-    addBlock({ ...template, startTime });
+    try {
+      const template = JSON.parse(data);
+      const rect = timelineRef.current.getBoundingClientRect();
+      const dropY = e.clientY - rect.top + timelineRef.current.scrollTop;
+      
+      const minutesFromTop = Math.round(dropY / PIXELS_PER_MINUTE);
+      const startTime = new Date();
+      startTime.setHours(Math.floor(minutesFromTop / 60), minutesFromTop % 60, 0, 0);
+
+      addBlock({ ...template, startTime });
+    } catch (error) {
+      console.error("Failed to parse dropped data", error);
+    }
   };
 
   const handleDoubleClick = (e: MouseEvent<HTMLDivElement>) => {
