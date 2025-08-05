@@ -4,23 +4,12 @@
  * @fileOverview Smart suggestion AI agent.
  *
  * - getSmartSuggestions - A function that suggests planning improvements.
- * - SmartSuggestionsInput - The input type for the getSmartSuggestions function.
- * - SmartSuggestionsOutput - The return type for the getSmartSuggestions function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { SmartSuggestionsInputSchema, SmartSuggestionsOutputSchema, type SmartSuggestionsInput, type SmartSuggestionsOutput } from '@/types/ai-types';
 
-const SmartSuggestionsInputSchema = z.object({
-  dailyData: z.string().describe('JSON string of the user\'s daily time block data, each block should include the id, title, startTime, duration, color, category, position, completed, and reflection.'),
-  userPreferences: z.string().describe('JSON string of the user\'s preferences including theme and working hours.'),
-});
-export type SmartSuggestionsInput = z.infer<typeof SmartSuggestionsInputSchema>;
-
-const SmartSuggestionsOutputSchema = z.object({
-  suggestions: z.array(z.string()).describe('An array of suggestions to improve the user\'s time planning.'),
-});
-export type SmartSuggestionsOutput = z.infer<typeof SmartSuggestionsOutputSchema>;
 
 export async function getSmartSuggestions(input: SmartSuggestionsInput): Promise<SmartSuggestionsOutput> {
   return smartSuggestionsFlow(input);
