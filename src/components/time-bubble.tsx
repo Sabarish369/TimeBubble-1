@@ -7,16 +7,25 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { BUBBLE_COLORS, PIXELS_PER_MINUTE } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import { Check, Copy, MoreVertical, Trash2, MessageSquareText } from 'lucide-react';
+import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon } from 'lucide-react';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Input } from './ui/input';
 import { format } from 'date-fns';
+import type { BubbleCategory } from '@/types';
 
 interface TimeBubbleProps {
   block: TimeBlockType;
   timelineRef: RefObject<HTMLDivElement>;
 }
+
+const categoryIcons: Record<BubbleCategory, LucideIcon> = {
+  work: Briefcase,
+  study: BookOpen,
+  break: Coffee,
+  personal: User,
+  health: Heart,
+};
 
 export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock } = useTimeBubbles();
@@ -56,16 +65,12 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   };
 
   const handleMouseUp = useCallback(() => {
-    if (isDragging) {
-       const newMinutes = Math.max(0, Math.round(dragStartRef.current.initialTop / PIXELS_PER_MINUTE / 15) * 15);
-       if (newMinutes < 0) return;
-    }
     if (isResizing) {
       updateBlock(block.id, { startTime: liveStartTime, duration: liveDuration });
     }
     setIsDragging(false);
     setIsResizing(null);
-  }, [isDragging, isResizing, block.id, liveStartTime, liveDuration, updateBlock]);
+  }, [isResizing, block.id, liveStartTime, liveDuration, updateBlock]);
 
   const handleMouseMove = useCallback((e: globalThis.MouseEvent) => {
     if (!isDragging && !isResizing) return;
@@ -75,16 +80,13 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     if (!timeline) return;
     
     const timelineRect = timeline.getBoundingClientRect();
-    // We need to account for the grid layout shift
-    const gridGutterWidth = 80;
     const relativeY = e.clientY - timelineRect.top;
 
     const deltaY = e.clientY - dragStartRef.current.y;
 
     if (isDragging) {
       const newTop = Math.max(0, dragStartRef.current.initialTop + deltaY);
-      if (newTop < 0) return;
-      const newMinutes = Math.round(newTop / PIXELS_PER_MINUTE / 15) * 15;
+      const newMinutes = Math.max(0, Math.round(newTop / PIXELS_PER_MINUTE / 15) * 15);
       const newStartTime = new Date(block.startTime);
       newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
       updateBlock(block.id, { startTime: newStartTime });
@@ -98,11 +100,10 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       }
       if (isResizing === 'top') {
         const newTop = dragStartRef.current.initialTop + deltaY;
-        if (newTop < 0) return;
         const newHeight = dragStartRef.current.initialHeight - deltaY;
         
         if (newHeight >= 15 * PIXELS_PER_MINUTE) {
-          const newMinutes = Math.round(newTop / PIXELS_PER_MINUTE / 15) * 15;
+          const newMinutes = Math.max(0, Math.round(newTop / PIXELS_PER_MINUTE / 15) * 15);
           const newStartTime = new Date(block.startTime);
           newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
 
@@ -153,13 +154,14 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
   const displayTop = (startTimeToDisplay.getHours() * 60 + startTimeToDisplay.getMinutes()) * PIXELS_PER_MINUTE;
   const displayHeight = durationToDisplay * PIXELS_PER_MINUTE;
+  const Icon = categoryIcons[block.category];
   
   return (
     <div
       className={cn(
-        'absolute left-[80px] right-4 rounded-lg p-2 flex flex-col shadow-md transition-all duration-200 z-10',
+        'absolute left-[80px] right-4 rounded-lg p-3 flex shadow-sm transition-all duration-200 z-10 border',
         'select-none', 
-        isDragging && 'shadow-xl scale-105 z-20 cursor-grabbing',
+        isDragging && 'shadow-lg scale-105 z-20 cursor-grabbing',
         isResizing && 'z-20',
         isPast && !block.completed && 'opacity-60',
         block.completed && 'opacity-70 border-2 border-green-500'
@@ -168,6 +170,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         top: `${displayTop}px`,
         height: `${displayHeight}px`,
         backgroundColor: block.color,
+        borderColor: 'rgba(0,0,0,0.05)',
       }}
       onMouseDown={handleMouseDown}
     >
@@ -211,30 +214,39 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         </DropdownMenu>
       </div>
 
-      <div className={cn("flex-grow overflow-hidden cursor-grab flex flex-col justify-center")} onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
-        {isEditing ? (
-          <Input
-            value={title}
-            onChange={handleTitleChange}
-            onBlur={handleTitleBlur}
-            onKeyDown={handleTitleKeyDown}
-            className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-sm font-semibold text-slate-800 text-center"
-            autoFocus
-            onClick={e => e.stopPropagation()}
-            onMouseDown={e => e.stopPropagation()}
-          />
-        ) : (
-          <p className="text-sm font-semibold text-slate-800 pointer-events-none text-center">{block.title}</p>
-        )}
-        {(showContent || block.duration < 30) && (
-           <p className="text-xs text-slate-700 pointer-events-none text-center">
-             {format(startTimeToDisplay, 'p')} - {format(endTimeToDisplay, 'p')}
-           </p>
-        )}
+      <div className={cn("flex-grow overflow-hidden cursor-grab flex items-center gap-3")} onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
+        {showContent && Icon && <Icon className="h-6 w-6 text-slate-700 shrink-0" />}
+        <div className="flex-1 overflow-hidden">
+          {isEditing ? (
+            <Input
+              value={title}
+              onChange={handleTitleChange}
+              onBlur={handleTitleBlur}
+              onKeyDown={handleTitleKeyDown}
+              className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-sm font-semibold text-slate-800"
+              autoFocus
+              onClick={e => e.stopPropagation()}
+              onMouseDown={e => e.stopPropagation()}
+            />
+          ) : (
+            <p className="text-sm font-semibold text-slate-800 pointer-events-none truncate">{block.title}</p>
+          )}
+          {showContent && (
+            <p className="text-xs text-slate-700 pointer-events-none">
+              {format(startTimeToDisplay, 'p')} - {format(endTimeToDisplay, 'p')}
+            </p>
+          )}
+        </div>
       </div>
 
+      {!showContent && (
+        <div className='absolute inset-0 flex items-center justify-center pointer-events-none'>
+          <p className="text-sm font-semibold text-slate-800">{block.title}</p>
+        </div>
+      )}
+
       {canReflect && !showContent && (
-        <Button size="sm" className="mt-auto h-7 z-10" onClick={(e) => { e.stopPropagation(); setReflectingBlock(block); }}>
+        <Button size="sm" className="absolute bottom-2 right-2 h-7 z-10" onClick={(e) => { e.stopPropagation(); setReflectingBlock(block); }}>
           Reflect
         </Button>
       )}
