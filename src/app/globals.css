@@ -33,6 +33,12 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+
+    --bubble-mint: 166 57% 77%;
+    --bubble-lavender: 255 47% 84%;
+    --bubble-peach: 28 100% 86%;
+    --bubble-sky-blue: 197 92% 85%;
+    --bubble-rose-gold: 0 74% 82%;
   }
   .dark {
     --background: 240 10% 3.9%;
@@ -59,6 +65,12 @@ body {
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+
+    --bubble-mint: 166 57% 30%;
+    --bubble-lavender: 255 47% 37%;
+    --bubble-peach: 28 100% 39%;
+    --bubble-sky-blue: 197 92% 38%;
+    --bubble-rose-gold: 0 74% 35%;
   }
 }
 

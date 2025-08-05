@@ -77,10 +77,10 @@ export function Sidebar() {
               className="p-3 rounded-lg shadow-sm cursor-grab active:cursor-grabbing flex items-center gap-3 transition-shadow hover:shadow-md relative group"
               style={{ backgroundColor: template.color }}
             >
-              <Icon className="h-5 w-5 shrink-0 text-black/60" />
+              <Icon className="h-5 w-5 shrink-0 text-slate-700 dark:text-white/80" />
               <div className='flex-1'>
-                <p className="font-medium text-sm text-black/80">{template.title}</p>
-                <p className="text-xs text-black/60">{template.duration} min</p>
+                <p className="font-medium text-sm text-slate-800 dark:text-white">{template.title}</p>
+                <p className="text-xs text-slate-700 dark:text-white/80">{template.duration} min</p>
               </div>
               {!template.isDefault && (
                  <AlertDialog>
@@ -91,7 +91,7 @@ export function Sidebar() {
                       className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity absolute top-1 right-1"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <Trash2 className="h-4 w-4 text-black/60" />
+                      <Trash2 className="h-4 w-4 text-slate-700 dark:text-white/80" />
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>

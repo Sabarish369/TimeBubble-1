@@ -179,7 +179,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer">
-              <MoreVertical className="w-4 h-4 text-slate-700" />
+              <MoreVertical className="w-4 h-4 text-slate-700 dark:text-white/80" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent onClick={e => e.stopPropagation()}>
@@ -212,7 +212,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       </div>
 
       <div className={cn("flex-grow overflow-hidden cursor-grab flex items-center gap-3 h-full")} onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
-        <Icon className="h-6 w-6 text-slate-700 shrink-0" />
+        <Icon className="h-6 w-6 text-slate-700 dark:text-white shrink-0" />
         <div className="flex-1 overflow-hidden">
           {isEditing ? (
             <Input
@@ -220,16 +220,16 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
               onChange={handleTitleChange}
               onBlur={handleTitleBlur}
               onKeyDown={handleTitleKeyDown}
-              className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-base font-semibold text-slate-800"
+              className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-base font-semibold text-slate-800 dark:text-white"
               autoFocus
               onClick={e => e.stopPropagation()}
               onMouseDown={e => e.stopPropagation()}
             />
           ) : (
-            <p className="text-base font-semibold text-slate-800 pointer-events-none truncate">{block.title}</p>
+            <p className="text-base font-semibold text-slate-800 dark:text-white pointer-events-none truncate">{block.title}</p>
           )}
           {showContent && (
-            <p className="text-sm text-slate-700 pointer-events-none">
+            <p className="text-sm text-slate-700 dark:text-white/80 pointer-events-none">
               {format(startTimeToDisplay, 'p')} - {format(endTimeToDisplay, 'p')}
             </p>
           )}
@@ -238,7 +238,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
       {!showContent && (
         <div className='absolute inset-0 flex items-center justify-center pointer-events-none'>
-          <p className="text-base font-semibold text-slate-800">{block.title}</p>
+          <p className="text-base font-semibold text-slate-800 dark:text-white">{block.title}</p>
         </div>
       )}
 
@@ -249,8 +249,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       )}
 
       {block.completed && (
-        <div className="absolute inset-0 bg-slate-200/60 rounded-lg flex items-center justify-center pointer-events-none">
-            <Check className="h-8 w-8 text-green-600" />
+        <div className="absolute inset-0 bg-slate-900/60 rounded-lg flex items-center justify-center pointer-events-none">
+            <Check className="h-8 w-8 text-green-500" />
         </div>
       )}
 
