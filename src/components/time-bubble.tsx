@@ -142,8 +142,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     >
       <div
         className={cn(
-          "absolute top-1 right-1 z-10",
-          !showContent && "top-1/2 right-1/2 translate-x-1/2 -translate-y-1/2"
+          "absolute top-1 right-1 z-20"
         )}
       >
         <DropdownMenu>
@@ -185,7 +184,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         </DropdownMenu>
       </div>
 
-      <div className={cn("flex-grow overflow-hidden cursor-grab flex", !showContent && "items-center justify-center")} onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
+      <div className={cn("flex-grow overflow-hidden cursor-grab flex items-center", !showContent && "justify-center")} onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
         {isEditing ? (
           <Input
             value={title}
