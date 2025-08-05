@@ -36,7 +36,9 @@ export function Timeline() {
   };
 
   const handleDoubleClick = (e: MouseEvent<HTMLDivElement>) => {
-    if (!timelineRef.current || e.target !== timelineRef.current) return;
+    // Check if the double click is on a time bubble
+    if ((e.target as HTMLElement).closest('[class*="absolute left-[80px]"]')) return;
+    if (!timelineRef.current) return;
     
     const rect = timelineRef.current.getBoundingClientRect();
     const y = e.clientY - rect.top + timelineRef.current.scrollTop;

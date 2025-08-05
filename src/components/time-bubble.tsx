@@ -70,6 +70,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     if (!timeline) return;
     
     const timelineRect = timeline.getBoundingClientRect();
+    // We need to account for the grid layout shift
+    const gridGutterWidth = 80;
     const relativeY = e.clientY - timelineRect.top;
 
     const deltaY = e.clientY - dragStartRef.current.y;
@@ -148,7 +150,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   return (
     <div
       className={cn(
-        'absolute left-24 right-4 rounded-lg p-2 flex flex-col shadow-md transition-all duration-200 z-10',
+        'absolute left-[80px] right-4 rounded-lg p-2 flex flex-col shadow-md transition-all duration-200 z-10',
         'select-none', 
         isDragging && 'shadow-xl scale-105 z-20 cursor-grabbing',
         isResizing && 'z-20',
@@ -209,7 +211,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
             onChange={handleTitleChange}
             onBlur={handleTitleBlur}
             onKeyDown={handleTitleKeyDown}
-            className="h-full w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-sm font-medium text-black/90"
+            className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-sm font-medium text-black/90 text-center"
             autoFocus
             onClick={e => e.stopPropagation()}
             onMouseDown={e => e.stopPropagation()}
@@ -217,7 +219,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         ) : (
           <p className="text-sm font-medium text-black/90 pointer-events-none text-center">{block.title}</p>
         )}
-        {showContent && (
+        {(showContent || block.duration < 30) && (
            <p className="text-xs text-black/60 pointer-events-none text-center">
              {format(startTimeToDisplay, 'p')} - {format(endTimeToDisplay, 'p')}
            </p>
