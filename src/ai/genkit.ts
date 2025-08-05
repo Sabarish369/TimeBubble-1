@@ -8,9 +8,7 @@ import {googleAI} from '@genkit-ai/googleai';
 
 export const ai = genkit({
   plugins: [
-    googleAI({
-      apiVersion: 'v1beta',
-    }),
+    googleAI(),
   ],
   // The Genkit v1.x API has changed and these options are not supported here.
   // logLevel: 'debug',
