@@ -23,13 +23,17 @@ export function Timeline() {
 
     try {
       const template = JSON.parse(data);
+      const mainContainer = timelineRef.current.parentElement;
+      if (!mainContainer) return;
+      
       const rect = timelineRef.current.getBoundingClientRect();
-      // Adjust for the main container's scroll position
-      const dropY = e.clientY - rect.top + (timelineRef.current.parentElement?.scrollTop ?? 0);
+      const dropY = e.clientY - rect.top;
       
       const minutesFromTop = Math.round(dropY / PIXELS_PER_MINUTE);
+      const clampedMinutes = Math.max(0, minutesFromTop);
+      
       const startTime = new Date();
-      startTime.setHours(Math.floor(minutesFromTop / 60), minutesFromTop % 60, 0, 0);
+      startTime.setHours(Math.floor(clampedMinutes / 60), clampedMinutes % 60, 0, 0);
 
       addBlock({ ...template, startTime });
     } catch (error) {
