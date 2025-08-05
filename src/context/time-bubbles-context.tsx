@@ -2,17 +2,20 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import type { TimeBlock } from '@/types';
+import type { TimeBlock, BubbleTemplate } from '@/types';
 import { getSmartSuggestions } from '@/ai/flows/smart-suggestions';
 import { useToast } from '@/hooks/use-toast';
 
 interface TimeBubblesContextType {
   timeBlocks: TimeBlock[];
+  templates: BubbleTemplate[];
   isLoaded: boolean;
   addBlock: (block: Omit<TimeBlock, 'id' | 'completed'>) => void;
   updateBlock: (id: string, updates: Partial<TimeBlock>) => void;
   deleteBlock: (id: string) => void;
   duplicateBlock: (id: string) => void;
+  addTemplate: (template: Omit<BubbleTemplate, 'id'>) => void;
+  deleteTemplate: (id: string) => void;
   getBlocksForSuggestions: () => string;
   getAiSuggestions: () => Promise<void>;
   suggestions: string[];
@@ -25,9 +28,11 @@ interface TimeBubblesContextType {
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
 
 const getTodayKey = () => new Date().toISOString().split('T')[0];
+const STORAGE_KEY = 'timebubble_data';
 
 export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
+  const [templates, setTemplates] = useState<BubbleTemplate[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
@@ -38,10 +43,11 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const storedData = localStorage.getItem('timebubble_data');
+        const storedData = localStorage.getItem(STORAGE_KEY);
         if (storedData) {
           const parsedData = JSON.parse(storedData);
           const todayKey = getTodayKey();
+          
           const todaysBlocks = parsedData.daily_data?.[todayKey] ?? [];
           const blocksWithDates = todaysBlocks.map((block: any) => ({
             ...block,
@@ -49,6 +55,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
             reflection: block.reflection ? { ...block.reflection, timestamp: new Date(block.reflection.timestamp) } : undefined,
           }));
           setTimeBlocks(blocksWithDates);
+
+          const customTemplates = parsedData.custom_templates ?? [];
+          setTemplates(customTemplates);
         }
       } catch (error) {
         console.error('Failed to load from localStorage', error);
@@ -63,28 +72,34 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [toast]);
   
-  useEffect(() => {
+  const saveData = useCallback(() => {
     if (!isLoaded || typeof window === 'undefined') return;
+    try {
+      const storedData = localStorage.getItem(STORAGE_KEY);
+      const allData = storedData ? JSON.parse(storedData) : { user_preferences: {}, daily_data: {}, custom_templates: [] };
+      const todayKey = getTodayKey();
+      
+      allData.daily_data[todayKey] = timeBlocks;
+      allData.custom_templates = templates;
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
+    } catch (error) {
+      console.error('Failed to save to localStorage', error);
+      toast({
+        title: 'Error',
+        description: 'Could not save your changes.',
+        variant: 'destructive',
+      });
+    }
+  }, [timeBlocks, templates, isLoaded, toast]);
   
+  useEffect(() => {
     const debounceSave = setTimeout(() => {
-      try {
-        const storedData = localStorage.getItem('timebubble_data');
-        const allData = storedData ? JSON.parse(storedData) : { user_preferences: {}, daily_data: {} };
-        const todayKey = getTodayKey();
-        allData.daily_data[todayKey] = timeBlocks;
-        localStorage.setItem('timebubble_data', JSON.stringify(allData));
-      } catch (error) {
-        console.error('Failed to save to localStorage', error);
-        toast({
-          title: 'Error',
-          description: 'Could not save your changes.',
-          variant: 'destructive',
-        });
-      }
+        saveData();
     }, 500);
   
     return () => clearTimeout(debounceSave);
-  }, [timeBlocks, isLoaded, toast]);
+  }, [saveData]);
   
 
   const addBlock = useCallback((block: Omit<TimeBlock, 'id' | 'completed'>) => {
@@ -110,6 +125,22 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       });
     }
   }, [timeBlocks, addBlock]);
+
+  const addTemplate = useCallback((template: Omit<BubbleTemplate, 'id'>) => {
+    setTemplates(prev => [...prev, { ...template, id: crypto.randomUUID() }]);
+    toast({
+        title: 'Template Created',
+        description: `"${template.title}" has been added to your templates.`,
+    });
+  }, [toast]);
+
+  const deleteTemplate = useCallback((id: string) => {
+    setTemplates(prev => prev.filter(t => t.id !== id));
+    toast({
+        title: 'Template Deleted',
+        description: 'The template has been removed.',
+    });
+  }, [toast]);
 
   const getBlocksForSuggestions = useCallback(() => {
     return JSON.stringify(timeBlocks.map(b => ({ ...b, id: undefined })));
@@ -141,11 +172,14 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
   const value = {
     timeBlocks,
+    templates,
     isLoaded,
     addBlock,
     updateBlock,
     deleteBlock,
     duplicateBlock,
+    addTemplate,
+    deleteTemplate,
     getBlocksForSuggestions,
     getAiSuggestions,
     suggestions,

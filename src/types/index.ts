@@ -20,3 +20,12 @@ export interface TimeBlock {
   completed: boolean;
   reflection?: ReflectionData;
 }
+
+export interface BubbleTemplate {
+  id: string;
+  title: string;
+  duration: number;
+  color: string;
+  category: BubbleCategory;
+  isDefault?: boolean;
+}

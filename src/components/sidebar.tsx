@@ -1,11 +1,24 @@
 'use client';
 
 import type { DragEvent } from 'react';
-import { Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Briefcase, BookOpen, Coffee, User, Heart, Plus, Trash2, type LucideIcon } from 'lucide-react';
 import { BUBBLE_COLORS, SIDEBAR_WIDTH } from '@/lib/constants';
-import type { BubbleCategory } from '@/types';
+import type { BubbleCategory, BubbleTemplate } from '@/types';
+import { useTimeBubbles } from '@/context/time-bubbles-context';
+import { Button } from './ui/button';
+import { TemplateModal } from './template-modal';
+import { useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   work: Briefcase,
@@ -15,47 +28,91 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   health: Heart,
 };
 
-const templates: { title: string; category: BubbleCategory; duration: number, color: string }[] = [
-  { title: 'Focus Work', category: 'work', duration: 90, color: BUBBLE_COLORS.mint },
-  { title: 'Study Session', category: 'study', duration: 120, color: BUBBLE_COLORS["sky-blue"] },
-  { title: 'Short Break', category: 'break', duration: 15, color: BUBBLE_COLORS.peach },
-  { title: 'Workout', category: 'health', duration: 60, color: BUBBLE_COLORS["rose-gold"] },
-  { title: 'Personal Time', category: 'personal', duration: 45, color: BUBBLE_COLORS.lavender },
+const defaultTemplates: BubbleTemplate[] = [
+  { id: 'default-1', title: 'Focus Work', category: 'work', duration: 90, color: BUBBLE_COLORS.mint, isDefault: true },
+  { id: 'default-2', title: 'Study Session', category: 'study', duration: 120, color: BUBBLE_COLORS["sky-blue"], isDefault: true },
+  { id: 'default-3', title: 'Short Break', category: 'break', duration: 15, color: BUBBLE_COLORS.peach, isDefault: true },
+  { id: 'default-4', title: 'Workout', category: 'health', duration: 60, color: BUBBLE_COLORS["rose-gold"], isDefault: true },
+  { id: 'default-5', title: 'Personal Time', category: 'personal', duration: 45, color: BUBBLE_COLORS.lavender, isDefault: true },
 ];
 
 export function Sidebar() {
-  const handleDragStart = (e: DragEvent<HTMLDivElement>, template: typeof templates[0]) => {
+  const { templates, deleteTemplate } = useTimeBubbles();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const allTemplates = [...defaultTemplates, ...templates];
+
+  const handleDragStart = (e: DragEvent<HTMLDivElement>, template: BubbleTemplate) => {
     e.dataTransfer.effectAllowed = "copy";
-    e.dataTransfer.setData('application/json', JSON.stringify(template));
+    const templateData = {
+      title: template.title,
+      category: template.category,
+      duration: template.duration,
+      color: template.color
+    };
+    e.dataTransfer.setData('application/json', JSON.stringify(templateData));
   };
 
   return (
     <aside
-      className="p-4 border-r bg-card shrink-0"
+      className="p-4 border-r bg-card shrink-0 flex flex-col"
       style={{ width: `${SIDEBAR_WIDTH}px` }}
     >
-      <h2 className="text-xl font-semibold mb-4 text-center">Templates</h2>
-      <Separator className="mb-4" />
-      <div className="space-y-3">
-        {templates.map((template) => {
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold text-center">Templates</h2>
+        <Button variant="ghost" size="icon" onClick={() => setIsModalOpen(true)}>
+          <Plus className="h-5 w-5" />
+          <span className="sr-only">Create New Template</span>
+        </Button>
+      </div>
+      
+      <div className="space-y-3 overflow-y-auto flex-1">
+        {allTemplates.map((template) => {
           const Icon = categoryIcons[template.category];
           return (
             <div
-              key={template.title}
+              key={template.id}
               draggable
               onDragStart={(e) => handleDragStart(e, template)}
-              className="p-3 rounded-lg shadow-sm cursor-grab active:cursor-grabbing flex items-center gap-3 transition-shadow hover:shadow-md"
+              className="p-3 rounded-lg shadow-sm cursor-grab active:cursor-grabbing flex items-center gap-3 transition-shadow hover:shadow-md relative group"
               style={{ backgroundColor: template.color }}
             >
               <Icon className="h-5 w-5 shrink-0 text-black/60" />
-              <div>
+              <div className='flex-1'>
                 <p className="font-medium text-sm text-black/80">{template.title}</p>
                 <p className="text-xs text-black/60">{template.duration} min</p>
               </div>
+              {!template.isDefault && (
+                 <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity absolute top-1 right-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Trash2 className="h-4 w-4 text-black/60" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete the "{template.title}" template. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => deleteTemplate(template.id)}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           );
         })}
       </div>
+      <TemplateModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </aside>
   );
 }
