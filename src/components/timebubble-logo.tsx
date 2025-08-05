@@ -9,13 +9,18 @@ export function TimeBubbleLogo(props: SVGProps<SVGSVGElement>) {
       aria-label="TimeBubble Logo"
       {...props}
     >
+       <defs>
+        <linearGradient id="logoGradient" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="hsl(var(--primary))" />
+            <stop offset="100%" stopColor="hsl(var(--accent))" />
+        </linearGradient>
+      </defs>
       <g clipPath="url(#clip0_10_2)">
-        <circle cx="12" cy="12" r="10" className="fill-primary/70" />
-        <circle cx="28" cy="12" r="6" className="fill-accent/80" />
+        <circle cx="12" cy="12" r="10" fill="url(#logoGradient)" />
         <text
-          x="42"
+          x="30"
           y="17"
-          fontFamily="'Inter', sans-serif"
+          fontFamily="'Manrope', sans-serif"
           fontSize="16"
           fontWeight="600"
           className="fill-foreground"
