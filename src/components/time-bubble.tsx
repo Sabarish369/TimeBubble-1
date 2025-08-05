@@ -159,12 +159,12 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   return (
     <div
       className={cn(
-        'absolute left-[80px] right-4 rounded-lg p-3 flex shadow-sm transition-all duration-200 z-10 border',
+        'absolute left-[80px] right-4 rounded-lg p-3 flex items-center shadow-md transition-all duration-200 z-10 border',
         'select-none', 
         isDragging && 'shadow-lg scale-105 z-20 cursor-grabbing',
         isResizing && 'z-20',
-        isPast && !block.completed && 'opacity-60',
-        block.completed && 'opacity-70 border-2 border-green-500'
+        isPast && !block.completed && 'border-slate-300',
+        block.completed && 'border-2 border-green-500'
       )}
       style={{
         top: `${displayTop}px`,
@@ -223,16 +223,16 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
               onChange={handleTitleChange}
               onBlur={handleTitleBlur}
               onKeyDown={handleTitleKeyDown}
-              className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-sm font-semibold text-slate-800"
+              className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-base font-semibold text-slate-800"
               autoFocus
               onClick={e => e.stopPropagation()}
               onMouseDown={e => e.stopPropagation()}
             />
           ) : (
-            <p className="text-sm font-semibold text-slate-800 pointer-events-none truncate">{block.title}</p>
+            <p className="text-base font-semibold text-slate-800 pointer-events-none truncate">{block.title}</p>
           )}
           {showContent && (
-            <p className="text-xs text-slate-700 pointer-events-none">
+            <p className="text-sm text-slate-700 pointer-events-none">
               {format(startTimeToDisplay, 'p')} - {format(endTimeToDisplay, 'p')}
             </p>
           )}
@@ -241,7 +241,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
       {!showContent && (
         <div className='absolute inset-0 flex items-center justify-center pointer-events-none'>
-          <p className="text-sm font-semibold text-slate-800">{block.title}</p>
+          <p className="text-base font-semibold text-slate-800">{block.title}</p>
         </div>
       )}
 
@@ -252,8 +252,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       )}
 
       {block.completed && (
-        <div className="absolute inset-0 bg-black/20 rounded-lg flex items-center justify-center pointer-events-none">
-            <Check className="h-8 w-8 text-white" />
+        <div className="absolute inset-0 bg-transparent rounded-lg flex items-center justify-center pointer-events-none">
+            <Check className="h-8 w-8 text-green-600" />
         </div>
       )}
 
