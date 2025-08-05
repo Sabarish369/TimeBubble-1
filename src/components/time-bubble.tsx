@@ -57,7 +57,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
   const handleMouseUp = useCallback(() => {
     if (isDragging) {
-       const newMinutes = Math.round(dragStartRef.current.initialTop / PIXELS_PER_MINUTE / 15) * 15;
+       const newMinutes = Math.max(0, Math.round(dragStartRef.current.initialTop / PIXELS_PER_MINUTE / 15) * 15);
        if (newMinutes < 0) return;
     }
     if (isResizing) {
@@ -82,7 +82,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     const deltaY = e.clientY - dragStartRef.current.y;
 
     if (isDragging) {
-      const newTop = dragStartRef.current.initialTop + deltaY;
+      const newTop = Math.max(0, dragStartRef.current.initialTop + deltaY);
       if (newTop < 0) return;
       const newMinutes = Math.round(newTop / PIXELS_PER_MINUTE / 15) * 15;
       const newStartTime = new Date(block.startTime);
@@ -218,7 +218,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
             onChange={handleTitleChange}
             onBlur={handleTitleBlur}
             onKeyDown={handleTitleKeyDown}
-            className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-sm font-semibold text-black/90 text-center"
+            className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-sm font-semibold text-slate-800 text-center"
             autoFocus
             onClick={e => e.stopPropagation()}
             onMouseDown={e => e.stopPropagation()}
