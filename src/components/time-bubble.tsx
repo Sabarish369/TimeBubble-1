@@ -10,6 +10,7 @@ import { Check, Copy, MoreVertical, Trash2, MessageSquareText } from 'lucide-rea
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Input } from './ui/input';
+import { format } from 'date-fns';
 
 interface TimeBubbleProps {
   block: TimeBlockType;
@@ -22,6 +23,16 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const [isResizing, setIsResizing] = useState<'top' | 'bottom' | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(block.title);
+  
+  const [liveStartTime, setLiveStartTime] = useState(block.startTime);
+  const [liveDuration, setLiveDuration] = useState(block.duration);
+
+  useEffect(() => {
+    setLiveStartTime(block.startTime);
+    setLiveDuration(block.duration);
+  }, [block.startTime, block.duration]);
+
+
   const dragStartRef = useRef({ y: 0, initialTop: 0, initialHeight: 0 });
 
   const minutesFromMidnight = block.startTime.getHours() * 60 + block.startTime.getMinutes();
@@ -44,9 +55,12 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   };
 
   const handleMouseUp = useCallback(() => {
+    if (isResizing) {
+      updateBlock(block.id, { startTime: liveStartTime, duration: liveDuration });
+    }
     setIsDragging(false);
     setIsResizing(null);
-  }, []);
+  }, [isResizing, block.id, liveStartTime, liveDuration, updateBlock]);
 
   const handleMouseMove = useCallback((e: globalThis.MouseEvent) => {
     if (!isDragging && !isResizing) return;
@@ -72,7 +86,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       if (isResizing === 'bottom') {
         const newHeight = dragStartRef.current.initialHeight + deltaY;
         const newDuration = Math.max(15, Math.round(newHeight / PIXELS_PER_MINUTE / 15) * 15);
-        updateBlock(block.id, { duration: newDuration });
+        setLiveDuration(newDuration);
       }
       if (isResizing === 'top') {
         const newTop = dragStartRef.current.initialTop + deltaY;
@@ -88,8 +102,9 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
           const durationDifference = (originalEndTime.getTime() - newStartTime.getTime()) / (1000 * 60);
           const newDuration = Math.max(15, Math.round(durationDifference / 15) * 15);
-
-          updateBlock(block.id, { startTime: newStartTime, duration: newDuration });
+          
+          setLiveStartTime(newStartTime);
+          setLiveDuration(newDuration);
         }
       }
     }
@@ -120,22 +135,29 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   };
 
   const isPast = new Date() > new Date(block.startTime.getTime() + block.duration * 60000);
-  const showContent = height >= 35;
+  const showContent = (isResizing ? liveDuration : block.duration) * PIXELS_PER_MINUTE >= 50;
   const canReflect = isPast && !block.completed;
+
+  const startTimeToDisplay = isResizing ? liveStartTime : block.startTime;
+  const durationToDisplay = isResizing ? liveDuration : block.duration;
+  const endTimeToDisplay = new Date(startTimeToDisplay.getTime() + durationToDisplay * 60000);
+
+  const displayTop = (startTimeToDisplay.getHours() * 60 + startTimeToDisplay.getMinutes()) * PIXELS_PER_MINUTE;
+  const displayHeight = durationToDisplay * PIXELS_PER_MINUTE;
   
   return (
     <div
       className={cn(
         'absolute left-16 right-4 rounded-lg p-2 flex flex-col shadow-md transition-all duration-200 z-10',
-        'select-none', // Prevent text selection while dragging
+        'select-none', 
         isDragging && 'shadow-xl scale-105 z-20 cursor-grabbing',
         isResizing && 'z-20',
         isPast && !block.completed && 'opacity-60',
         block.completed && 'opacity-70 border-2 border-green-500'
       )}
       style={{
-        top: `${top}px`,
-        height: `${height}px`,
+        top: `${displayTop}px`,
+        height: `${displayHeight}px`,
         backgroundColor: block.color,
       }}
       onMouseDown={handleMouseDown}
@@ -152,15 +174,11 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent onClick={e => e.stopPropagation()}>
-            {canReflect && (
-              <>
-                <DropdownMenuItem onSelect={() => setReflectingBlock(block)}>
-                  <MessageSquareText className="mr-2 h-4 w-4" />
-                  <span>Reflect</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-              </>
-            )}
+            <DropdownMenuItem onSelect={() => setReflectingBlock(block)} disabled={!canReflect}>
+              <MessageSquareText className="mr-2 h-4 w-4" />
+              <span>Reflect</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => duplicateBlock(block.id)}>
               <Copy className="mr-2 h-4 w-4" />
               <span>Duplicate</span>
@@ -184,7 +202,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         </DropdownMenu>
       </div>
 
-      <div className={cn("flex-grow overflow-hidden cursor-grab flex items-center", !showContent && "justify-center")} onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
+      <div className={cn("flex-grow overflow-hidden cursor-grab flex flex-col justify-center", !showContent && "items-center")} onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
         {isEditing ? (
           <Input
             value={title}
@@ -197,7 +215,12 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
             onMouseDown={e => e.stopPropagation()}
           />
         ) : (
-          <p className="text-sm font-medium text-black/90 pointer-events-none">{block.title}</p>
+          <p className="text-sm font-medium text-black/90 pointer-events-none text-center">{block.title}</p>
+        )}
+        {showContent && (
+           <p className="text-xs text-black/60 pointer-events-none text-center">
+             {format(startTimeToDisplay, 'p')} - {format(endTimeToDisplay, 'p')}
+           </p>
         )}
       </div>
 
