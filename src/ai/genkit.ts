@@ -5,14 +5,30 @@
 import { config } from 'dotenv';
 config();
 
-import genkit from '@genkit-ai/next';
-import {googleAI} from '@genkit-ai/googleai';
+import { genkit, configureGenkit } from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
+import { genkitEval, GenkitMetric } from 'genkit/eval';
+import { dotprompt } from '@genkit-ai/dotprompt';
 
-export const ai = genkit({
+configureGenkit({
   plugins: [
     googleAI({ apiKey: process.env.GEMINI_API_KEY }),
+    dotprompt(),
+    genkitEval({
+      judge: 'googleai/gemini-1.5-flash-latest',
+      metrics: [GenkitMetric.Faithfulness, GenkitMetric.AnswerRelevancy],
+      embedder: 'googleai/text-embedding-004',
+    }),
   ],
-  // The Genkit v1.x API has changed and these options are not supported here.
-  // logLevel: 'debug',
-  // enableTracingAndMetrics: true,
+  // Log developer-friendly errors
+  devMode: true,
+  // Use a simple file-based trace store.
+  traceStore: {
+    type: 'file',
+    options: {
+      path: '.genkit-traces',
+    },
+  },
 });
+
+export { genkit as ai };
