@@ -1,3 +1,4 @@
+
 'use client';
 import type { DragEvent, MouseEvent } from 'react';
 import React, { useEffect } from 'react';
@@ -13,18 +14,6 @@ export function Timeline() {
   const { timeBlocks, addBlock, isLoaded, updateBlock, reflectingBlock, setReflectingBlock } = useTimeBubbles();
   const timelineRef = React.useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (timelineRef.current && isLoaded) {
-      const now = new Date();
-      const minutes = now.getHours() * 60 + now.getMinutes();
-      const scrollToPosition = minutes * PIXELS_PER_MINUTE - timelineRef.current.clientHeight / 2;
-      timelineRef.current.scrollTo({
-        top: scrollToPosition,
-        behavior: 'smooth',
-      });
-    }
-  }, [isLoaded]);
-
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (!timelineRef.current) return;
@@ -35,7 +24,8 @@ export function Timeline() {
     try {
       const template = JSON.parse(data);
       const rect = timelineRef.current.getBoundingClientRect();
-      const dropY = e.clientY - rect.top + timelineRef.current.scrollTop;
+      // Adjust for the main container's scroll position
+      const dropY = e.clientY - rect.top + (timelineRef.current.parentElement?.scrollTop ?? 0);
       
       const minutesFromTop = Math.round(dropY / PIXELS_PER_MINUTE);
       const startTime = new Date();
@@ -48,12 +38,12 @@ export function Timeline() {
   };
 
   const handleDoubleClick = (e: MouseEvent<HTMLDivElement>) => {
-    // Check if the double click is on a time bubble
     if ((e.target as HTMLElement).closest('[class*="absolute left-[80px]"]')) return;
     if (!timelineRef.current) return;
     
     const rect = timelineRef.current.getBoundingClientRect();
-    const y = e.clientY - rect.top + timelineRef.current.scrollTop;
+    // Adjust for the main container's scroll position
+    const y = e.clientY - rect.top + (timelineRef.current.parentElement?.scrollTop ?? 0);
     const minutesFromTop = Math.round(y / PIXELS_PER_MINUTE);
 
     const startTime = new Date();
@@ -76,7 +66,7 @@ export function Timeline() {
   return (
     <div
       ref={timelineRef}
-      className="relative w-full overflow-y-auto"
+      className="relative w-full"
       style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
