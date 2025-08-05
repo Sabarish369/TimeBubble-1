@@ -179,7 +179,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       style={{
         top: `${displayTop}px`,
         height: `${displayHeight}px`,
-        backgroundColor: `var(${block.color})`,
+        backgroundColor: block.color,
         borderColor: 'rgba(0,0,0,0.05)',
       }}
       onMouseDown={handleMouseDown}
@@ -231,7 +231,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
                 <button
                   key={name}
                   className={cn("w-6 h-6 rounded-full border", block.color === colorVar && "ring-2 ring-ring")}
-                  style={{ backgroundColor: `var(${colorVar})` }}
+                  style={{ backgroundColor: colorVar }}
                   onClick={() => updateBlock(block.id, { color: colorVar })}
                 />
               ))}
