@@ -49,7 +49,6 @@ Use the following as the primary source of information about the plant.
 
 Description: {{{description}}}
 Photo: {{media url=photoDataUri}}`,
-  model: 'gemini-1.5-flash-latest',
 });
 
 const diagnosePlantFlow = ai.defineFlow(

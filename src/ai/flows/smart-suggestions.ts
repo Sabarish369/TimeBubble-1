@@ -38,7 +38,6 @@ Daily Data: {{{dailyData}}}
 
 Provide suggestions to improve their schedule, increase productivity, and promote well-being. Return your suggestions as an array of strings.
 `,
-  model: 'gemini-1.5-flash-latest',
 });
 
 const smartSuggestionsFlow = ai.defineFlow(

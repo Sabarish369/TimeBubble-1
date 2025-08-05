@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Central configuration for the Genkit AI plugin.
@@ -13,6 +12,7 @@ export const ai = genkit({
       apiVersion: 'v1beta',
     }),
   ],
-  logLevel: 'debug',
-  enableTracingAndMetrics: true,
+  // The Genkit v1.x API has changed and these options are not supported here.
+  // logLevel: 'debug',
+  // enableTracingAndMetrics: true,
 });
