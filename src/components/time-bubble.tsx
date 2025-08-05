@@ -6,7 +6,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { BUBBLE_COLORS, PIXELS_PER_MINUTE } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import { Check, Copy, MoreVertical, Trash2 } from 'lucide-react';
+import { Check, Copy, MoreVertical, Trash2, MessageSquareText } from 'lucide-react';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Input } from './ui/input';
@@ -121,7 +121,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
   const isPast = new Date() > new Date(block.startTime.getTime() + block.duration * 60000);
   const showContent = height >= 35;
-
+  const canReflect = isPast && !block.completed;
+  
   return (
     <div
       className={cn(
@@ -152,6 +153,15 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent onClick={e => e.stopPropagation()}>
+            {canReflect && (
+              <>
+                <DropdownMenuItem onSelect={() => setReflectingBlock(block)}>
+                  <MessageSquareText className="mr-2 h-4 w-4" />
+                  <span>Reflect</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem onSelect={() => duplicateBlock(block.id)}>
               <Copy className="mr-2 h-4 w-4" />
               <span>Duplicate</span>
@@ -175,7 +185,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         </DropdownMenu>
       </div>
 
-      <div className="flex-grow overflow-hidden cursor-grab" onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
+      <div className={cn("flex-grow overflow-hidden cursor-grab flex", !showContent && "items-center justify-center")} onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
         {isEditing ? (
           <Input
             value={title}
@@ -192,7 +202,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         )}
       </div>
 
-      {isPast && !block.completed && showContent && (
+      {canReflect && showContent && (
         <Button size="sm" className="mt-auto h-7 z-10" onClick={(e) => { e.stopPropagation(); setReflectingBlock(block); }}>
           Reflect
         </Button>
