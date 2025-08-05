@@ -14,6 +14,7 @@ interface TimeBubblesContextType {
   updateBlock: (id: string, updates: Partial<TimeBlock>) => void;
   deleteBlock: (id: string) => void;
   duplicateBlock: (id: string) => void;
+  clearAllBlocks: () => void;
   addTemplate: (template: Omit<BubbleTemplate, 'id'>) => void;
   deleteTemplate: (id: string) => void;
   getBlocksForSuggestions: () => string;
@@ -114,6 +115,10 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     setTimeBlocks(prev => prev.filter(b => b.id !== id));
   }, []);
 
+  const clearAllBlocks = useCallback(() => {
+    setTimeBlocks([]);
+  }, []);
+
   const duplicateBlock = useCallback((id: string) => {
     const blockToDuplicate = timeBlocks.find(b => b.id === id);
     if(blockToDuplicate) {
@@ -178,6 +183,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     updateBlock,
     deleteBlock,
     duplicateBlock,
+    clearAllBlocks,
     addTemplate,
     deleteTemplate,
     getBlocksForSuggestions,

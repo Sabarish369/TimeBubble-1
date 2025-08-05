@@ -13,6 +13,17 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Input } from './ui/input';
 import { format } from 'date-fns';
 import type { BubbleCategory } from '@/types';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface TimeBubbleProps {
   block: TimeBlockType;
@@ -85,8 +96,9 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     const deltaY = e.clientY - dragStartRef.current.y;
 
     if (isDragging) {
-      const newTop = Math.max(0, dragStartRef.current.initialTop + deltaY);
-      const newMinutes = Math.max(0, Math.round(newTop / PIXELS_PER_MINUTE / 15) * 15);
+      const newTop = dragStartRef.current.initialTop + deltaY;
+      const newMinutesRaw = Math.round(newTop / PIXELS_PER_MINUTE);
+      const newMinutes = Math.max(0, Math.round(newMinutesRaw / 15) * 15);
       const newStartTime = new Date(block.startTime);
       newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
       updateBlock(block.id, { startTime: newStartTime });
@@ -103,7 +115,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         const newHeight = dragStartRef.current.initialHeight - deltaY;
         
         if (newHeight >= 15 * PIXELS_PER_MINUTE) {
-          const newMinutes = Math.max(0, Math.round(newTop / PIXELS_PER_MINUTE / 15) * 15);
+          const newMinutesRaw = Math.round(newTop / PIXELS_PER_MINUTE);
+          const newMinutes = Math.max(0, Math.round(newMinutesRaw / 15) * 15);
           const newStartTime = new Date(block.startTime);
           newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
 
@@ -166,7 +179,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       style={{
         top: `${displayTop}px`,
         height: `${displayHeight}px`,
-        backgroundColor: block.color,
+        backgroundColor: `var(${block.color})`,
         borderColor: 'rgba(0,0,0,0.05)',
       }}
       onMouseDown={handleMouseDown}
@@ -192,18 +205,34 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
               <Copy className="mr-2 h-4 w-4" />
               <span>Duplicate</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => deleteBlock(block.id)}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              <span>Delete</span>
-            </DropdownMenuItem>
+             <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  <span>Delete</span>
+                </DropdownMenuItem>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete the "{block.title}" bubble. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => deleteBlock(block.id)}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <DropdownMenuSeparator />
             <div className="flex gap-2 p-2">
-              {Object.entries(BUBBLE_COLORS).map(([name, color]) => (
+              {Object.entries(BUBBLE_COLORS).map(([name, colorVar]) => (
                 <button
                   key={name}
-                  className={cn("w-6 h-6 rounded-full border", block.color === color && "ring-2 ring-ring")}
-                  style={{ backgroundColor: color }}
-                  onClick={() => updateBlock(block.id, { color })}
+                  className={cn("w-6 h-6 rounded-full border", block.color === colorVar && "ring-2 ring-ring")}
+                  style={{ backgroundColor: `var(${colorVar})` }}
+                  onClick={() => updateBlock(block.id, { color: colorVar })}
                 />
               ))}
             </div>
