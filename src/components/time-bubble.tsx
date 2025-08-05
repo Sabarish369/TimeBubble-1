@@ -97,8 +97,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
     if (isDragging) {
       const newTop = dragStartRef.current.initialTop + deltaY;
-      const newMinutesRaw = Math.round(newTop / PIXELS_PER_MINUTE);
-      const newMinutes = Math.max(0, Math.round(newMinutesRaw / 15) * 15);
+      const newMinutesRaw = Math.max(0, newTop / PIXELS_PER_MINUTE);
+      const newMinutes = Math.round(newMinutesRaw / 15) * 15;
       const newStartTime = new Date(block.startTime);
       newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
       updateBlock(block.id, { startTime: newStartTime });
@@ -115,8 +115,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         const newHeight = dragStartRef.current.initialHeight - deltaY;
         
         if (newHeight >= 15 * PIXELS_PER_MINUTE) {
-          const newMinutesRaw = Math.round(newTop / PIXELS_PER_MINUTE);
-          const newMinutes = Math.max(0, Math.round(newMinutesRaw / 15) * 15);
+          const newMinutesRaw = Math.max(0, newTop / PIXELS_PER_MINUTE);
+          const newMinutes = Math.round(newMinutesRaw / 15) * 15;
           const newStartTime = new Date(block.startTime);
           newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
 
@@ -157,9 +157,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     }
   };
 
-  const isPast = new Date() > new Date(block.startTime.getTime() + block.duration * 60000);
   const showContent = (isResizing ? liveDuration : block.duration) * PIXELS_PER_MINUTE >= 40;
-  const canReflect = isPast && !block.completed;
 
   const startTimeToDisplay = isResizing ? liveStartTime : block.startTime;
   const durationToDisplay = isResizing ? liveDuration : block.duration;
@@ -196,7 +194,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent onClick={e => e.stopPropagation()}>
-            <DropdownMenuItem onSelect={() => setReflectingBlock(block)} disabled={!canReflect}>
+            <DropdownMenuItem onSelect={() => setReflectingBlock(block)}>
               <MessageSquareText className="mr-2 h-4 w-4" />
               <span>Reflect</span>
             </DropdownMenuItem>
@@ -269,12 +267,6 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         <div className='absolute inset-0 flex items-center justify-center pointer-events-none'>
           <p className="text-base font-semibold text-slate-800 dark:text-white">{block.title}</p>
         </div>
-      )}
-
-      {canReflect && !showContent && (
-        <Button size="sm" className="absolute bottom-2 right-2 h-7 z-10" onClick={(e) => { e.stopPropagation(); setReflectingBlock(block); }}>
-          Reflect
-        </Button>
       )}
 
       {block.completed && (
