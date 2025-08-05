@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview Central configuration for the Genkit AI plugin.
  */
