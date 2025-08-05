@@ -159,12 +159,9 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   return (
     <div
       className={cn(
-        'absolute left-[80px] right-4 rounded-lg p-3 flex items-center shadow-md transition-all duration-200 z-10 border',
+        'absolute left-[80px] right-4 rounded-lg p-3 flex items-start shadow-md transition-all duration-200 z-10 border',
         'select-none', 
-        isDragging && 'shadow-lg scale-105 z-20 cursor-grabbing',
-        isResizing && 'z-20',
-        isPast && !block.completed && 'border-slate-300',
-        block.completed && 'border-2 border-green-500'
+        isDragging && 'shadow-lg scale-105 z-20 cursor-grabbing'
       )}
       style={{
         top: `${displayTop}px`,
@@ -182,7 +179,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer">
-              <MoreVertical className="w-4 h-4 text-black/70" />
+              <MoreVertical className="w-4 h-4 text-slate-700" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent onClick={e => e.stopPropagation()}>
@@ -214,8 +211,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         </DropdownMenu>
       </div>
 
-      <div className={cn("flex-grow overflow-hidden cursor-grab flex items-center gap-3")} onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
-        {showContent && Icon && <Icon className="h-6 w-6 text-slate-700 shrink-0" />}
+      <div className={cn("flex-grow overflow-hidden cursor-grab flex items-center gap-3 h-full")} onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
+        <Icon className="h-6 w-6 text-slate-700 shrink-0" />
         <div className="flex-1 overflow-hidden">
           {isEditing ? (
             <Input
@@ -252,7 +249,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       )}
 
       {block.completed && (
-        <div className="absolute inset-0 bg-transparent rounded-lg flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 bg-slate-200/60 rounded-lg flex items-center justify-center pointer-events-none">
             <Check className="h-8 w-8 text-green-600" />
         </div>
       )}
