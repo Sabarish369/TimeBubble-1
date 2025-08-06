@@ -7,41 +7,33 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Calendar } from './ui/calendar';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { format, parse, startOfDay } from 'date-fns';
+import { format, parse, startOfDay, getHours, getMinutes, setHours, setMinutes } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
 
-// Generate time options for every 15 minutes
-const timeOptions = Array.from({ length: 24 * 4 }, (_, i) => {
-    const totalMinutes = i * 15;
-    const date = startOfDay(new Date());
-    date.setMinutes(totalMinutes);
-    return format(date, 'p');
-});
+const hourOptions = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+const minuteOptions = ['00', '15', '30', '45'];
 
 export function RescheduleModal() {
   const { reschedulingBlock, setReschedulingBlock, rescheduleBlock } = useTimeBubbles();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [selectedTime, setSelectedTime] = useState<string>('12:00 PM');
+  const [selectedHour, setSelectedHour] = useState<string>('12');
+  const [selectedMinute, setSelectedMinute] = useState<string>('00');
   const { toast } = useToast();
 
   useEffect(() => {
     if (reschedulingBlock) {
-        setSelectedDate(reschedulingBlock.startTime);
-        setSelectedTime(format(reschedulingBlock.startTime, 'p'));
+        const startTime = reschedulingBlock.startTime;
+        setSelectedDate(startTime);
+        setSelectedHour(getHours(startTime).toString().padStart(2, '0'));
+        setSelectedMinute(getMinutes(startTime).toString().padStart(2, '0'));
     }
   }, [reschedulingBlock]);
 
   const handleReschedule = () => {
-    if (!reschedulingBlock || !selectedDate || !selectedTime) return;
+    if (!reschedulingBlock || !selectedDate) return;
     
-    // Prevent rescheduling to the past
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const newStartTime = parse(selectedTime, 'p', selectedDate);
-    newStartTime.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-
+    let newStartTime = setMinutes(setHours(startOfDay(selectedDate), parseInt(selectedHour)), parseInt(selectedMinute));
 
     if (newStartTime < new Date()) {
         toast({
@@ -77,18 +69,30 @@ export function RescheduleModal() {
                 disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1))}
                 className="rounded-md border"
             />
-            <div className="space-y-2">
-                <Label htmlFor="time-select">Time</Label>
-                <Select value={selectedTime} onValueChange={setSelectedTime}>
-                    <SelectTrigger id="time-select" className="w-full">
-                        <SelectValue placeholder="Select a time" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {timeOptions.map(time => (
-                            <SelectItem key={time} value={time}>{time}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+            <div className="space-y-2 flex-1">
+                <Label>Time</Label>
+                <div className="flex gap-2">
+                    <Select value={selectedHour} onValueChange={setSelectedHour}>
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Hour" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {hourOptions.map(hour => (
+                                <SelectItem key={`hr-${hour}`} value={hour}>{hour}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={selectedMinute} onValueChange={setSelectedMinute}>
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Min" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {minuteOptions.map(minute => (
+                                <SelectItem key={`min-${minute}`} value={minute}>{minute}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
         </div>
         <DialogFooter>
