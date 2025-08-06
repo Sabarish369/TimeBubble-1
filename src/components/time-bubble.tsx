@@ -200,9 +200,9 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   return (
     <div
       className={cn(
-        'absolute left-[80px] right-4 rounded-lg p-3 flex items-start shadow-md transition-all duration-200 z-10 border',
+        'absolute left-[80px] right-4 rounded-lg p-3 flex items-start shadow-md transition-all duration-200 z-10',
         'select-none', 
-        'border-slate-300/50 dark:border-slate-700/50',
+        'outline outline-1 outline-slate-300/50 dark:outline-slate-700/50',
         'cursor-pointer',
         isDragging && 'shadow-lg scale-105 z-20 cursor-grabbing',
       )}
@@ -299,11 +299,11 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       )}
 
       <div
-        className="absolute top-0 left-0 w-full h-1.5 cursor-n-resize z-10"
+        className="absolute -top-px left-0 w-full h-1.5 cursor-n-resize z-10"
         onMouseDown={(e) => handleResizeMouseDown(e, 'top')}
       />
       <div
-        className="absolute bottom-0 left-0 w-full h-1.5 cursor-s-resize z-10"
+        className="absolute -bottom-px left-0 w-full h-1.5 cursor-s-resize z-10"
         onMouseDown={(e) => handleResizeMouseDown(e, 'bottom')}
       />
     </div>
