@@ -245,15 +245,14 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         'outline outline-1 outline-slate-300/50 dark:outline-slate-700/50',
         isDragging && 'shadow-lg scale-105 z-20 cursor-grabbing',
         isCurrent && !isOverdue && 'is-glowing',
-        isOverdue && 'opacity-50',
-        !isOverdue && 'cursor-pointer'
+        !isOverdue && !isCurrent && 'cursor-pointer'
       )}
       style={bubbleStyle}
       onMouseDown={isOverdue ? undefined : handleMouseDown}
       onClick={isOverdue ? undefined : handleClick}
     >
        <div 
-        className="absolute inset-0 rounded-lg" 
+        className={cn("absolute inset-0 rounded-lg", isOverdue && "opacity-50")}
         style={{
           background: block.completed 
             ? 'linear-gradient(to bottom, hsl(140, 60%, 65%), hsl(140, 60%, 45%))' 
@@ -314,7 +313,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         </DropdownMenu>
       </div>
 
-      <div className="w-full h-full pointer-events-none relative z-10 flex-1">
+      <div className={cn("w-full h-full pointer-events-none relative z-10 flex-1", isOverdue && "opacity-50")}>
         {showFullContent ? (
           <div className={cn("flex-grow overflow-hidden flex items-center gap-3 h-full")}>
             <Icon className="h-6 w-6 text-slate-700 dark:text-white shrink-0" />
