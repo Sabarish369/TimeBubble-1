@@ -16,7 +16,7 @@ export function ZoomControls() {
         <span className="sr-only">Zoom Out</span>
       </Button>
       <Slider
-        value={[zoomLevel]}
+        defaultValue={[zoomLevel]}
         onValueChange={(value) => setZoomLevel(value[0])}
         min={MIN_ZOOM}
         max={MAX_ZOOM}
