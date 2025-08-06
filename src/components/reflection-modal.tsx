@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useTimeBubbles } from '@/context/time-bubbles-context';
@@ -13,6 +14,7 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Smile, Meh, Frown, Flame, Coffee } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Slider } from './ui/slider';
+import { useEffect } from 'react';
 
 const reflectionSchema = z.object({
   productivity: z.number().min(1).max(5),
@@ -36,11 +38,22 @@ export function ReflectionModal() {
   const form = useForm<ReflectionFormValues>({
     resolver: zodResolver(reflectionSchema),
     defaultValues: {
-      productivity: reflectingBlock?.reflection?.productivity ?? 3,
-      mood: reflectingBlock?.reflection?.mood ?? 'neutral',
-      notes: reflectingBlock?.reflection?.notes ?? '',
+      productivity: 3,
+      mood: 'neutral',
+      notes: '',
     },
   });
+
+  useEffect(() => {
+    if (reflectingBlock) {
+      form.reset({
+        productivity: reflectingBlock.reflection?.productivity ?? 3,
+        mood: reflectingBlock.reflection?.mood ?? 'neutral',
+        notes: reflectingBlock.reflection?.notes ?? '',
+      });
+    }
+  }, [reflectingBlock, form]);
+
 
   const onSubmit = (data: ReflectionFormValues) => {
     if (!reflectingBlock) return;
@@ -125,7 +138,7 @@ export function ReflectionModal() {
                 <FormItem>
                   <FormLabel>Notes</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Any thoughts or notes?" {...field} />
+                    <Textarea placeholder="Any thoughts or notes?" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

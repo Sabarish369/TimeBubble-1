@@ -22,7 +22,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import { CelebrationPopper } from './celebration-popper';
 
 interface TimeBubbleProps {
   block: TimeBlockType;
@@ -45,11 +46,21 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   
   const [liveStartTime, setLiveStartTime] = useState(block.startTime);
   const [liveDuration, setLiveDuration] = useState(block.duration);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
     setLiveStartTime(block.startTime);
     setLiveDuration(block.duration);
   }, [block.startTime, block.duration]);
+
+  // Trigger celebration when block becomes completed
+  useEffect(() => {
+    if (block.completed) {
+      setShowCelebration(true);
+      const timer = setTimeout(() => setShowCelebration(false), 2000); // Animation duration
+      return () => clearTimeout(timer);
+    }
+  }, [block.completed]);
 
 
   const dragStartRef = useRef({ y: 0, initialTop: 0, initialHeight: 0 });
@@ -173,7 +184,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
   const startTimeToDisplay = isResizing || isDragging ? liveStartTime : block.startTime;
-  const durationToDisplay = isResizing ? liveDuration : block.duration;
+  const durationToDisplay = isResizing || isDragging ? liveDuration : block.duration;
   
   const minutesFromMidnight = startTimeToDisplay.getHours() * 60 + startTimeToDisplay.getMinutes();
   const top = Math.max(0, minutesFromMidnight * PIXELS_PER_MINUTE);
@@ -203,6 +214,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       onMouseDown={handleMouseDown}
       onClick={handleClick}
     >
+       {showCelebration && <CelebrationPopper />}
       <div
         className={cn(
           "absolute top-1 right-1 z-20 flex items-center"
