@@ -106,50 +106,74 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     return () => clearTimeout(debounceSave);
   }, [saveData]);
   
- const findNextAvailableSlot = useCallback((startTime: Date, duration: number, excludeId?: string): Date => {
-    let proposedStartTime = startTime.getTime();
-    
+  const findAvailableSlot = useCallback((requestedStartTime: Date, duration: number, excludeId?: string): Date => {
     const sortedBlocks = [...timeBlocks]
-        .filter(b => b.id !== excludeId)
-        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-
-    let isOverlapping;
-    do {
-      isOverlapping = false;
-      const proposedEndTime = proposedStartTime + duration * 60000;
-      
+      .filter(b => b.id !== excludeId)
+      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+  
+    let finalStartTime = new Date(requestedStartTime);
+  
+    const checkAndResolveCollisions = (newStartTime: Date): Date => {
+      const newEndTime = new Date(newStartTime.getTime() + duration * 60000);
+  
       for (const block of sortedBlocks) {
-        const blockStartTime = block.startTime.getTime();
-        const blockEndTime = blockStartTime + block.duration * 60000;
-
-        if (proposedStartTime < blockEndTime && proposedEndTime > blockStartTime) {
-          proposedStartTime = blockEndTime;
-          isOverlapping = true;
-          break; // Restart check with new proposedStartTime
+        const blockStartTime = block.startTime;
+        const blockEndTime = new Date(blockStartTime.getTime() + block.duration * 60000);
+  
+        // Check for overlap
+        if (newStartTime < blockEndTime && newEndTime > blockStartTime) {
+          // Collision detected. Decide whether to snap before or after.
+          const collisionMidpoint = new Date(blockStartTime.getTime() + (block.duration / 2) * 60000);
+          
+          let resolvedStartTime;
+          if (requestedStartTime < collisionMidpoint) {
+            // Snap before the conflicting block
+            resolvedStartTime = new Date(blockStartTime.getTime() - duration * 60000);
+          } else {
+            // Snap after the conflicting block
+            resolvedStartTime = new Date(blockEndTime);
+          }
+          
+          // Recursively check again from the new resolved position
+          return checkAndResolveCollisions(resolvedStartTime);
         }
       }
-    } while (isOverlapping);
-
-    return new Date(proposedStartTime);
+      
+      // No collisions found, this start time is valid
+      return newStartTime;
+    };
+  
+    finalStartTime = checkAndResolveCollisions(finalStartTime);
+  
+    // Ensure the start time is not negative (before midnight)
+    const today = new Date(requestedStartTime);
+    today.setHours(0, 0, 0, 0);
+    if (finalStartTime < today) {
+      return today;
+    }
+  
+    return finalStartTime;
   }, [timeBlocks]);
 
 
   const addBlock = useCallback((block: Omit<TimeBlock, 'id' | 'completed'>) => {
-    const newStartTime = findNextAvailableSlot(block.startTime, block.duration);
+    const newStartTime = findAvailableSlot(block.startTime, block.duration);
     setTimeBlocks(prev => [...prev, { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false }]);
-  }, [findNextAvailableSlot]);
+  }, [findAvailableSlot]);
 
   const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
-    const originalBlock = timeBlocks.find(b => b.id === id);
-    if (!originalBlock) return;
+    setTimeBlocks(prev => {
+        const originalBlock = prev.find(b => b.id === id);
+        if (!originalBlock) return prev;
 
-    let updatedBlock = { ...originalBlock, ...updates };
+        // Optimistically apply updates to get new start time and duration
+        const tentativeBlock = { ...originalBlock, ...updates };
+        const newStartTime = findAvailableSlot(tentativeBlock.startTime, tentativeBlock.duration, id);
 
-    const newStartTime = findNextAvailableSlot(updatedBlock.startTime, updatedBlock.duration, id);
-    updatedBlock.startTime = newStartTime;
+        return prev.map(b => (b.id === id ? { ...b, ...updates, startTime: newStartTime } : b));
+    });
+  }, [findAvailableSlot]);
 
-    setTimeBlocks(prev => prev.map(b => (b.id === id ? updatedBlock : b)));
-  }, [timeBlocks, findNextAvailableSlot]);
 
   const deleteBlock = useCallback((id: string) => {
     setTimeBlocks(prev => prev.filter(b => b.id !== id));
