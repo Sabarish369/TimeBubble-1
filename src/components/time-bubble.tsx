@@ -348,7 +348,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       )}
 
       {isOverdue && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center gap-4">
+        <div className="absolute inset-0 z-20 flex items-center justify-center gap-2">
           <Button onClick={() => setReflectingBlock(block)}>
             <MessageSquareText className="mr-2 h-4 w-4"/>
             Reflect
@@ -357,6 +357,25 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
             <History className="mr-2 h-4 w-4" />
             Reschedule
           </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon" onClick={e => e.stopPropagation()}>
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent onClick={e => e.stopPropagation()}>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the "{block.title}" bubble. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => deleteBlock(block.id)}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
         </div>
       )}
 
@@ -371,5 +390,3 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     </div>
   );
 }
-
-    
