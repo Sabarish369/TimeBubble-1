@@ -11,7 +11,7 @@ import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Briefcase, BookOp
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { format } from 'date-fns';
-import type { BubbleCategory } from '@/types';
+import type { BubbleCategory, BubbleColor } from '@/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,11 +50,16 @@ const ActiveBubbleAnimation = () => {
     );
 };
 
-const GlowingParticles = () => {
+const GlowingParticles = ({ color }: { color: BubbleColor }) => {
+  const particleColor = `hsl(var(--bubble-${color}))`;
+  
   return (
     <div className="glowing-particles">
-      {Array.from({ length: 8 }).map((_, i) => (
-         <div key={i} className="particle" />
+      {Array.from({ length: 20 }).map((_, i) => (
+         <div key={i} className={`particle particle-${i+1}`} style={{ 
+            backgroundColor: particleColor,
+            boxShadow: `0 0 5px ${particleColor}, 0 0 10px ${particleColor}`
+         }} />
       ))}
     </div>
   )
@@ -258,7 +263,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     >
        {showCelebration && <CelebrationPopper />}
        {isCurrent && <ActiveBubbleAnimation />}
-       {isCurrent && <GlowingParticles />}
+       {isCurrent && <GlowingParticles color={block.color} />}
       <div
         className={cn(
           "absolute top-1 right-1 z-20 flex items-center"

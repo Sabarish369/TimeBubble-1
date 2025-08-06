@@ -2,6 +2,8 @@ import { BUBBLE_COLORS } from "@/lib/constants";
 
 export type BubbleCategory = 'work' | 'study' | 'break' | 'personal' | 'health';
 
+export type BubbleColor = keyof typeof BUBBLE_COLORS;
+
 export type Mood = 'happy' | 'neutral' | 'stressed' | 'tired' | 'focused';
 
 export interface ReflectionData {
@@ -17,7 +19,7 @@ export interface TimeBlock {
   title: string;
   startTime: Date;
   duration: number; // in minutes
-  color: keyof typeof BUBBLE_COLORS;
+  color: BubbleColor;
   category: BubbleCategory;
   completed: boolean;
   description?: string;
@@ -29,7 +31,7 @@ export interface BubbleTemplate {
   title: string;
   description?: string;
   duration: number;
-  color: keyof typeof BUBBLE_COLORS;
+  color: BubbleColor;
   category: BubbleCategory;
   isDefault?: boolean;
 }
