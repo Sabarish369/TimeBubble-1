@@ -1,26 +1,16 @@
+
 'use client';
 
 import * as React from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useTimeBubbles } from '@/context/time-bubbles-context';
 
 export function ThemeToggle() {
-  const [theme, setThemeState] = React.useState<'theme-light' | 'dark' | 'system'>('theme-light');
-
-  React.useEffect(() => {
-    const isDarkMode = document.documentElement.classList.contains('dark');
-    setThemeState(isDarkMode ? 'dark' : 'theme-light');
-  }, []);
-
-  React.useEffect(() => {
-    const isDark =
-      theme === 'dark' ||
-      (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    document.documentElement.classList[isDark ? 'add' : 'remove']('dark');
-  }, [theme]);
+  const { theme, setTheme } = useTimeBubbles();
 
   const toggleTheme = () => {
-    setThemeState(prevTheme => (prevTheme === 'dark' ? 'theme-light' : 'dark'));
+    setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
   return (

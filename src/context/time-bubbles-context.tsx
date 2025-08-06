@@ -8,6 +8,8 @@ import { getSmartSuggestions } from '@/ai/flows/smart-suggestions';
 import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
 
+type Theme = 'light' | 'dark';
+
 interface TimeBubblesContextType {
   timeBlocks: TimeBlock[];
   templates: BubbleTemplate[];
@@ -30,6 +32,8 @@ interface TimeBubblesContextType {
   setSelectedBlock: (block: TimeBlock | null) => void;
   zoomLevel: number;
   setZoomLevel: (level: number) => void;
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
 }
 
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
@@ -37,6 +41,7 @@ const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(und
 const getTodayKey = () => new Date().toISOString().split('T')[0];
 const STORAGE_KEY = 'timebubble_data';
 const ZOOM_STORAGE_KEY = 'timebubble_zoom';
+const THEME_STORAGE_KEY = 'timebubble_theme';
 
 export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
@@ -47,6 +52,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [reflectingBlock, setReflectingBlock] = useState<TimeBlock | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
   const [zoomLevel, setZoomLevelState] = useState(1);
+  const [theme, setThemeState] = useState<Theme>('light');
 
   const { toast } = useToast();
 
@@ -75,6 +81,13 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
             setZoomLevelState(parseFloat(storedZoom));
         }
 
+        const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
+        if (storedTheme) {
+            setThemeState(storedTheme);
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            setThemeState('dark');
+        }
+
       } catch (error) {
         console.error('Failed to load from localStorage', error);
         toast({
@@ -100,6 +113,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
       localStorage.setItem(ZOOM_STORAGE_KEY, String(zoomLevel));
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
     } catch (error) {
       console.error('Failed to save to localStorage', error);
       toast({
@@ -108,7 +122,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         variant: 'destructive',
       });
     }
-  }, [timeBlocks, templates, isLoaded, toast, zoomLevel]);
+  }, [timeBlocks, templates, isLoaded, toast, zoomLevel, theme]);
   
   useEffect(() => {
     const debounceSave = setTimeout(() => {
@@ -118,42 +132,48 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     return () => clearTimeout(debounceSave);
   }, [saveData]);
   
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        const root = window.document.documentElement;
+        root.classList.remove('light', 'dark');
+        root.classList.add(theme);
+    }
+  }, [theme]);
+  
   const findAvailableSlot = useCallback((requestedStartTime: Date, duration: number, excludeId?: string): Date => {
     const sortedBlocks = [...timeBlocks]
       .filter(b => b.id !== excludeId)
       .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
   
     let newStartTime = new Date(requestedStartTime);
-    let resolved = false;
-
-    while(!resolved) {
-        resolved = true;
-        let newEndTime = new Date(newStartTime.getTime() + duration * 60000);
-        
-        for (const block of sortedBlocks) {
-            const blockStartTime = block.startTime;
-            const blockEndTime = new Date(block.startTime.getTime() + block.duration * 60000);
-
-            // Check for overlap
-            if (newStartTime < blockEndTime && newEndTime > blockStartTime) {
-                // Collision detected. Decide whether to snap before or after.
-                const collisionMidpoint = new Date(blockStartTime.getTime() + (block.duration / 2) * 60000);
-                
-                if (newStartTime < collisionMidpoint) {
-                    // Snap before
-                    newStartTime = new Date(blockStartTime.getTime() - duration * 60000);
-                } else {
-                    // Snap after
-                    newStartTime = new Date(blockEndTime);
-                }
-                
-                resolved = false; // Re-run checks with the new time
-                break; 
-            }
+  
+    const checkAndResolveCollisions = (start: Date): Date => {
+      let resolvedTime = new Date(start);
+      let newEndTime = new Date(resolvedTime.getTime() + duration * 60000);
+      let collision = false;
+  
+      for (const block of sortedBlocks) {
+        const blockStartTime = block.startTime;
+        const blockEndTime = new Date(block.startTime.getTime() + block.duration * 60000);
+  
+        if (resolvedTime < blockEndTime && newEndTime > blockStartTime) {
+          collision = true;
+          const collisionMidpoint = new Date(blockStartTime.getTime() + (block.duration / 2) * 60000);
+          
+          if (start < collisionMidpoint) {
+            resolvedTime = new Date(blockStartTime.getTime() - duration * 60000);
+          } else {
+            resolvedTime = new Date(blockEndTime);
+          }
+          // After resolving one collision, re-check against all blocks
+          return checkAndResolveCollisions(resolvedTime);
         }
-    }
-
-    // Ensure the start time is not negative (before midnight)
+      }
+      return resolvedTime;
+    };
+  
+    newStartTime = checkAndResolveCollisions(newStartTime);
+    
     const today = new Date(requestedStartTime);
     today.setHours(0, 0, 0, 0);
     if (newStartTime < today) {
@@ -174,7 +194,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         const originalBlock = prev.find(b => b.id === id);
         if (!originalBlock) return prev;
 
-        // Optimistically apply updates to get new start time and duration
         const tentativeBlock = { ...originalBlock, ...updates };
         const newStartTime = findAvailableSlot(tentativeBlock.startTime, tentativeBlock.duration, id);
 
@@ -251,6 +270,10 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     const newZoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, level));
     setZoomLevelState(newZoomLevel);
   };
+  
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme);
+  };
 
 
   const value = {
@@ -274,7 +297,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     selectedBlock,
     setSelectedBlock,
     zoomLevel,
-    setZoomLevel
+    setZoomLevel,
+    theme,
+    setTheme,
   };
 
   return (
