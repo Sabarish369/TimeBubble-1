@@ -169,7 +169,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const top = Math.max(0, minutesFromMidnight * PIXELS_PER_MINUTE);
   const height = durationToDisplay * PIXELS_PER_MINUTE;
 
-  const showContent = height >= 40;
+  const showFullContent = height >= 60;
+  const showCompactContent = height >= 40 && height < 60;
 
   const endTimeToDisplay = new Date(startTimeToDisplay.getTime() + durationToDisplay * 60000);
 
@@ -178,15 +179,15 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   return (
     <div
       className={cn(
-        'absolute left-[80px] right-4 rounded-lg p-3 flex items-start shadow-md transition-all duration-200 z-10 border-2',
+        'absolute left-[80px] right-4 rounded-lg p-3 flex items-start shadow-md transition-all duration-200 z-10 border',
         'select-none', 
+        'border-slate-300/50 dark:border-slate-700/50',
         isDragging && 'shadow-lg scale-105 z-20 cursor-grabbing',
       )}
       style={{
         top: `${top}px`,
         height: `${height}px`,
         backgroundColor: `hsl(var(--bubble-${block.color}))`,
-        borderColor: `hsl(var(--bubble-${block.color}-dark))`,
       }}
       onMouseDown={handleMouseDown}
     >
@@ -196,12 +197,12 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         )}
       >
         <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer" onClick={(e) => {e.stopPropagation(); setReflectingBlock(block)}}>
-            <MessageSquareText className="w-4 h-4 text-slate-700 dark:text-white/80" />
+            <MessageSquareText className="w-4 h-4 text-slate-700 dark:text-white" />
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer">
-              <MoreVertical className="w-4 h-4 text-slate-700 dark:text-white/80" />
+              <MoreVertical className="w-4 h-4 text-slate-700 dark:text-white" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent onClick={e => e.stopPropagation()}>
@@ -244,39 +245,58 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         </DropdownMenu>
       </div>
 
-      {showContent ? (
-        <div className={cn("flex-grow overflow-hidden cursor-grab flex items-center gap-3 h-full")} onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
-          <Icon className="h-6 w-6 text-slate-700 dark:text-white shrink-0" />
-          <div className="flex-1 overflow-hidden">
-            {isEditing ? (
-              <Input
-                value={title}
-                onChange={handleTitleChange}
-                onBlur={handleTitleBlur}
-                onKeyDown={handleTitleKeyDown}
-                className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-base font-semibold text-slate-800 dark:text-white"
-                autoFocus
-                onClick={e => e.stopPropagation()}
-                onMouseDown={e => e.stopPropagation()}
-              />
-            ) : (
-              <p className="text-base font-semibold text-slate-800 dark:text-white pointer-events-none truncate">{block.title}</p>
-            )}
-            <p className="text-sm text-slate-700 dark:text-white/80 pointer-events-none">
-              {format(startTimeToDisplay, 'p')} - {format(endTimeToDisplay, 'p')}
-            </p>
+      <div className="w-full h-full" onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
+        {showFullContent ? (
+          <div className={cn("flex-grow overflow-hidden cursor-grab flex items-center gap-3 h-full")}>
+            <Icon className="h-6 w-6 text-slate-700 dark:text-white shrink-0" />
+            <div className="flex-1 overflow-hidden">
+              {isEditing ? (
+                <Input
+                  value={title}
+                  onChange={handleTitleChange}
+                  onBlur={handleTitleBlur}
+                  onKeyDown={handleTitleKeyDown}
+                  className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-base font-semibold text-slate-800 dark:text-white"
+                  autoFocus
+                  onClick={e => e.stopPropagation()}
+                  onMouseDown={e => e.stopPropagation()}
+                />
+              ) : (
+                <p className="text-base font-semibold text-slate-800 dark:text-white pointer-events-none truncate">{block.title}</p>
+              )}
+              <p className="text-sm text-slate-700 dark:text-white/80 pointer-events-none">
+                {format(startTimeToDisplay, 'p')} - {format(endTimeToDisplay, 'p')}
+              </p>
+            </div>
           </div>
-        </div>
-      ) : (
-         <div className='absolute inset-0 flex items-center justify-center pointer-events-none'>
-          <p className="text-base font-semibold text-slate-800 dark:text-white">{block.title}</p>
-        </div>
-      )}
-
+        ) : showCompactContent ? (
+           <div className={cn("flex-grow overflow-hidden cursor-grab flex items-center gap-3 h-full")}>
+            <Icon className="h-5 w-5 text-slate-700 dark:text-white shrink-0" />
+             {isEditing ? (
+                <Input
+                  value={title}
+                  onChange={handleTitleChange}
+                  onBlur={handleTitleBlur}
+                  onKeyDown={handleTitleKeyDown}
+                  className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-sm font-semibold text-slate-800 dark:text-white"
+                  autoFocus
+                  onClick={e => e.stopPropagation()}
+                  onMouseDown={e => e.stopPropagation()}
+                />
+              ) : (
+                <p className="text-sm font-semibold text-slate-800 dark:text-white pointer-events-none truncate">{block.title}</p>
+              )}
+          </div>
+        ) : (
+          <div className='w-full h-full flex items-center justify-center pointer-events-none'>
+            <p className="text-xs font-semibold text-slate-800 dark:text-white truncate px-4">{block.title}</p>
+          </div>
+        )}
+      </div>
 
       {block.completed && (
         <div className="absolute inset-0 bg-slate-900/60 rounded-lg flex items-center justify-center pointer-events-none">
-            <Check className="h-8 w-8 text-green-500" />
+            <Check className="h-8 w-8 text-green-400" />
         </div>
       )}
 
