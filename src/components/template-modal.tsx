@@ -33,11 +33,13 @@ import {
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { BUBBLE_COLORS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import type { BubbleCategory } from '@/types';
+import type { BubbleCategory, BubbleTemplate, BubbleColor } from '@/types';
+import { useEffect } from 'react';
 
 interface TemplateModalProps {
   isOpen: boolean;
   onClose: () => void;
+  template?: BubbleTemplate;
 }
 
 const templateSchema = z.object({
@@ -53,8 +55,9 @@ type TemplateFormValues = z.infer<typeof templateSchema>;
 const categories: BubbleCategory[] = ['work', 'study', 'break', 'personal', 'health'];
 const colorNames = Object.keys(BUBBLE_COLORS) as (keyof typeof BUBBLE_COLORS)[];
 
-export function TemplateModal({ isOpen, onClose }: TemplateModalProps) {
-  const { addTemplate } = useTimeBubbles();
+export function TemplateModal({ isOpen, onClose, template }: TemplateModalProps) {
+  const { addTemplate, updateTemplate } = useTimeBubbles();
+  const isEditMode = !!template;
   
   const form = useForm<TemplateFormValues>({
     resolver: zodResolver(templateSchema),
@@ -67,24 +70,48 @@ export function TemplateModal({ isOpen, onClose }: TemplateModalProps) {
     },
   });
 
+  useEffect(() => {
+    if (isOpen) {
+        if (isEditMode && template) {
+            form.reset({
+                title: template.title,
+                description: template.description ?? '',
+                duration: template.duration,
+                category: template.category,
+                color: template.color,
+            });
+        } else {
+            form.reset({
+                title: '',
+                description: '',
+                duration: 30,
+                category: 'personal',
+                color: 'lavender',
+            });
+        }
+    }
+  }, [isOpen, isEditMode, template, form]);
+
   const onSubmit = (data: TemplateFormValues) => {
-    addTemplate(data as Omit<TemplateFormValues, 'id'> & { color: keyof typeof BUBBLE_COLORS});
+    if (isEditMode && template) {
+      updateTemplate(template.id, data as Omit<TemplateFormValues, 'id'> & { color: BubbleColor });
+    } else {
+      addTemplate(data as Omit<TemplateFormValues, 'id'> & { color: BubbleColor });
+    }
     onClose();
-    form.reset();
   };
 
   const handleClose = () => {
     onClose();
-    form.reset();
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create New Template</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit Template' : 'Create New Template'}</DialogTitle>
           <DialogDescription>
-            Design a new time bubble template for quick access.
+            {isEditMode ? 'Modify your existing time bubble template.' : 'Design a new time bubble template for quick access.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -175,7 +202,7 @@ export function TemplateModal({ isOpen, onClose }: TemplateModalProps) {
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
-              <Button type="submit">Create Template</Button>
+              <Button type="submit">{isEditMode ? 'Save Changes' : 'Create Template'}</Button>
             </DialogFooter>
           </form>
         </Form>

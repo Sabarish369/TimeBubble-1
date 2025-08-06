@@ -19,7 +19,8 @@ interface TimeBubblesContextType {
   deleteBlock: (id: string) => void;
   duplicateBlock: (id: string) => void;
   clearAllBlocks: () => void;
-  addTemplate: (template: Omit<BubbleTemplate, 'id'>) => void;
+  addTemplate: (template: Omit<BubbleTemplate, 'id' | 'isDefault'>) => void;
+  updateTemplate: (id: string, updates: Partial<Omit<BubbleTemplate, 'id' | 'isDefault'>>) => void;
   deleteTemplate: (id: string) => void;
   getBlocksForSuggestions: () => string;
   getAiSuggestions: () => Promise<void>;
@@ -147,32 +148,15 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   
     let newStartTime = new Date(requestedStartTime);
   
-    const checkAndResolveCollisions = (start: Date): Date => {
-      let resolvedTime = new Date(start);
-      let newEndTime = new Date(resolvedTime.getTime() + duration * 60000);
-      let collision = false;
-  
-      for (const block of sortedBlocks) {
-        const blockStartTime = block.startTime;
-        const blockEndTime = new Date(block.startTime.getTime() + block.duration * 60000);
-  
-        if (resolvedTime < blockEndTime && newEndTime > blockStartTime) {
-          collision = true;
-          const collisionMidpoint = new Date(blockStartTime.getTime() + (block.duration / 2) * 60000);
-          
-          if (start < collisionMidpoint) {
-            resolvedTime = new Date(blockStartTime.getTime() - duration * 60000);
-          } else {
-            resolvedTime = new Date(blockEndTime);
-          }
-          // After resolving one collision, re-check against all blocks
-          return checkAndResolveCollisions(resolvedTime);
-        }
+    for (const block of sortedBlocks) {
+      const blockStartTime = block.startTime;
+      const blockEndTime = new Date(block.startTime.getTime() + block.duration * 60000);
+      const newEndTime = new Date(newStartTime.getTime() + duration * 60000);
+      
+      if (newStartTime < blockEndTime && newEndTime > blockStartTime) {
+        newStartTime = new Date(blockEndTime);
       }
-      return resolvedTime;
-    };
-  
-    newStartTime = checkAndResolveCollisions(newStartTime);
+    }
     
     const today = new Date(requestedStartTime);
     today.setHours(0, 0, 0, 0);
@@ -222,11 +206,19 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [timeBlocks, addBlock]);
 
-  const addTemplate = useCallback((template: Omit<BubbleTemplate, 'id'>) => {
-    setTemplates(prev => [...prev, { ...template, id: crypto.randomUUID() }]);
+  const addTemplate = useCallback((template: Omit<BubbleTemplate, 'id' | 'isDefault'>) => {
+    setTemplates(prev => [...prev, { ...template, id: crypto.randomUUID(), isDefault: false }]);
     toast({
         title: 'Template Created',
         description: `"${template.title}" has been added to your templates.`,
+    });
+  }, [toast]);
+
+  const updateTemplate = useCallback((id: string, updates: Partial<Omit<BubbleTemplate, 'id' | 'isDefault'>>) => {
+    setTemplates(prev => prev.map(t => (t.id === id ? { ...t, ...updates } : t)));
+    toast({
+        title: 'Template Updated',
+        description: `Your template has been updated.`,
     });
   }, [toast]);
 
@@ -286,6 +278,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     duplicateBlock,
     clearAllBlocks,
     addTemplate,
+    updateTemplate,
     deleteTemplate,
     getBlocksForSuggestions,
     getAiSuggestions,

@@ -2,7 +2,7 @@
 'use client';
 
 import type { DragEvent } from 'react';
-import { Briefcase, BookOpen, Coffee, User, Heart, Plus, Trash2, type LucideIcon } from 'lucide-react';
+import { Briefcase, BookOpen, Coffee, User, Heart, Plus, Trash2, Pencil, type LucideIcon } from 'lucide-react';
 import { BUBBLE_COLORS, SIDEBAR_WIDTH } from '@/lib/constants';
 import type { BubbleCategory, BubbleTemplate } from '@/types';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
@@ -40,7 +40,8 @@ const defaultTemplates: BubbleTemplate[] = [
 export function Sidebar() {
   const { templates, deleteTemplate } = useTimeBubbles();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+  const [editingTemplate, setEditingTemplate] = useState<BubbleTemplate | undefined>(undefined);
+
   const allTemplates = [...defaultTemplates, ...templates];
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, template: BubbleTemplate) => {
@@ -70,6 +71,21 @@ export function Sidebar() {
     }, 0);
   };
 
+  const handleOpenCreateModal = () => {
+    setEditingTemplate(undefined);
+    setIsModalOpen(true);
+  }
+
+  const handleOpenEditModal = (template: BubbleTemplate) => {
+    setEditingTemplate(template);
+    setIsModalOpen(true);
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingTemplate(undefined);
+  }
+
   return (
     <aside
       className="p-4 border-r bg-card shrink-0 flex flex-col"
@@ -77,7 +93,7 @@ export function Sidebar() {
     >
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-center">Templates</h2>
-        <Button variant="ghost" size="icon" onClick={() => setIsModalOpen(true)}>
+        <Button variant="ghost" size="icon" onClick={handleOpenCreateModal}>
           <Plus className="h-5 w-5" />
           <span className="sr-only">Create New Template</span>
         </Button>
@@ -100,36 +116,50 @@ export function Sidebar() {
                 <p className="text-xs text-slate-700 dark:text-white/80">{template.duration} min</p>
               </div>
               {!template.isDefault && (
-                 <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
+                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                  <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity absolute top-1 right-1"
-                      onClick={(e) => e.stopPropagation()}
+                      className="h-7 w-7"
+                      onClick={() => handleOpenEditModal(template)}
                     >
-                      <Trash2 className="h-4 w-4 text-slate-700 dark:text-white/80" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently delete the "{template.title}" template. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => deleteTemplate(template.id)}>Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                      <Pencil className="h-4 w-4 text-slate-700 dark:text-white/80" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Trash2 className="h-4 w-4 text-slate-700 dark:text-white/80" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete the "{template.title}" template. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteTemplate(template.id)}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               )}
             </div>
           );
         })}
       </div>
-      <TemplateModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <TemplateModal 
+        isOpen={isModalOpen} 
+        onClose={handleCloseModal}
+        template={editingTemplate}
+      />
     </aside>
   );
 }
