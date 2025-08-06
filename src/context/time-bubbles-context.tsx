@@ -28,7 +28,7 @@ interface TimeBubblesContextType {
   addTemplate: (template: Omit<BubbleTemplate, 'id' | 'isDefault'>) => void;
   updateTemplate: (id: string, updates: Partial<Omit<BubbleTemplate, 'id' | 'isDefault'>>) => void;
   deleteTemplate: (id: string) => void;
-  rescheduleBlock: (id: string, newDate: Date) => void;
+  rescheduleBlock: (id: string, newStartTime: Date) => void;
   getBlocksForSuggestions: () => string;
   getAiSuggestions: () => Promise<void>;
   suggestions: string[];
@@ -290,13 +290,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [toast]);
 
-  const rescheduleBlock = (id: string, newDate: Date) => {
+  const rescheduleBlock = (id: string, newStartTime: Date) => {
     const blockToReschedule = timeBlocks.find(b => b.id === id);
     if (!blockToReschedule) return;
-
-    const newStartTime = new Date(newDate);
-    newStartTime.setHours(blockToReschedule.startTime.getHours());
-    newStartTime.setMinutes(blockToReschedule.startTime.getMinutes());
 
     const rescheduledBlock = {
       ...blockToReschedule,
@@ -304,7 +300,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     };
     
     // Save to the new date's storage
-    const newDayKey = getDayKey(newDate);
+    const newDayKey = getDayKey(newStartTime);
     try {
       const storedData = localStorage.getItem(STORAGE_KEY);
       const allData = storedData ? JSON.parse(storedData) : { daily_data: {} };
