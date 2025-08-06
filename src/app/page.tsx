@@ -40,7 +40,7 @@ function AppContent() {
       <Header />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
-        <main ref={mainRef} className="flex-1 overflow-y-auto">
+        <main ref={mainRef} className="flex-1 overflow-y-auto bg-gradient-to-b from-primary/5 via-background to-accent/5">
           <Timeline />
         </main>
       </div>

@@ -75,7 +75,7 @@ export function Timeline() {
   return (
     <div
       ref={timelineRef}
-      className="relative w-full bg-gradient-to-b from-primary/5 via-background to-accent/5"
+      className="relative w-full"
       style={{ height: `${TOTAL_HOURS * hourHeight}px` }}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
