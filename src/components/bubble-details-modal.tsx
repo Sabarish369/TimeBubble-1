@@ -4,20 +4,31 @@
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, FormControl, FormField, FormItem, FormMessage } from './ui/form';
+import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from './ui/form';
 import { useState, useEffect } from 'react';
 import { Input } from './ui/input';
+import { cn } from '@/lib/utils';
 
 const detailsSchema = z.object({
   title: z.string().min(2).max(50),
   description: z.string().max(200).optional(),
+  startTime: z.string(),
+  endTime: z.string(),
+}).refine(data => {
+    const start = parse(data.startTime, 'p', new Date());
+    const end = parse(data.endTime, 'p', new Date());
+    return end > start;
+}, {
+    message: "End time must be after start time",
+    path: ["endTime"],
 });
+
 type DetailsFormValues = z.infer<typeof detailsSchema>;
 
 export function BubbleDetailsModal() {
@@ -26,10 +37,6 @@ export function BubbleDetailsModal() {
 
   const form = useForm<DetailsFormValues>({
     resolver: zodResolver(detailsSchema),
-    defaultValues: {
-      title: '',
-      description: '',
-    },
   });
 
   useEffect(() => {
@@ -37,6 +44,8 @@ export function BubbleDetailsModal() {
       form.reset({
         title: selectedBlock.title,
         description: selectedBlock.description ?? '',
+        startTime: format(selectedBlock.startTime, 'p'),
+        endTime: format(new Date(selectedBlock.startTime.getTime() + selectedBlock.duration * 60000), 'p'),
       });
     }
   }, [selectedBlock, form]);
@@ -54,9 +63,27 @@ export function BubbleDetailsModal() {
   };
 
   const onSubmit = (data: DetailsFormValues) => {
-    updateBlock(selectedBlock.id, { title: data.title, description: data.description });
+    const today = selectedBlock.startTime;
+    const newStartTime = parse(data.startTime, 'p', today);
+    const newEndTime = parse(data.endTime, 'p', today);
+    
+    // Handle overnight case for end time
+    if (newEndTime <= newStartTime) {
+      newEndTime.setDate(newEndTime.getDate() + 1);
+    }
+    
+    const newDuration = (newEndTime.getTime() - newStartTime.getTime()) / (1000 * 60);
+
+    const updatedData = { 
+        title: data.title, 
+        description: data.description,
+        startTime: newStartTime,
+        duration: newDuration,
+    };
+    
+    updateBlock(selectedBlock.id, updatedData);
     setIsEditing(false);
-    setSelectedBlock({ ...selectedBlock, ...data });
+    setSelectedBlock({ ...selectedBlock, ...updatedData });
   };
   
   const startTime = format(selectedBlock.startTime, 'p');
@@ -84,12 +111,42 @@ export function BubbleDetailsModal() {
                         ) : (
                             <DialogTitle>{selectedBlock.title}</DialogTitle>
                         )}
-                        <DialogDescription>
+                         <DialogDescription className={cn(isEditing && "hidden")}>
                             {startTime} - {endTime} ({selectedBlock.duration} minutes)
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
+                        {isEditing && (
+                             <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="startTime"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Start Time</FormLabel>
+                                            <FormControl>
+                                                <Input {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="endTime"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>End Time</FormLabel>
+                                            <FormControl>
+                                                <Input {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        )}
                         <div className='space-y-2'>
                             <h4 className='font-medium'>Category</h4>
                             <Badge variant="secondary" className='capitalize'>{selectedBlock.category}</Badge>

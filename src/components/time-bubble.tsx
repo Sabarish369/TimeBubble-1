@@ -41,6 +41,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setSelectedBlock } = useTimeBubbles();
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'top' | 'bottom' | null>(null);
+  const [didMove, setDidMove] = useState(false);
   
   const [liveStartTime, setLiveStartTime] = useState(block.startTime);
   const [liveDuration, setLiveDuration] = useState(block.duration);
@@ -66,6 +67,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     e.stopPropagation();
 
     setIsDragging(true);
+    setDidMove(false);
     dragStartRef.current = { y: e.clientY, initialTop: top, initialHeight: 0 };
   };
 
@@ -73,6 +75,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     e.preventDefault();
     e.stopPropagation();
     setIsResizing(direction);
+    setDidMove(false);
     dragStartRef.current = { y: e.clientY, initialTop: top, initialHeight: height };
   };
   
@@ -83,10 +86,11 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
             return;
         }
     }
-    if (!isDragging && !isResizing) {
-        e.stopPropagation();
-        setSelectedBlock(block);
+    if (didMove) {
+        return;
     }
+    e.stopPropagation();
+    setSelectedBlock(block);
   };
 
   const handleMouseUp = useCallback(() => {
@@ -105,15 +109,18 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
   const handleMouseMove = useCallback((e: globalThis.MouseEvent) => {
     if (!isDragging && !isResizing) return;
+    
+    const deltaY = e.clientY - dragStartRef.current.y;
+    if (Math.abs(deltaY) > 2) { // Threshold to detect actual movement
+      setDidMove(true);
+    }
+    
     e.preventDefault();
 
     const timeline = timelineRef.current;
     if (!timeline) return;
     
     const timelineRect = timeline.getBoundingClientRect();
-    const relativeY = e.clientY - timelineRect.top;
-
-    const deltaY = e.clientY - dragStartRef.current.y;
 
     if (isDragging) {
       const newTop = dragStartRef.current.initialTop + deltaY;
