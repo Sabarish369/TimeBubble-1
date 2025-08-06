@@ -87,7 +87,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     const checkState = () => {
       if (!isToday(currentDate)) {
         setIsCurrent(false);
-        setIsPast(false);
+        setIsPast(true); // If it's not today, it's in the past or future
         return;
       }
       const now = new Date();
@@ -237,7 +237,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const Icon = categoryIcons[block.category];
   
   const isOverdue = isPast && !block.completed;
-  const isInteractive = !isOverdue || block.completed;
+  const isInteractive = !isOverdue;
   const showAsCurrent = isCurrent && !block.completed;
 
   const bubbleStyle: React.CSSProperties = {
