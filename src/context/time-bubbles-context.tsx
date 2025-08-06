@@ -111,48 +111,43 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       .filter(b => b.id !== excludeId)
       .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
   
-    let finalStartTime = new Date(requestedStartTime);
+    let newStartTime = new Date(requestedStartTime);
+    let newEndTime = new Date(newStartTime.getTime() + duration * 60000);
   
-    const checkAndResolveCollisions = (newStartTime: Date): Date => {
-      const newEndTime = new Date(newStartTime.getTime() + duration * 60000);
-  
+    let resolved = false;
+    while (!resolved) {
+      resolved = true;
       for (const block of sortedBlocks) {
         const blockStartTime = block.startTime;
-        const blockEndTime = new Date(blockStartTime.getTime() + block.duration * 60000);
-  
+        const blockEndTime = new Date(block.startTime.getTime() + block.duration * 60000);
+        
         // Check for overlap
         if (newStartTime < blockEndTime && newEndTime > blockStartTime) {
-          // Collision detected. Decide whether to snap before or after.
           const collisionMidpoint = new Date(blockStartTime.getTime() + (block.duration / 2) * 60000);
-          
-          let resolvedStartTime;
+
           if (requestedStartTime < collisionMidpoint) {
             // Snap before the conflicting block
-            resolvedStartTime = new Date(blockStartTime.getTime() - duration * 60000);
+            newStartTime = new Date(blockStartTime.getTime() - duration * 60000);
           } else {
             // Snap after the conflicting block
-            resolvedStartTime = new Date(blockEndTime);
+            newStartTime = new Date(blockEndTime);
           }
           
-          // Recursively check again from the new resolved position
-          return checkAndResolveCollisions(resolvedStartTime);
+          newEndTime = new Date(newStartTime.getTime() + duration * 60000);
+          resolved = false; // Re-run checks with the new time
+          break; 
         }
       }
-      
-      // No collisions found, this start time is valid
-      return newStartTime;
-    };
-  
-    finalStartTime = checkAndResolveCollisions(finalStartTime);
+    }
   
     // Ensure the start time is not negative (before midnight)
     const today = new Date(requestedStartTime);
     today.setHours(0, 0, 0, 0);
-    if (finalStartTime < today) {
+    if (newStartTime < today) {
       return today;
     }
   
-    return finalStartTime;
+    return newStartTime;
   }, [timeBlocks]);
 
 
