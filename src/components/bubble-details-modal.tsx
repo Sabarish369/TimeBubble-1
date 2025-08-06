@@ -4,7 +4,7 @@
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { format, parse } from 'date-fns';
+import { format, parse, startOfDay } from 'date-fns';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
 import { useForm } from 'react-hook-form';
@@ -14,6 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from '
 import { useState, useEffect } from 'react';
 import { Input } from './ui/input';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const detailsSchema = z.object({
   title: z.string().min(2).max(50),
@@ -30,6 +31,14 @@ const detailsSchema = z.object({
 });
 
 type DetailsFormValues = z.infer<typeof detailsSchema>;
+
+// Generate time options for every 15 minutes
+const timeOptions = Array.from({ length: 24 * 4 }, (_, i) => {
+    const totalMinutes = i * 15;
+    const date = startOfDay(new Date());
+    date.setMinutes(totalMinutes);
+    return format(date, 'p');
+});
 
 export function BubbleDetailsModal() {
   const { selectedBlock, setSelectedBlock, updateBlock } = useTimeBubbles();
@@ -48,7 +57,7 @@ export function BubbleDetailsModal() {
         endTime: format(new Date(selectedBlock.startTime.getTime() + selectedBlock.duration * 60000), 'p'),
       });
     }
-  }, [selectedBlock, form]);
+  }, [selectedBlock, form, isEditing]);
   
   if (!selectedBlock) return null;
 
@@ -125,9 +134,18 @@ export function BubbleDetailsModal() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Start Time</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} />
-                                            </FormControl>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select a time" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {timeOptions.map(time => (
+                                                            <SelectItem key={time} value={time}>{time}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -138,9 +156,18 @@ export function BubbleDetailsModal() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>End Time</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} />
-                                            </FormControl>
+                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select a time" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {timeOptions.map(time => (
+                                                        <SelectItem key={time} value={time}>{time}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}
