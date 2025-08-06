@@ -7,7 +7,7 @@ import type { TimeBlock, BubbleTemplate } from '@/types';
 import { getSmartSuggestions } from '@/ai/flows/smart-suggestions';
 import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
-import { addDays, format, startOfDay } from 'date-fns';
+import { addDays, format, startOfDay, isToday } from 'date-fns';
 
 type Theme = 'light' | 'dark';
 
@@ -57,6 +57,25 @@ const STORAGE_KEY = 'timebubble_data';
 const ZOOM_STORAGE_KEY = 'timebubble_zoom';
 const THEME_STORAGE_KEY = 'timebubble_theme';
 
+const playNotificationSound = () => {
+    if (typeof window !== 'undefined' && window.AudioContext) {
+        const audioContext = new window.AudioContext();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 1);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 1);
+    }
+};
+
 export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [history, setHistory] = useState<TimeBlock[][]>([]);
@@ -74,6 +93,23 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setThemeState] = useState<Theme>('light');
 
   const { toast } = useToast();
+
+   useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      toast({
+        title: 'Enable Notifications',
+        description: 'Get notified when your time bubbles end.',
+        action: (
+          <button
+            onClick={() => Notification.requestPermission()}
+            className="inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium"
+          >
+            Enable
+          </button>
+        ),
+      });
+    }
+  }, [toast]);
 
   // Load data whenever the current date changes
   useEffect(() => {
@@ -223,13 +259,13 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const addBlock = useCallback((block: Omit<TimeBlock, 'id' | 'completed'>) => {
     setTimeBlocksWithHistory(prev => {
         const newStartTime = findAvailableSlot(block.startTime, block.duration);
-        return [...prev, { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false }];
+        return [...prev, { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false, notified: false }];
     });
   }, [findAvailableSlot, setTimeBlocksWithHistory]);
 
   const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
     // This is a special case. Reflections shouldn't be part of the undo/redo history.
-    if ('completed' in updates || 'reflection' in updates) {
+    if ('completed' in updates || 'reflection' in updates || 'notified' in updates) {
       setTimeBlocks(prev => prev.map(b => (b.id === id ? { ...b, ...updates } : b)));
       return;
     }
@@ -244,6 +280,36 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         return prev.map(b => (b.id === id ? { ...b, ...updates, startTime: newStartTime } : b));
     });
   }, [findAvailableSlot, setTimeBlocksWithHistory]);
+
+  // Interval for notifications. Moved here to be after updateBlock definition.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isToday(currentDate) || document.hidden) return;
+  
+      const now = new Date();
+      timeBlocks.forEach(block => {
+        const endTime = new Date(block.startTime.getTime() + block.duration * 60000);
+        if (now >= endTime && !block.completed && !block.notified) {
+          if (Notification.permission === 'granted') {
+            const notification = new Notification(`Time's up for "${block.title}"!`, {
+              body: 'Time to reflect on your task.',
+              icon: '/favicon.ico', 
+            });
+            playNotificationSound();
+
+            notification.onclick = () => {
+              window.focus();
+              setReflectingBlock(block);
+            };
+            
+            updateBlock(block.id, { notified: true });
+          }
+        }
+      });
+    }, 10000); // Check every 10 seconds
+  
+    return () => clearInterval(interval);
+  }, [timeBlocks, currentDate, updateBlock]);
 
 
   const deleteBlock = useCallback((id: string) => {
@@ -297,6 +363,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     const rescheduledBlock = {
       ...blockToReschedule,
       startTime: newStartTime,
+      notified: false,
     };
     
     // Save to the new date's storage

@@ -24,11 +24,12 @@ export interface TimeBlock {
   completed: boolean;
   description?: string;
   reflection?: ReflectionData;
+  notified?: boolean;
 }
 
 export interface BubbleTemplate {
   id: string;
-  title: string;
+  title:string;
   description?: string;
   duration: number;
   color: BubbleColor;
