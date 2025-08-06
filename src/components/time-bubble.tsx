@@ -175,7 +175,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     if (isDragging) {
       const newTop = dragStartRef.current.initialTop + deltaY;
       const newMinutesRaw = newTop / pixelsPerMinute;
-      const newMinutes = Math.round(Math.max(0, newMinutesRaw));
+      const newMinutes = Math.max(0, newMinutesRaw);
       const newStartTime = new Date(block.startTime);
       newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
       setLiveStartTime(newStartTime);
@@ -184,7 +184,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     if (isResizing) {
       if (isResizing === 'bottom') {
         const newHeight = dragStartRef.current.initialHeight + deltaY;
-        const newDuration = Math.max(15, Math.round(newHeight / pixelsPerMinute));
+        const newDuration = Math.max(15, newHeight / pixelsPerMinute);
         setLiveDuration(newDuration);
       }
       if (isResizing === 'top') {
@@ -193,7 +193,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         
         if (newHeight >= 15 * pixelsPerMinute) {
           const newMinutesRaw = newTop / pixelsPerMinute;
-          const newMinutes = Math.round(Math.max(0, newMinutesRaw));
+          const newMinutes = Math.max(0, newMinutesRaw);
           const newStartTime = new Date(block.startTime);
           newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
 
@@ -201,7 +201,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
           originalEndTime.setMinutes(originalEndTime.getMinutes() + block.duration);
 
           const durationDifference = (originalEndTime.getTime() - newStartTime.getTime()) / (1000 * 60);
-          const newDuration = Math.max(15, Math.round(durationDifference));
+          const newDuration = Math.max(15, durationDifference);
           
           setLiveStartTime(newStartTime);
           setLiveDuration(newDuration);
