@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Label } from './ui/label';
 
 const hourOptions = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
-const minuteOptions = ['00', '15', '30', '45'];
+const minuteOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
 
 export function RescheduleModal() {
   const { reschedulingBlock, setReschedulingBlock, rescheduleBlock } = useTimeBubbles();

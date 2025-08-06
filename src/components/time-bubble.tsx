@@ -175,7 +175,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     if (isDragging) {
       const newTop = dragStartRef.current.initialTop + deltaY;
       const newMinutesRaw = newTop / pixelsPerMinute;
-      const newMinutes = Math.round(Math.max(0, newMinutesRaw) / 15) * 15;
+      const newMinutes = Math.round(Math.max(0, newMinutesRaw));
       const newStartTime = new Date(block.startTime);
       newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
       setLiveStartTime(newStartTime);
@@ -184,7 +184,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     if (isResizing) {
       if (isResizing === 'bottom') {
         const newHeight = dragStartRef.current.initialHeight + deltaY;
-        const newDuration = Math.max(15, Math.round(newHeight / pixelsPerMinute / 15) * 15);
+        const newDuration = Math.max(15, Math.round(newHeight / pixelsPerMinute));
         setLiveDuration(newDuration);
       }
       if (isResizing === 'top') {
@@ -193,7 +193,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         
         if (newHeight >= 15 * pixelsPerMinute) {
           const newMinutesRaw = newTop / pixelsPerMinute;
-          const newMinutes = Math.round(Math.max(0, newMinutesRaw) / 15) * 15;
+          const newMinutes = Math.round(Math.max(0, newMinutesRaw));
           const newStartTime = new Date(block.startTime);
           newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
 
@@ -201,7 +201,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
           originalEndTime.setMinutes(originalEndTime.getMinutes() + block.duration);
 
           const durationDifference = (originalEndTime.getTime() - newStartTime.getTime()) / (1000 * 60);
-          const newDuration = Math.max(15, Math.round(durationDifference / 15) * 15);
+          const newDuration = Math.max(15, Math.round(durationDifference));
           
           setLiveStartTime(newStartTime);
           setLiveDuration(newDuration);
@@ -310,7 +310,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
                   key={colorName}
                   className={cn("w-6 h-6 rounded-full border", block.color === colorName && "ring-2 ring-ring")}
                   style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
-                  onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBBLE_COLORS })}
+                  onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBble_COLORS })}
                 />
               ))}
             </div>

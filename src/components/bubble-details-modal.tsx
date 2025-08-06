@@ -38,7 +38,7 @@ type DetailsFormValues = z.infer<typeof detailsSchema>;
 
 // Generate time options
 const hourOptions = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
-const minuteOptions = ['00', '15', '30', '45'];
+const minuteOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
 
 
 export function BubbleDetailsModal() {
