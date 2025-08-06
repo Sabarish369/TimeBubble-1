@@ -41,7 +41,7 @@ export function Header() {
           <ZoomOut className="h-5 w-5" />
             <Slider
               value={[zoomLevel]}
-              onValueValueChange={(value) => setZoomLevel(value[0])}
+              onValueChange={(value) => setZoomLevel(value[0])}
               min={MIN_ZOOM}
               max={MAX_ZOOM}
               step={0.1}
