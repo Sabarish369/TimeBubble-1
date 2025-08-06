@@ -106,54 +106,50 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     return () => clearTimeout(debounceSave);
   }, [saveData]);
   
-  const isOverlapping = useCallback((newBlock: Omit<TimeBlock, 'id'>, existingBlocks: TimeBlock[], excludeId?: string) => {
-    const newStartTime = newBlock.startTime.getTime();
-    const newEndTime = newStartTime + newBlock.duration * 60000;
+ const findNextAvailableSlot = useCallback((startTime: Date, duration: number, excludeId?: string): Date => {
+    let proposedStartTime = startTime.getTime();
+    
+    const sortedBlocks = [...timeBlocks]
+        .filter(b => b.id !== excludeId)
+        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-    for (const existingBlock of existingBlocks) {
-      if (existingBlock.id === excludeId) continue;
-
-      const existingStartTime = existingBlock.startTime.getTime();
-      const existingEndTime = existingStartTime + existingBlock.duration * 60000;
+    let isOverlapping;
+    do {
+      isOverlapping = false;
+      const proposedEndTime = proposedStartTime + duration * 60000;
       
-      // Overlap if (startA < endB) and (endA > startB)
-      if (newStartTime < existingEndTime && newEndTime > existingStartTime) {
-        return true;
+      for (const block of sortedBlocks) {
+        const blockStartTime = block.startTime.getTime();
+        const blockEndTime = blockStartTime + block.duration * 60000;
+
+        if (proposedStartTime < blockEndTime && proposedEndTime > blockStartTime) {
+          proposedStartTime = blockEndTime;
+          isOverlapping = true;
+          break; // Restart check with new proposedStartTime
+        }
       }
-    }
-    return false;
-  }, []);
+    } while (isOverlapping);
+
+    return new Date(proposedStartTime);
+  }, [timeBlocks]);
 
 
   const addBlock = useCallback((block: Omit<TimeBlock, 'id' | 'completed'>) => {
-    if (isOverlapping(block, timeBlocks)) {
-      toast({
-        title: 'Overlapping Time',
-        description: 'This time slot is already taken.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    setTimeBlocks(prev => [...prev, { ...block, id: crypto.randomUUID(), completed: false }]);
-  }, [timeBlocks, isOverlapping, toast]);
+    const newStartTime = findNextAvailableSlot(block.startTime, block.duration);
+    setTimeBlocks(prev => [...prev, { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false }]);
+  }, [findNextAvailableSlot]);
 
   const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
     const originalBlock = timeBlocks.find(b => b.id === id);
     if (!originalBlock) return;
 
-    const updatedBlock = { ...originalBlock, ...updates };
-    
-    if (isOverlapping(updatedBlock, timeBlocks, id)) {
-      toast({
-        title: 'Overlapping Time',
-        description: 'This time slot is already taken.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    let updatedBlock = { ...originalBlock, ...updates };
+
+    const newStartTime = findNextAvailableSlot(updatedBlock.startTime, updatedBlock.duration, id);
+    updatedBlock.startTime = newStartTime;
 
     setTimeBlocks(prev => prev.map(b => (b.id === id ? updatedBlock : b)));
-  }, [timeBlocks, isOverlapping, toast]);
+  }, [timeBlocks, findNextAvailableSlot]);
 
   const deleteBlock = useCallback((id: string) => {
     setTimeBlocks(prev => prev.filter(b => b.id !== id));
