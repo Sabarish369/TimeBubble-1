@@ -11,18 +11,19 @@ export function ZoomControls() {
   const { zoomLevel, setZoomLevel } = useTimeBubbles();
   return (
     <div className="flex items-center gap-2 w-32">
-      <Button variant="ghost" size="icon" onClick={() => setZoomLevel(zoomLevel - 0.2)}>
+      <Button variant="ghost" size="icon" onClick={() => setZoomLevel(Math.max(MIN_ZOOM, zoomLevel - 0.2))}>
         <ZoomOut className="h-5 w-5" />
         <span className="sr-only">Zoom Out</span>
       </Button>
       <Slider
-        value={[zoomLevel]}
+        defaultValue={[zoomLevel]}
         onValueChange={(value) => setZoomLevel(value[0])}
         min={MIN_ZOOM}
         max={MAX_ZOOM}
         step={0.1}
+        key={zoomLevel}
       />
-      <Button variant="ghost" size="icon" onClick={() => setZoomLevel(zoomLevel + 0.2)}>
+      <Button variant="ghost" size="icon" onClick={() => setZoomLevel(Math.min(MAX_ZOOM, zoomLevel + 0.2))}>
         <ZoomIn className="h-5 w-5" />
         <span className="sr-only">Zoom In</span>
       </Button>
