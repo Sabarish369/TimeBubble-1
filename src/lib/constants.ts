@@ -10,3 +10,5 @@ export const BUBBLE_COLORS = {
   'rose-gold': 'hsl(var(--bubble-rose-gold))',
 };
 export const DEFAULT_BUBBLE_COLOR = 'lavender';
+export const MIN_ZOOM = 0.5;
+export const MAX_ZOOM = 3;

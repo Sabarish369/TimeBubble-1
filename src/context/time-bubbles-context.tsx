@@ -6,6 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import type { TimeBlock, BubbleTemplate } from '@/types';
 import { getSmartSuggestions } from '@/ai/flows/smart-suggestions';
 import { useToast } from '@/hooks/use-toast';
+import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
 
 interface TimeBubblesContextType {
   timeBlocks: TimeBlock[];
@@ -28,8 +29,7 @@ interface TimeBubblesContextType {
   selectedBlock: TimeBlock | null;
   setSelectedBlock: (block: TimeBlock | null) => void;
   zoomLevel: number;
-  zoomIn: () => void;
-  zoomOut: () => void;
+  setZoomLevel: (level: number) => void;
 }
 
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
@@ -37,10 +37,6 @@ const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(und
 const getTodayKey = () => new Date().toISOString().split('T')[0];
 const STORAGE_KEY = 'timebubble_data';
 const ZOOM_STORAGE_KEY = 'timebubble_zoom';
-
-const MIN_ZOOM = 0.5;
-const MAX_ZOOM = 3;
-const ZOOM_STEP = 0.25;
 
 export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
@@ -50,7 +46,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [reflectingBlock, setReflectingBlock] = useState<TimeBlock | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel, setZoomLevelState] = useState(1);
 
   const { toast } = useToast();
 
@@ -76,7 +72,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
         const storedZoom = localStorage.getItem(ZOOM_STORAGE_KEY);
         if (storedZoom) {
-            setZoomLevel(parseFloat(storedZoom));
+            setZoomLevelState(parseFloat(storedZoom));
         }
 
       } catch (error) {
@@ -251,13 +247,11 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     setSuggestions([]);
   };
 
-  const zoomIn = () => {
-    setZoomLevel(prev => Math.min(MAX_ZOOM, prev + ZOOM_STEP));
+  const setZoomLevel = (level: number) => {
+    const newZoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, level));
+    setZoomLevelState(newZoomLevel);
   };
-  
-  const zoomOut = () => {
-    setZoomLevel(prev => Math.max(MIN_ZOOM, prev - ZOOM_STEP));
-  };
+
 
   const value = {
     timeBlocks,
@@ -280,8 +274,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     selectedBlock,
     setSelectedBlock,
     zoomLevel,
-    zoomIn,
-    zoomOut
+    setZoomLevel
   };
 
   return (

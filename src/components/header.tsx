@@ -20,9 +20,11 @@ import { TimeBubbleLogo } from '@/components/timebubble-logo';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { SmartSuggestions } from '@/components/smart-suggestions';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
+import { Slider } from './ui/slider';
+import { MIN_ZOOM, MAX_ZOOM } from '@/lib/constants';
 
 export function Header() {
-  const { clearAllBlocks, zoomIn, zoomOut } = useTimeBubbles();
+  const { clearAllBlocks, zoomLevel, setZoomLevel } = useTimeBubbles();
 
   return (
     <header className="flex items-center justify-between p-4 border-b shrink-0">
@@ -34,15 +36,18 @@ export function Header() {
           {format(new Date(), 'EEEE, MMMM do')}
         </span>
       </div>
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={zoomIn}>
-          <ZoomIn className="h-5 w-5" />
-          <span className="sr-only">Zoom In</span>
-        </Button>
-        <Button variant="ghost" size="icon" onClick={zoomOut}>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 w-32">
           <ZoomOut className="h-5 w-5" />
-          <span className="sr-only">Zoom Out</span>
-        </Button>
+            <Slider
+              value={[zoomLevel]}
+              onValueChange={(value) => setZoomLevel(value[0])}
+              min={MIN_ZOOM}
+              max={MAX_ZOOM}
+              step={0.1}
+            />
+          <ZoomIn className="h-5 w-5" />
+        </div>
         <SmartSuggestions />
         <AlertDialog>
           <AlertDialogTrigger asChild>
