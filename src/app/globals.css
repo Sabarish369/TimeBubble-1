@@ -42,7 +42,7 @@ body {
     --bubble-rose-gold: 0 74% 82%;
   }
   .dark {
-    --background: 240 10% 3.9%;
+    --background: 240 10% 3.9% / 0.9;
     --foreground: 0 0% 98%;
     --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
@@ -81,6 +81,7 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
   }
 }
 
@@ -210,10 +211,10 @@ body {
 
   @keyframes glow {
     from {
-      box-shadow: 0 0 5px -2px var(--glow-color), 0 0 10px -2px var(--glow-color), 0 0 15px -2px var(--glow-color);
+      box-shadow: 0 0 5px -2px hsl(var(--glow-color)), 0 0 10px -2px hsl(var(--glow-color)), 0 0 15px -2px hsl(var(--glow-color));
     }
     to {
-      box-shadow: 0 0 5px 2px var(--glow-color), 0 0 10px 2px var(--glow-color), 0 0 15px 2px var(--glow-color);
+      box-shadow: 0 0 5px 2px hsl(var(--glow-color)), 0 0 10px 2px hsl(var(--glow-color)), 0 0 15px 2px hsl(var(--glow-color));
     }
   }
 }
