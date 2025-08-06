@@ -39,6 +39,10 @@ interface TimeBubblesContextType {
   setZoomLevel: (level: number) => void;
   theme: Theme;
   setTheme: (theme: Theme) => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
@@ -50,6 +54,9 @@ const THEME_STORAGE_KEY = 'timebubble_theme';
 
 export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
+  const [history, setHistory] = useState<TimeBlock[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
   const [templates, setTemplates] = useState<BubbleTemplate[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -61,7 +68,20 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setThemeState] = useState<Theme>('light');
 
   const { toast } = useToast();
+
+  const updateHistory = (newBlocks: TimeBlock[]) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(newBlocks);
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
   
+  const setTimeBlocksWithHistory = (newBlocks: TimeBlock[] | ((prev: TimeBlock[]) => TimeBlock[])) => {
+    const updatedBlocks = typeof newBlocks === 'function' ? newBlocks(timeBlocks) : newBlocks;
+    setTimeBlocks(updatedBlocks);
+    updateHistory(updatedBlocks);
+  };
+
   const loadDataForDate = useCallback((date: Date) => {
     if (typeof window !== 'undefined') {
       try {
@@ -77,9 +97,14 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
             reflection: block.reflection ? { ...block.reflection, timestamp: new Date(block.reflection.timestamp) } : undefined,
           }));
           setTimeBlocks(blocksWithDates);
+          setHistory([blocksWithDates]);
+          setHistoryIndex(0);
 
           const customTemplates = parsedData.custom_templates ?? [];
           setTemplates(customTemplates);
+        } else {
+            setHistory([[]]);
+            setHistoryIndex(0);
         }
       } catch (error) {
         console.error('Failed to load from localStorage', error);
@@ -180,12 +205,20 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
 
   const addBlock = useCallback((block: Omit<TimeBlock, 'id' | 'completed'>) => {
-    const newStartTime = findAvailableSlot(block.startTime, block.duration);
-    setTimeBlocks(prev => [...prev, { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false }]);
+    setTimeBlocksWithHistory(prev => {
+        const newStartTime = findAvailableSlot(block.startTime, block.duration);
+        return [...prev, { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false }];
+    });
   }, [findAvailableSlot]);
 
   const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
-    setTimeBlocks(prev => {
+    // This is a special case. Reflections shouldn't be part of the undo/redo history.
+    if ('completed' in updates || 'reflection' in updates) {
+      setTimeBlocks(prev => prev.map(b => (b.id === id ? { ...b, ...updates } : b)));
+      return;
+    }
+
+    setTimeBlocksWithHistory(prev => {
         const originalBlock = prev.find(b => b.id === id);
         if (!originalBlock) return prev;
 
@@ -198,11 +231,11 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
 
   const deleteBlock = useCallback((id: string) => {
-    setTimeBlocks(prev => prev.filter(b => b.id !== id));
+    setTimeBlocksWithHistory(prev => prev.filter(b => b.id !== id));
   }, []);
 
   const clearAllBlocks = useCallback(() => {
-    setTimeBlocks([]);
+    setTimeBlocksWithHistory([]);
   }, []);
 
   const duplicateBlock = useCallback((id: string) => {
@@ -314,6 +347,25 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     setThemeState(newTheme);
   };
 
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  const undo = () => {
+    if (canUndo) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setTimeBlocks(history[newIndex]);
+    }
+  };
+
+  const redo = () => {
+    if (canRedo) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setTimeBlocks(history[newIndex]);
+    }
+  };
+
 
   const value = {
     timeBlocks,
@@ -343,6 +395,10 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     setZoomLevel,
     theme,
     setTheme,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   };
 
   return (

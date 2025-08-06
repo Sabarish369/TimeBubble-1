@@ -2,7 +2,7 @@
 'use client';
 
 import { format } from 'date-fns';
-import { Sparkles, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
+import { Sparkles, Trash2, ZoomIn, ZoomOut, Undo2, Redo2 } from 'lucide-react';
 
 import {
   AlertDialog,
@@ -24,7 +24,7 @@ import { Slider } from './ui/slider';
 import { MIN_ZOOM, MAX_ZOOM } from '@/lib/constants';
 
 export function Header() {
-  const { clearAllBlocks, zoomLevel, setZoomLevel } = useTimeBubbles();
+  const { clearAllBlocks, zoomLevel, setZoomLevel, undo, redo, canUndo, canRedo } = useTimeBubbles();
 
   return (
     <header className="flex items-center justify-between p-4 border-b shrink-0 bg-gradient-to-r from-primary/10 via-background to-accent/10">
@@ -37,6 +37,16 @@ export function Header() {
         </span>
       </div>
       <div className="flex items-center gap-4">
+         <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo}>
+            <Undo2 className="h-5 w-5" />
+            <span className="sr-only">Undo</span>
+          </Button>
+          <Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo}>
+            <Redo2 className="h-5 w-5" />
+            <span className="sr-only">Redo</span>
+          </Button>
+        </div>
         <div className="flex items-center gap-2 w-32">
           <ZoomOut className="h-5 w-5" />
             <Slider
