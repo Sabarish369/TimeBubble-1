@@ -221,7 +221,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       saveData(); // Save data for the old date first
       loadDataForDate(currentDate);
     }
-  }, [currentDate, isLoaded, saveData, loadDataForDate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDate, isLoaded, loadDataForDate]);
   
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -448,10 +449,13 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     setSuggestions([]);
   };
 
-  const setZoomLevel = (level: number) => {
+  const setZoomLevel = useCallback((level: number) => {
     const newZoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, level));
-    setZoomLevelState(newZoomLevel);
-  };
+    setZoomLevelState(current => {
+      if (current === newZoomLevel) return current;
+      return newZoomLevel;
+    });
+  }, []);
   
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
