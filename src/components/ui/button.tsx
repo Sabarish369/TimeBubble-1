@@ -9,14 +9,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 transition-opacity",
+        default: "bg-gradient-to-r from-primary to-accent text-primary-foreground hover:bg-gradient-to-br hover:from-primary/70 hover:to-accent/70 hover:backdrop-blur-sm hover:border-white/20 hover:border",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border border-input bg-background hover:bg-gradient-to-r from-[hsl(var(--bubble-mint))] to-[hsl(var(--chart-2))] hover:text-primary-foreground",
+          "border border-input bg-background hover:bg-gradient-to-br hover:from-primary/70 hover:to-accent/70 hover:text-primary-foreground hover:backdrop-blur-sm hover:border-white/20",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-gradient-to-r from-[hsl(var(--bubble-mint))] to-[hsl(var(--chart-2))] hover:text-primary-foreground",
-        ghost: "hover:bg-gradient-to-r from-[hsl(var(--bubble-mint))] to-[hsl(var(--chart-2))] hover:text-primary-foreground",
+          "bg-secondary text-secondary-foreground hover:bg-gradient-to-br hover:from-primary/70 hover:to-accent/70 hover:text-primary-foreground hover:backdrop-blur-sm hover:border-white/20",
+        ghost: "hover:bg-gradient-to-br hover:from-primary/70 hover:to-accent/70 hover:text-primary-foreground hover:backdrop-blur-sm hover:border-white/20",
         link: "text-primary underline-offset-4 hover:underline",
         reflect: "bg-gradient-to-r from-[hsl(var(--bubble-mint))] to-[hsl(var(--chart-2))] text-primary-foreground hover:opacity-90 transition-opacity"
       },
