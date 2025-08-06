@@ -2,7 +2,7 @@
 'use client';
 
 import type { DragEvent } from 'react';
-import { Briefcase, BookOpen, Coffee, User, Heart, Plus, Trash2, Pencil, type LucideIcon } from 'lucide-react';
+import { Briefcase, BookOpen, Coffee, User, Heart, Plus, Trash2, Pencil, type LucideIcon, CalendarPlus } from 'lucide-react';
 import { BUBBLE_COLORS, SIDEBAR_WIDTH } from '@/lib/constants';
 import type { BubbleCategory, BubbleTemplate } from '@/types';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { BubbleCreateModal } from './bubble-create-modal';
 
 const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   work: Briefcase,
@@ -39,7 +40,8 @@ const defaultTemplates: BubbleTemplate[] = [
 
 export function Sidebar() {
   const { templates, updateTemplate, deleteTemplate } = useTimeBubbles();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [isBubbleCreateModalOpen, setIsBubbleCreateModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<BubbleTemplate | undefined>(undefined);
 
   const allTemplates = [...defaultTemplates.map(t => {
@@ -75,18 +77,18 @@ export function Sidebar() {
     }, 0);
   };
 
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateTemplateModal = () => {
     setEditingTemplate(undefined);
-    setIsModalOpen(true);
+    setIsTemplateModalOpen(true);
   }
 
   const handleOpenEditModal = (template: BubbleTemplate) => {
     setEditingTemplate(template);
-    setIsModalOpen(true);
+    setIsTemplateModalOpen(true);
   }
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleCloseTemplateModal = () => {
+    setIsTemplateModalOpen(false);
     setEditingTemplate(undefined);
   }
 
@@ -95,9 +97,16 @@ export function Sidebar() {
       className="p-4 border-r bg-gradient-to-br from-primary/10 via-background to-accent/10 shrink-0 flex flex-col"
       style={{ width: `${SIDEBAR_WIDTH}px` }}
     >
+      <div className='p-2 mb-4'>
+        <Button className='w-full' onClick={() => setIsBubbleCreateModalOpen(true)}>
+          <CalendarPlus className="mr-2 h-5 w-5" />
+          Add Bubble
+        </Button>
+      </div>
+
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-center">Templates</h2>
-        <Button variant="ghost" size="icon" onClick={handleOpenCreateModal}>
+        <Button variant="ghost" size="icon" onClick={handleOpenCreateTemplateModal}>
           <Plus className="h-5 w-5" />
           <span className="sr-only">Create New Template</span>
         </Button>
@@ -160,9 +169,13 @@ export function Sidebar() {
         })}
       </div>
       <TemplateModal 
-        isOpen={isModalOpen} 
-        onClose={handleCloseModal}
+        isOpen={isTemplateModalOpen} 
+        onClose={handleCloseTemplateModal}
         template={editingTemplate}
+      />
+      <BubbleCreateModal 
+        isOpen={isBubbleCreateModalOpen}
+        onClose={() => setIsBubbleCreateModalOpen(false)}
       />
     </aside>
   );

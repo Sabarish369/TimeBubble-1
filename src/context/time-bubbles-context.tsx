@@ -21,6 +21,7 @@ interface TimeBubblesContextType {
   goToNextDay: () => void;
   goToPreviousDay: () => void;
   addBlock: (block: Omit<TimeBlock, 'id' | 'completed'>) => void;
+  addBlockOnDate: (block: Omit<TimeBlock, 'id' | 'completed'>, date: Date) => void;
   updateBlock: (id: string, updates: Partial<TimeBlock>) => void;
   deleteBlock: (id: string) => void;
   duplicateBlock: (id: string) => void;
@@ -110,13 +111,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       });
     }
   }, [toast]);
-
-  // Load data whenever the current date changes
-  useEffect(() => {
-    if (isLoaded) {
-      loadDataForDate(currentDate);
-    }
-  }, [currentDate, isLoaded]);
 
   const updateHistory = useCallback((newBlocks: TimeBlock[]) => {
     const newHistory = history.slice(0, historyIndex + 1);
@@ -221,6 +215,14 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     return () => clearTimeout(debounceSave);
   }, [saveData]);
   
+  // Load data whenever the current date changes
+  useEffect(() => {
+    if (isLoaded) {
+      saveData(); // Save data for the old date first
+      loadDataForDate(currentDate);
+    }
+  }, [currentDate, isLoaded, saveData, loadDataForDate]);
+  
   useEffect(() => {
     if (typeof window !== 'undefined') {
         const root = window.document.documentElement;
@@ -229,8 +231,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [theme]);
   
-  const findAvailableSlot = useCallback((requestedStartTime: Date, duration: number, excludeId?: string): Date => {
-    const sortedBlocks = [...timeBlocks]
+  const findAvailableSlot = useCallback((requestedStartTime: Date, duration: number, blocksToCheck: TimeBlock[], excludeId?: string): Date => {
+    const sortedBlocks = [...blocksToCheck]
       .filter(b => b.id !== excludeId)
       .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
   
@@ -253,15 +255,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }
 
     return newStartTime;
-  }, [timeBlocks]);
-
-
-  const addBlock = useCallback((block: Omit<TimeBlock, 'id' | 'completed'>) => {
-    setTimeBlocksWithHistory(prev => {
-        const newStartTime = findAvailableSlot(block.startTime, block.duration);
-        return [...prev, { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false, notified: false }];
-    });
-  }, [findAvailableSlot, setTimeBlocksWithHistory]);
+  }, []);
 
   const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
     // This is a special case. Reflections shouldn't be part of the undo/redo history.
@@ -275,11 +269,43 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         if (!originalBlock) return prev;
 
         const tentativeBlock = { ...originalBlock, ...updates };
-        const newStartTime = findAvailableSlot(tentativeBlock.startTime, tentativeBlock.duration, id);
+        const newStartTime = findAvailableSlot(tentativeBlock.startTime, tentativeBlock.duration, prev, id);
 
         return prev.map(b => (b.id === id ? { ...b, ...updates, startTime: newStartTime } : b));
     });
   }, [findAvailableSlot, setTimeBlocksWithHistory]);
+  
+  const addBlockOnDate = useCallback((block: Omit<TimeBlock, 'id' | 'completed'>, date: Date) => {
+    const dayKey = getDayKey(date);
+    const storedData = localStorage.getItem(STORAGE_KEY);
+    const allData = storedData ? JSON.parse(storedData) : { daily_data: {} };
+    const blocksForDate: TimeBlock[] = (allData.daily_data?.[dayKey] ?? []).map((b: any) => ({
+      ...b,
+      startTime: new Date(b.startTime)
+    }));
+
+    const newStartTime = findAvailableSlot(block.startTime, block.duration, blocksForDate);
+    const newBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false, notified: false };
+    
+    allData.daily_data[dayKey] = [...blocksForDate, newBlock];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
+
+    // If the date is the currently viewed date, update the state as well
+    if (dayKey === getDayKey(currentDate)) {
+      setTimeBlocksWithHistory(prev => [...prev, newBlock]);
+    }
+
+    toast({
+      title: 'Bubble Added',
+      description: `"${block.title}" added to ${format(date, 'MMMM do')}.`
+    });
+
+  }, [findAvailableSlot, setTimeBlocksWithHistory, currentDate, toast]);
+
+  const addBlock = useCallback((block: Omit<TimeBlock, 'id' | 'completed'>) => {
+    addBlockOnDate(block, block.startTime);
+  }, [addBlockOnDate]);
+
 
   // Interval for notifications. Moved here to be after updateBlock definition.
   useEffect(() => {
@@ -371,6 +397,11 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     try {
       const storedData = localStorage.getItem(STORAGE_KEY);
       const allData = storedData ? JSON.parse(storedData) : { daily_data: {} };
+      
+      const blocksForNewDate = (allData.daily_data[newDayKey] || []).map((b: any) => ({...b, startTime: new Date(b.startTime)}));
+      const resolvedStartTime = findAvailableSlot(newStartTime, rescheduledBlock.duration, blocksForNewDate);
+      rescheduledBlock.startTime = resolvedStartTime;
+
       if (!allData.daily_data[newDayKey]) {
         allData.daily_data[newDayKey] = [];
       }
@@ -378,7 +409,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
 
       // Remove from the current day
-      deleteBlock(id);
+      setTimeBlocksWithHistory(prev => prev.filter(b => b.id !== id));
     } catch (error) {
        console.error('Failed to reschedule block', error);
        toast({
@@ -472,6 +503,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     goToNextDay,
     goToPreviousDay,
     addBlock,
+    addBlockOnDate,
     updateBlock,
     deleteBlock,
     duplicateBlock,

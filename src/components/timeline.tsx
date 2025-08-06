@@ -13,6 +13,7 @@ import { BubbleDetailsModal } from './bubble-details-modal';
 import { RescheduleModal } from './reschedule-modal';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast } from 'date-fns';
+import { BubbleCreateModal } from './bubble-create-modal';
 
 export function Timeline() {
   const { timeBlocks, addBlock, isLoaded, reflectingBlock, selectedBlock, reschedulingBlock, zoomLevel, currentDate } = useTimeBubbles();
