@@ -48,10 +48,13 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const [liveDuration, setLiveDuration] = useState(block.duration);
   const [showCelebration, setShowCelebration] = useState(false);
 
+  // Keep live state in sync with block prop, but only if not actively being manipulated
   useEffect(() => {
-    setLiveStartTime(block.startTime);
-    setLiveDuration(block.duration);
-  }, [block.startTime, block.duration]);
+    if (!isDragging && !isResizing) {
+      setLiveStartTime(block.startTime);
+      setLiveDuration(block.duration);
+    }
+  }, [block.startTime, block.duration, isDragging, isResizing]);
 
   // Trigger celebration when block becomes completed
   useEffect(() => {
@@ -106,10 +109,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
   const handleMouseUp = useCallback(() => {
     if (isDragging) {
-      const newMinutes = (liveStartTime.getHours() * 60) + liveStartTime.getMinutes();
-      const newDate = new Date();
-      newDate.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
-      updateBlock(block.id, { startTime: newDate });
+      updateBlock(block.id, { startTime: liveStartTime });
     }
     if (isResizing) {
       updateBlock(block.id, { startTime: liveStartTime, duration: liveDuration });

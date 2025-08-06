@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ReactNode } from 'react';
@@ -105,14 +106,54 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     return () => clearTimeout(debounceSave);
   }, [saveData]);
   
+  const isOverlapping = useCallback((newBlock: Omit<TimeBlock, 'id'>, existingBlocks: TimeBlock[], excludeId?: string) => {
+    const newStartTime = newBlock.startTime.getTime();
+    const newEndTime = newStartTime + newBlock.duration * 60000;
+
+    for (const existingBlock of existingBlocks) {
+      if (existingBlock.id === excludeId) continue;
+
+      const existingStartTime = existingBlock.startTime.getTime();
+      const existingEndTime = existingStartTime + existingBlock.duration * 60000;
+      
+      // Overlap if (startA < endB) and (endA > startB)
+      if (newStartTime < existingEndTime && newEndTime > existingStartTime) {
+        return true;
+      }
+    }
+    return false;
+  }, []);
+
 
   const addBlock = useCallback((block: Omit<TimeBlock, 'id' | 'completed'>) => {
+    if (isOverlapping(block, timeBlocks)) {
+      toast({
+        title: 'Overlapping Time',
+        description: 'This time slot is already taken.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setTimeBlocks(prev => [...prev, { ...block, id: crypto.randomUUID(), completed: false }]);
-  }, []);
+  }, [timeBlocks, isOverlapping, toast]);
 
   const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
-    setTimeBlocks(prev => prev.map(b => (b.id === id ? { ...b, ...updates } : b)));
-  }, []);
+    const originalBlock = timeBlocks.find(b => b.id === id);
+    if (!originalBlock) return;
+
+    const updatedBlock = { ...originalBlock, ...updates };
+    
+    if (isOverlapping(updatedBlock, timeBlocks, id)) {
+      toast({
+        title: 'Overlapping Time',
+        description: 'This time slot is already taken.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setTimeBlocks(prev => prev.map(b => (b.id === id ? updatedBlock : b)));
+  }, [timeBlocks, isOverlapping, toast]);
 
   const deleteBlock = useCallback((id: string) => {
     setTimeBlocks(prev => prev.filter(b => b.id !== id));
@@ -125,12 +166,12 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const duplicateBlock = useCallback((id: string) => {
     const blockToDuplicate = timeBlocks.find(b => b.id === id);
     if(blockToDuplicate) {
-      const newStartTime = new Date(blockToDuplicate.startTime.getTime() + blockToDuplicate.duration * 60000);
-      addBlock({
+      const newBlockData = {
         ...blockToDuplicate,
         title: `${blockToDuplicate.title} (copy)`,
-        startTime: newStartTime,
-      });
+        startTime: new Date(blockToDuplicate.startTime.getTime() + (blockToDuplicate.duration * 60000)),
+      }
+      addBlock(newBlockData);
     }
   }, [timeBlocks, addBlock]);
 
