@@ -310,7 +310,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
                   key={colorName}
                   className={cn("w-6 h-6 rounded-full border", block.color === colorName && "ring-2 ring-ring")}
                   style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
-                  onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBble_COLORS })}
+                  onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBBLE_COLORS })}
                 />
               ))}
             </div>
@@ -355,7 +355,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
       {isOverdue && (
         <div className="absolute inset-0 z-20 flex items-center justify-center gap-2">
-          <Button onClick={() => setReflectingBlock(block)}>
+          <Button variant="reflect" onClick={() => setReflectingBlock(block)}>
             <MessageSquareText className="mr-2 h-4 w-4"/>
             Reflect
           </Button>
