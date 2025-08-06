@@ -69,18 +69,18 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
   const { toast } = useToast();
 
-  const updateHistory = (newBlocks: TimeBlock[]) => {
+  const updateHistory = useCallback((newBlocks: TimeBlock[]) => {
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newBlocks);
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
-  };
+  }, [history, historyIndex]);
   
-  const setTimeBlocksWithHistory = (newBlocks: TimeBlock[] | ((prev: TimeBlock[]) => TimeBlock[])) => {
+  const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: TimeBlock[]) => TimeBlock[])) => {
     const updatedBlocks = typeof newBlocks === 'function' ? newBlocks(timeBlocks) : newBlocks;
     setTimeBlocks(updatedBlocks);
     updateHistory(updatedBlocks);
-  };
+  }, [timeBlocks, updateHistory]);
 
   const loadDataForDate = useCallback((date: Date) => {
     if (typeof window !== 'undefined') {
@@ -209,7 +209,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         const newStartTime = findAvailableSlot(block.startTime, block.duration);
         return [...prev, { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false }];
     });
-  }, [findAvailableSlot]);
+  }, [findAvailableSlot, setTimeBlocksWithHistory]);
 
   const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
     // This is a special case. Reflections shouldn't be part of the undo/redo history.
@@ -227,16 +227,16 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
         return prev.map(b => (b.id === id ? { ...b, ...updates, startTime: newStartTime } : b));
     });
-  }, [findAvailableSlot]);
+  }, [findAvailableSlot, setTimeBlocksWithHistory]);
 
 
   const deleteBlock = useCallback((id: string) => {
     setTimeBlocksWithHistory(prev => prev.filter(b => b.id !== id));
-  }, []);
+  }, [setTimeBlocksWithHistory]);
 
   const clearAllBlocks = useCallback(() => {
     setTimeBlocksWithHistory([]);
-  }, []);
+  }, [setTimeBlocksWithHistory]);
 
   const duplicateBlock = useCallback((id: string) => {
     const blockToDuplicate = timeBlocks.find(b => b.id === id);
@@ -415,3 +415,5 @@ export const useTimeBubbles = () => {
   }
   return context;
 };
+
+    
