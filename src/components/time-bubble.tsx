@@ -57,7 +57,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const dragStartRef = useRef({ y: 0, initialTop: 0, initialHeight: 0 });
 
   const minutesFromMidnight = block.startTime.getHours() * 60 + block.startTime.getMinutes();
-  const top = minutesFromMidnight * PIXELS_PER_MINUTE;
+  const top = Math.max(0, minutesFromMidnight * PIXELS_PER_MINUTE);
   const height = block.duration * PIXELS_PER_MINUTE;
 
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
@@ -97,8 +97,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
     if (isDragging) {
       const newTop = dragStartRef.current.initialTop + deltaY;
-      const newMinutesRaw = Math.max(0, newTop / PIXELS_PER_MINUTE);
-      const newMinutes = Math.round(newMinutesRaw / 15) * 15;
+      const newMinutesRaw = newTop / PIXELS_PER_MINUTE;
+      const newMinutes = Math.round(Math.max(0, newMinutesRaw) / 15) * 15;
       const newStartTime = new Date(block.startTime);
       newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
       updateBlock(block.id, { startTime: newStartTime });
@@ -115,8 +115,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         const newHeight = dragStartRef.current.initialHeight - deltaY;
         
         if (newHeight >= 15 * PIXELS_PER_MINUTE) {
-          const newMinutesRaw = Math.max(0, newTop / PIXELS_PER_MINUTE);
-          const newMinutes = Math.round(newMinutesRaw / 15) * 15;
+          const newMinutesRaw = newTop / PIXELS_PER_MINUTE;
+          const newMinutes = Math.round(Math.max(0, newMinutesRaw) / 15) * 15;
           const newStartTime = new Date(block.startTime);
           newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
 
@@ -163,7 +163,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const durationToDisplay = isResizing ? liveDuration : block.duration;
   const endTimeToDisplay = new Date(startTimeToDisplay.getTime() + durationToDisplay * 60000);
 
-  const displayTop = (startTimeToDisplay.getHours() * 60 + startTimeToDisplay.getMinutes()) * PIXELS_PER_MINUTE;
+  const displayTop = Math.max(0, (startTimeToDisplay.getHours() * 60 + startTimeToDisplay.getMinutes()) * PIXELS_PER_MINUTE);
   const displayHeight = durationToDisplay * PIXELS_PER_MINUTE;
   const Icon = categoryIcons[block.category];
   
@@ -177,16 +177,19 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       style={{
         top: `${displayTop}px`,
         height: `${displayHeight}px`,
-        backgroundColor: block.color,
-        borderColor: 'rgba(0,0,0,0.05)',
+        backgroundColor: `hsl(var(--bubble-${block.color}))`,
+        borderColor: `hsl(var(--bubble-${block.color}-dark))`,
       }}
       onMouseDown={handleMouseDown}
     >
       <div
         className={cn(
-          "absolute top-1 right-1 z-20"
+          "absolute top-1 right-1 z-20 flex items-center"
         )}
       >
+        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer" onClick={(e) => {e.stopPropagation(); setReflectingBlock(block)}}>
+            <MessageSquareText className="w-4 h-4 text-slate-700 dark:text-white/80" />
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer">
@@ -194,11 +197,6 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent onClick={e => e.stopPropagation()}>
-            <DropdownMenuItem onSelect={() => setReflectingBlock(block)}>
-              <MessageSquareText className="mr-2 h-4 w-4" />
-              <span>Reflect</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => duplicateBlock(block.id)}>
               <Copy className="mr-2 h-4 w-4" />
               <span>Duplicate</span>
@@ -225,12 +223,12 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
             </AlertDialog>
             <DropdownMenuSeparator />
             <div className="flex gap-2 p-2">
-              {Object.entries(BUBBLE_COLORS).map(([name, colorVar]) => (
+              {Object.keys(BUBBLE_COLORS).map((colorName) => (
                 <button
-                  key={name}
-                  className={cn("w-6 h-6 rounded-full border", block.color === colorVar && "ring-2 ring-ring")}
-                  style={{ backgroundColor: colorVar }}
-                  onClick={() => updateBlock(block.id, { color: colorVar })}
+                  key={colorName}
+                  className={cn("w-6 h-6 rounded-full border", block.color === colorName && "ring-2 ring-ring")}
+                  style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
+                  onClick={() => updateBlock(block.id, { color: colorName })}
                 />
               ))}
             </div>
