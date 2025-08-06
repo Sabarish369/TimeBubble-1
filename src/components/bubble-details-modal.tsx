@@ -11,7 +11,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormMessage } from './ui/form';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from './ui/input';
 
 const detailsSchema = z.object({
@@ -27,10 +27,19 @@ export function BubbleDetailsModal() {
   const form = useForm<DetailsFormValues>({
     resolver: zodResolver(detailsSchema),
     defaultValues: {
-      title: selectedBlock?.title ?? '',
-      description: selectedBlock?.description ?? '',
+      title: '',
+      description: '',
     },
   });
+
+  useEffect(() => {
+    if (selectedBlock) {
+      form.reset({
+        title: selectedBlock.title,
+        description: selectedBlock.description ?? '',
+      });
+    }
+  }, [selectedBlock, form]);
   
   if (!selectedBlock) return null;
 
@@ -41,14 +50,12 @@ export function BubbleDetailsModal() {
   };
   
   const handleEdit = () => {
-    form.reset({ title: selectedBlock.title, description: selectedBlock.description });
     setIsEditing(true);
   };
 
   const onSubmit = (data: DetailsFormValues) => {
     updateBlock(selectedBlock.id, { title: data.title, description: data.description });
     setIsEditing(false);
-    // The block is updated, so we need to refresh the selectedBlock
     setSelectedBlock({ ...selectedBlock, ...data });
   };
   
@@ -57,67 +64,72 @@ export function BubbleDetailsModal() {
 
   return (
     <Dialog open={!!selectedBlock} onOpenChange={handleClose}>
-      <DialogContent>
-        <DialogHeader>
-          {isEditing ? (
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                  <FormControl>
-                    <Input {...field} className="text-lg font-semibold" />
-                  </FormControl>
-              )}
-            />
-          ) : (
-            <DialogTitle>{selectedBlock.title}</DialogTitle>
-          )}
-          <DialogDescription>
-            {startTime} - {endTime} ({selectedBlock.duration} minutes)
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-            <div className='space-y-2'>
-                <h4 className='font-medium'>Category</h4>
-                <Badge variant="secondary" className='capitalize'>{selectedBlock.category}</Badge>
-            </div>
-             <div className='space-y-2'>
-                <h4 className='font-medium'>Description</h4>
-                {isEditing ? (
-                   <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                            <Textarea placeholder="Add a short description..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                ) : (
-                    <p className='text-sm text-muted-foreground'>
-                        {selectedBlock.description || 'No description provided.'}
-                    </p>
-                )}
-             </div>
-        </div>
-
-        <DialogFooter>
-          {isEditing ? (
+        <DialogContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="flex justify-end gap-2 w-full">
-                 <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
-                 <Button type="submit">Save Changes</Button>
-              </form>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                    <DialogHeader>
+                        {isEditing ? (
+                            <FormField
+                                control={form.control}
+                                name="title"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormControl>
+                                            <Input {...field} className="text-lg font-semibold" />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        ) : (
+                            <DialogTitle>{selectedBlock.title}</DialogTitle>
+                        )}
+                        <DialogDescription>
+                            {startTime} - {endTime} ({selectedBlock.duration} minutes)
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        <div className='space-y-2'>
+                            <h4 className='font-medium'>Category</h4>
+                            <Badge variant="secondary" className='capitalize'>{selectedBlock.category}</Badge>
+                        </div>
+                        <div className='space-y-2'>
+                            <h4 className='font-medium'>Description</h4>
+                            {isEditing ? (
+                                <FormField
+                                    control={form.control}
+                                    name="description"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <Textarea placeholder="Add a short description..." {...field} value={field.value ?? ''} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            ) : (
+                                <p className='text-sm text-muted-foreground'>
+                                    {selectedBlock.description || 'No description provided.'}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        {isEditing ? (
+                            <div className="flex justify-end gap-2 w-full">
+                                <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+                                <Button type="submit">Save Changes</Button>
+                            </div>
+                        ) : (
+                            <Button type="button" onClick={handleEdit}>Edit</Button>
+                        )}
+                    </DialogFooter>
+                </form>
             </Form>
-          ) : (
-            <Button onClick={handleEdit}>Edit</Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
+        </DialogContent>
     </Dialog>
   );
 }
