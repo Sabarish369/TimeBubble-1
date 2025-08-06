@@ -92,7 +92,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className="p-4 border-r bg-background/80 backdrop-blur-xl shrink-0 flex flex-col"
+      className="p-4 border-r bg-gradient-to-br from-primary/10 via-background to-accent/10 shrink-0 flex flex-col"
       style={{ width: `${SIDEBAR_WIDTH}px` }}
     >
       <div className="flex items-center justify-between mb-4">

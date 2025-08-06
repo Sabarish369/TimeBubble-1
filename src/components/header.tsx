@@ -27,7 +27,7 @@ export function Header() {
   const { clearAllBlocks, zoomLevel, setZoomLevel } = useTimeBubbles();
 
   return (
-    <header className="flex items-center justify-between p-4 border-b shrink-0 bg-background/80 backdrop-blur-xl">
+    <header className="flex items-center justify-between p-4 border-b shrink-0 bg-gradient-to-r from-primary/10 via-background to-accent/10">
       <div className="flex items-center gap-4">
         <TimeBubbleLogo className="h-6 w-auto" />
       </div>
