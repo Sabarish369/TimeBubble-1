@@ -5,6 +5,7 @@ import { ZoomIn, ZoomOut } from 'lucide-react';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { Slider } from './ui/slider';
 import { MIN_ZOOM, MAX_ZOOM } from '@/lib/constants';
+import { Button } from './ui/button';
 
 export function ZoomControls() {
   const { zoomLevel, setZoomLevel } = useTimeBubbles();
