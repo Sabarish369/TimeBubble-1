@@ -9,14 +9,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-gradient-to-r from-primary to-accent text-primary-foreground hover:bg-gradient-to-br hover:from-primary/70 hover:to-accent/70 hover:backdrop-blur-sm hover:border-white/20 hover:border",
+        default: "bg-gradient-to-r from-primary to-accent text-primary-foreground hover:bg-white/20",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border border-input bg-background hover:bg-gradient-to-br hover:from-primary/70 hover:to-accent/70 hover:text-primary-foreground hover:backdrop-blur-sm hover:border-white/20",
+          "border border-input bg-background hover:bg-white/20 hover:text-accent-foreground",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-gradient-to-br hover:from-primary/70 hover:to-accent/70 hover:text-primary-foreground hover:backdrop-blur-sm hover:border-white/20",
-        ghost: "hover:bg-gradient-to-br hover:from-primary/70 hover:to-accent/70 hover:text-primary-foreground hover:backdrop-blur-sm hover:border-white/20",
+          "bg-secondary text-secondary-foreground hover:bg-white/20",
+        ghost: "hover:bg-white/20",
         link: "text-primary underline-offset-4 hover:underline",
         reflect: "bg-gradient-to-r from-[hsl(var(--bubble-mint))] to-[hsl(var(--chart-2))] text-primary-foreground hover:opacity-90 transition-opacity"
       },
