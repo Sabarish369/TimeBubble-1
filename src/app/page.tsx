@@ -7,29 +7,30 @@ import { Timeline } from "@/components/timeline";
 import { TimeBubblesProvider } from "@/context/time-bubbles-context";
 import { useEffect, useRef } from "react";
 import { useTimeBubbles } from "@/context/time-bubbles-context";
-import { PIXELS_PER_MINUTE } from "@/lib/constants";
+import { HOUR_HEIGHT } from "@/lib/constants";
 import { LoadingSpinner } from "@/components/loading-spinner";
 
 function AppContent() {
   const mainRef = useRef<HTMLElement>(null);
-  const { isLoaded } = useTimeBubbles();
+  const { isLoaded, zoomLevel } = useTimeBubbles();
 
   useEffect(() => {
     if (mainRef.current && isLoaded) {
+      const pixelsPerMinute = (HOUR_HEIGHT * zoomLevel) / 60;
       const now = new Date();
       const minutes = now.getHours() * 60 + now.getMinutes();
-      const scrollToPosition = minutes * PIXELS_PER_MINUTE - mainRef.current.clientHeight / 2;
+      const scrollToPosition = minutes * pixelsPerMinute - mainRef.current.clientHeight / 2;
       mainRef.current.scrollTo({
         top: scrollToPosition,
         behavior: 'smooth',
       });
     }
-  }, [isLoaded]);
+  }, [isLoaded, zoomLevel]);
 
   if (!isLoaded) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
-        <LoadingSpinner className="h-8 w-8 text-primary" />
+        <LoadingSpinner className="h-40 w-40 text-primary" />
       </div>
     );
   }

@@ -1,8 +1,12 @@
+
 'use client';
-import { HOUR_HEIGHT, TOTAL_HOURS, SIDEBAR_WIDTH } from '@/lib/constants';
+import { HOUR_HEIGHT, TOTAL_HOURS } from '@/lib/constants';
+import { useTimeBubbles } from '@/context/time-bubbles-context';
 
 export function TimelineGrid() {
+  const { zoomLevel } = useTimeBubbles();
   const hours = Array.from({ length: TOTAL_HOURS }, (_, i) => i);
+  const hourHeight = HOUR_HEIGHT * zoomLevel;
 
   const formatHour = (hour: number) => {
     if (hour === 0) return '12 AM';
@@ -19,7 +23,7 @@ export function TimelineGrid() {
           <div
             key={hour}
             className="text-right pr-2"
-            style={{ height: `${HOUR_HEIGHT}px` }}
+            style={{ height: `${hourHeight}px` }}
           >
             <span className="relative -top-3 text-sm font-medium text-muted-foreground">
               {formatHour(hour)}
@@ -34,7 +38,7 @@ export function TimelineGrid() {
           <div
             key={hour}
             className="border-t border-border/60"
-            style={{ height: `${HOUR_HEIGHT}px` }}
+            style={{ height: `${hourHeight}px` }}
           ></div>
         ))}
       </div>

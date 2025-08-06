@@ -1,22 +1,26 @@
+
 'use client';
 import { useEffect, useState } from 'react';
-import { PIXELS_PER_MINUTE } from '@/lib/constants';
+import { HOUR_HEIGHT } from '@/lib/constants';
+import { useTimeBubbles } from '@/context/time-bubbles-context';
 
 export function CurrentTimeIndicator() {
   const [topPosition, setTopPosition] = useState(0);
+  const { zoomLevel } = useTimeBubbles();
 
   useEffect(() => {
+    const pixelsPerMinute = (HOUR_HEIGHT * zoomLevel) / 60;
     const updatePosition = () => {
       const now = new Date();
       const minutes = now.getHours() * 60 + now.getMinutes();
-      setTopPosition(minutes * PIXELS_PER_MINUTE);
+      setTopPosition(minutes * pixelsPerMinute);
     };
 
     updatePosition();
     const interval = setInterval(updatePosition, 60000); // Update every minute
 
     return () => clearInterval(interval);
-  }, []);
+  }, [zoomLevel]);
 
   return (
     <div

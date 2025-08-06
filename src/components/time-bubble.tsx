@@ -5,7 +5,7 @@ import type { TimeBlock as TimeBlockType } from '@/types';
 import type { MouseEvent, RefObject } from 'react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
-import { BUBBLE_COLORS, PIXELS_PER_MINUTE } from '@/lib/constants';
+import { BUBBLE_COLORS, HOUR_HEIGHT } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon } from 'lucide-react';
 import { Button } from './ui/button';
@@ -39,7 +39,7 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
 };
 
 export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
-  const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setSelectedBlock } = useTimeBubbles();
+  const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setSelectedBlock, zoomLevel } = useTimeBubbles();
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'top' | 'bottom' | null>(null);
   const [didMove, setDidMove] = useState(false);
@@ -47,6 +47,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const [liveStartTime, setLiveStartTime] = useState(block.startTime);
   const [liveDuration, setLiveDuration] = useState(block.duration);
   const [showCelebration, setShowCelebration] = useState(false);
+
+  const pixelsPerMinute = (HOUR_HEIGHT * zoomLevel) / 60;
 
   // Keep live state in sync with block prop, but only if not actively being manipulated
   useEffect(() => {
@@ -135,7 +137,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
     if (isDragging) {
       const newTop = dragStartRef.current.initialTop + deltaY;
-      const newMinutesRaw = newTop / PIXELS_PER_MINUTE;
+      const newMinutesRaw = newTop / pixelsPerMinute;
       const newMinutes = Math.round(Math.max(0, newMinutesRaw) / 15) * 15;
       const newStartTime = new Date(block.startTime);
       newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
@@ -145,15 +147,15 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     if (isResizing) {
       if (isResizing === 'bottom') {
         const newHeight = dragStartRef.current.initialHeight + deltaY;
-        const newDuration = Math.max(15, Math.round(newHeight / PIXELS_PER_MINUTE / 15) * 15);
+        const newDuration = Math.max(15, Math.round(newHeight / pixelsPerMinute / 15) * 15);
         setLiveDuration(newDuration);
       }
       if (isResizing === 'top') {
         const newTop = dragStartRef.current.initialTop + deltaY;
         const newHeight = dragStartRef.current.initialHeight - deltaY;
         
-        if (newHeight >= 15 * PIXELS_PER_MINUTE) {
-          const newMinutesRaw = newTop / PIXELS_PER_MINUTE;
+        if (newHeight >= 15 * pixelsPerMinute) {
+          const newMinutesRaw = newTop / pixelsPerMinute;
           const newMinutes = Math.round(Math.max(0, newMinutesRaw) / 15) * 15;
           const newStartTime = new Date(block.startTime);
           newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
@@ -169,7 +171,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         }
       }
     }
-  }, [isDragging, isResizing, block.startTime, block.duration, timelineRef]);
+  }, [isDragging, isResizing, block.startTime, block.duration, timelineRef, pixelsPerMinute]);
 
 
   useEffect(() => {
@@ -187,8 +189,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const durationToDisplay = isResizing || isDragging ? liveDuration : block.duration;
   
   const minutesFromMidnight = startTimeToDisplay.getHours() * 60 + startTimeToDisplay.getMinutes();
-  const top = Math.max(0, minutesFromMidnight * PIXELS_PER_MINUTE);
-  const height = durationToDisplay * PIXELS_PER_MINUTE;
+  const top = Math.max(0, minutesFromMidnight * pixelsPerMinute);
+  const height = durationToDisplay * pixelsPerMinute;
 
   const showFullContent = height >= 60;
   const showCompactContent = height >= 40 && height < 60;

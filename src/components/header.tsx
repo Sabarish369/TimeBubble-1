@@ -1,7 +1,8 @@
+
 'use client';
 
 import { format } from 'date-fns';
-import { Sparkles, Trash2 } from 'lucide-react';
+import { Sparkles, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 
 import {
   AlertDialog,
@@ -21,19 +22,27 @@ import { SmartSuggestions } from '@/components/smart-suggestions';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 
 export function Header() {
-  const { clearAllBlocks } = useTimeBubbles();
+  const { clearAllBlocks, zoomIn, zoomOut } = useTimeBubbles();
 
   return (
     <header className="flex items-center justify-between p-4 border-b shrink-0">
       <div className="flex items-center gap-4">
         <TimeBubbleLogo className="h-6 w-auto" />
       </div>
-      <div className="flex-1 flex justify-center">
+      <div className="flex-1 flex justify-center items-center gap-4">
         <span className="text-lg font-semibold text-foreground/80">
           {format(new Date(), 'EEEE, MMMM do')}
         </span>
       </div>
       <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" onClick={zoomIn}>
+          <ZoomIn className="h-5 w-5" />
+          <span className="sr-only">Zoom In</span>
+        </Button>
+        <Button variant="ghost" size="icon" onClick={zoomOut}>
+          <ZoomOut className="h-5 w-5" />
+          <span className="sr-only">Zoom Out</span>
+        </Button>
         <SmartSuggestions />
         <AlertDialog>
           <AlertDialogTrigger asChild>

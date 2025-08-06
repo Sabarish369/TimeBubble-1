@@ -4,7 +4,7 @@ import type { DragEvent, MouseEvent } from 'react';
 import React from 'react';
 
 import { useTimeBubbles } from '@/context/time-bubbles-context';
-import { HOUR_HEIGHT, PIXELS_PER_MINUTE, TOTAL_HOURS, DEFAULT_BUBBLE_COLOR } from '@/lib/constants';
+import { HOUR_HEIGHT, TOTAL_HOURS, DEFAULT_BUBBLE_COLOR } from '@/lib/constants';
 import { CurrentTimeIndicator } from './current-time-indicator';
 import { TimelineGrid } from './timeline-grid';
 import { TimeBubble } from './time-bubble';
@@ -12,8 +12,11 @@ import { ReflectionModal } from './reflection-modal';
 import { BubbleDetailsModal } from './bubble-details-modal';
 
 export function Timeline() {
-  const { timeBlocks, addBlock, isLoaded, reflectingBlock, selectedBlock } = useTimeBubbles();
+  const { timeBlocks, addBlock, isLoaded, reflectingBlock, selectedBlock, zoomLevel } = useTimeBubbles();
   const timelineRef = React.useRef<HTMLDivElement>(null);
+
+  const hourHeight = HOUR_HEIGHT * zoomLevel;
+  const pixelsPerMinute = hourHeight / 60;
 
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -30,7 +33,7 @@ export function Timeline() {
       const rect = timelineRef.current.getBoundingClientRect();
       const dropY = e.clientY - rect.top;
       
-      const minutesFromTop = Math.round(dropY / PIXELS_PER_MINUTE);
+      const minutesFromTop = Math.round(dropY / pixelsPerMinute);
       const clampedMinutes = Math.max(0, minutesFromTop);
       
       const startTime = new Date();
@@ -49,7 +52,7 @@ export function Timeline() {
     const rect = timelineRef.current.getBoundingClientRect();
     // Adjust for the main container's scroll position
     const y = e.clientY - rect.top + (timelineRef.current.parentElement?.scrollTop ?? 0);
-    const minutesFromTop = Math.round(y / PIXELS_PER_MINUTE);
+    const minutesFromTop = Math.round(y / pixelsPerMinute);
 
     const startTime = new Date();
     startTime.setHours(Math.floor(minutesFromTop/60), minutesFromTop % 60, 0, 0);
@@ -73,7 +76,7 @@ export function Timeline() {
     <div
       ref={timelineRef}
       className="relative w-full"
-      style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}
+      style={{ height: `${TOTAL_HOURS * hourHeight}px` }}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDoubleClick={handleDoubleClick}
