@@ -11,10 +11,13 @@ import { TimeBubble } from './time-bubble';
 import { ReflectionModal } from './reflection-modal';
 import { BubbleDetailsModal } from './bubble-details-modal';
 import { RescheduleModal } from './reschedule-modal';
+import { useToast } from '@/hooks/use-toast';
+import { isToday, isPast } from 'date-fns';
 
 export function Timeline() {
   const { timeBlocks, addBlock, isLoaded, reflectingBlock, selectedBlock, reschedulingBlock, zoomLevel, currentDate } = useTimeBubbles();
   const timelineRef = React.useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const hourHeight = HOUR_HEIGHT * zoomLevel;
   const pixelsPerMinute = hourHeight / 60;
@@ -39,6 +42,14 @@ export function Timeline() {
       
       const startTime = new Date(currentDate);
       startTime.setHours(Math.floor(clampedMinutes / 60), clampedMinutes % 60, 0, 0);
+
+      if (isToday(currentDate) && isPast(startTime)) {
+        toast({
+          title: 'Past Time Scheduled',
+          description: `You've scheduled "${template.title}" for a time that has already passed.`,
+          variant: 'default',
+        });
+      }
 
       addBlock({ ...template, startTime });
     } catch (error) {
