@@ -8,6 +8,7 @@ import { TimeBubblesProvider } from "@/context/time-bubbles-context";
 import { useEffect, useRef } from "react";
 import { useTimeBubbles } from "@/context/time-bubbles-context";
 import { PIXELS_PER_MINUTE } from "@/lib/constants";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 function AppContent() {
   const mainRef = useRef<HTMLElement>(null);
@@ -24,6 +25,14 @@ function AppContent() {
       });
     }
   }, [isLoaded]);
+
+  if (!isLoaded) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <LoadingSpinner className="h-8 w-8 text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground font-body overflow-hidden">
