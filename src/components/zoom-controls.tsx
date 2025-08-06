@@ -21,7 +21,6 @@ export function ZoomControls() {
         min={MIN_ZOOM}
         max={MAX_ZOOM}
         step={0.1}
-        key={zoomLevel}
       />
       <Button variant="ghost" size="icon" onClick={() => setZoomLevel(Math.min(MAX_ZOOM, zoomLevel + 0.2))}>
         <ZoomIn className="h-5 w-5" />
