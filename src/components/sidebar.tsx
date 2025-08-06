@@ -53,6 +53,21 @@ export function Sidebar() {
       description: template.description
     };
     e.dataTransfer.setData('application/json', JSON.stringify(templateData));
+    
+    // Create a custom drag image
+    const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
+    dragImage.style.position = 'absolute';
+    dragImage.style.top = '-1000px'; // Position off-screen
+    dragImage.style.width = `${e.currentTarget.offsetWidth}px`;
+    dragImage.style.opacity = '1';
+    dragImage.style.pointerEvents = 'none';
+    document.body.appendChild(dragImage);
+    e.dataTransfer.setDragImage(dragImage, e.currentTarget.offsetWidth / 2, e.currentTarget.offsetHeight / 2);
+
+    // Clean up the cloned element after the drag starts
+    setTimeout(() => {
+        document.body.removeChild(dragImage);
+    }, 0);
   };
 
   return (
