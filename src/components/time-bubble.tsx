@@ -229,6 +229,19 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const Icon = categoryIcons[block.category];
   const bubbleColorValue = `hsl(var(--bubble-${block.color}))`;
   
+  const bubbleStyle: React.CSSProperties = {
+    top: `${top}px`,
+    height: `${height}px`,
+    transition: 'top 0.2s ease-out, height 0.2s ease-out, box-shadow 0.3s ease-in-out, background 0.3s ease-in-out',
+    '--glow-color': `var(--bubble-${block.color})`,
+  };
+
+  if (block.completed) {
+    bubbleStyle.background = 'linear-gradient(to bottom, hsl(140, 60%, 65%), hsl(140, 60%, 45%))';
+  } else {
+    bubbleStyle.background = `linear-gradient(to bottom, ${bubbleColorValue}, hsl(var(--bubble-${block.color}) / 0.8))`;
+  }
+  
   return (
     <div
       className={cn(
@@ -239,13 +252,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         isDragging && 'shadow-lg scale-105 z-20 cursor-grabbing',
         isCurrent && 'is-glowing',
       )}
-      style={{
-        top: `${top}px`,
-        height: `${height}px`,
-        transition: 'top 0.2s ease-out, height 0.2s ease-out, box-shadow 0.3s ease-in-out',
-        background: `linear-gradient(to bottom, ${bubbleColorValue}, hsl(var(--bubble-${block.color}) / 0.8))`,
-        '--glow-color': `var(--bubble-${block.color})`,
-      } as React.CSSProperties}
+      style={bubbleStyle}
       onMouseDown={handleMouseDown}
       onClick={handleClick}
     >
@@ -297,7 +304,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
                   key={colorName}
                   className={cn("w-6 h-6 rounded-full border", block.color === colorName && "ring-2 ring-ring")}
                   style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
-                  onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBble_COLORS })}
+                  onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBBLE_COLORS })}
                 />
               ))}
             </div>
@@ -329,8 +336,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       </div>
 
       {block.completed && (
-        <div className="absolute inset-0 bg-slate-900/60 rounded-lg flex items-center justify-center pointer-events-none">
-            <Check className="h-8 w-8 text-green-400" />
+        <div className="absolute inset-0 rounded-lg flex items-center justify-center pointer-events-none">
+            <Check className="h-8 w-8 text-white" />
         </div>
       )}
 
