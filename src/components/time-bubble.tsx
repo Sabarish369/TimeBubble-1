@@ -236,6 +236,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
   const Icon = categoryIcons[block.category];
   
+  const isInteractive = !isOverdue || block.completed;
+
   const bubbleStyle: React.CSSProperties = {
     top: `${top}px`,
     height: `${height}px`,
@@ -256,11 +258,11 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         'outline outline-1 outline-slate-300/50 dark:outline-slate-700/50',
         isDragging && 'shadow-lg scale-105 z-20 cursor-grabbing',
         isCurrent && !isOverdue && 'is-glowing',
-        !isOverdue && !isCurrent && 'cursor-pointer'
+        isInteractive && !isDragging && 'cursor-pointer'
       )}
       style={bubbleStyle}
-      onMouseDown={isOverdue ? undefined : handleMouseDown}
-      onClick={isOverdue ? undefined : handleClick}
+      onMouseDown={isInteractive ? handleMouseDown : undefined}
+      onClick={isInteractive ? handleClick : undefined}
     >
        <div 
         className={cn("absolute inset-0 rounded-lg")}
@@ -274,7 +276,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
        {showCelebration && <CelebrationPopper />}
        {isCurrent && !isOverdue && <ActiveBubbleAnimation />}
       
-      <div className="absolute top-1 right-1 z-20 flex items-center" style={{ opacity: isOverdue ? 0 : 1}}>
+      <div className="absolute top-1 right-1 z-20 flex items-center" style={{ opacity: isOverdue && !block.completed ? 0 : 1}}>
         <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer" onClick={(e) => {e.stopPropagation(); setReflectingBlock(block)}}>
             <MessageSquareText className="w-4 h-4 text-slate-700 dark:text-white" />
         </Button>
@@ -364,7 +366,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         </div>
       )}
 
-      {isOverdue && (
+      {isOverdue && !block.completed && (
         <div className="absolute inset-0 z-20 flex items-center justify-center gap-2">
           <Button variant="reflect" onClick={() => setReflectingBlock(block)}>
             <MessageSquareText className="mr-2 h-4 w-4"/>
@@ -398,14 +400,12 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
       <div
         className="absolute -top-px left-0 w-full h-1.5 cursor-n-resize z-20"
-        onMouseDown={isOverdue ? undefined : (e) => handleResizeMouseDown(e, 'top')}
+        onMouseDown={isInteractive ? (e) => handleResizeMouseDown(e, 'top') : undefined}
       />
       <div
         className="absolute -bottom-px left-0 w-full h-1.5 cursor-s-resize z-20"
-        onMouseDown={isOverdue ? undefined : (e) => handleResizeMouseDown(e, 'bottom')}
+        onMouseDown={isInteractive ? (e) => handleResizeMouseDown(e, 'bottom') : undefined}
       />
     </div>
   );
 }
-
-    
