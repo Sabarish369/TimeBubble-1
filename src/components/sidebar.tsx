@@ -38,11 +38,15 @@ const defaultTemplates: BubbleTemplate[] = [
 ];
 
 export function Sidebar() {
-  const { templates, deleteTemplate } = useTimeBubbles();
+  const { templates, updateTemplate, deleteTemplate } = useTimeBubbles();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<BubbleTemplate | undefined>(undefined);
 
-  const allTemplates = [...defaultTemplates, ...templates];
+  const allTemplates = [...defaultTemplates.map(t => {
+    const userOverride = templates.find(ut => ut.id === t.id);
+    return userOverride ? { ...t, ...userOverride } : t;
+  }), ...templates.filter(t => !t.isDefault)];
+
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, template: BubbleTemplate) => {
     e.dataTransfer.effectAllowed = "copy";
@@ -88,7 +92,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className="p-4 border-r bg-card shrink-0 flex flex-col"
+      className="p-4 border-r bg-background/80 backdrop-blur-xl shrink-0 flex flex-col"
       style={{ width: `${SIDEBAR_WIDTH}px` }}
     >
       <div className="flex items-center justify-between mb-4">

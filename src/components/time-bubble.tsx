@@ -244,7 +244,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         height: `${height}px`,
         transition: 'top 0.2s ease-out, height 0.2s ease-out, box-shadow 0.3s ease-in-out',
         backgroundColor: bubbleColorValue,
-        '--glow-color': bubbleColorValue,
+        '--glow-color': `var(--bubble-${block.color})`,
       } as React.CSSProperties}
       onMouseDown={handleMouseDown}
       onClick={handleClick}

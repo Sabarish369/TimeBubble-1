@@ -27,7 +27,7 @@ export function Header() {
   const { clearAllBlocks, zoomLevel, setZoomLevel } = useTimeBubbles();
 
   return (
-    <header className="flex items-center justify-between p-4 border-b shrink-0">
+    <header className="flex items-center justify-between p-4 border-b shrink-0 bg-background/80 backdrop-blur-xl">
       <div className="flex items-center gap-4">
         <TimeBubbleLogo className="h-6 w-auto" />
       </div>
@@ -41,7 +41,7 @@ export function Header() {
           <ZoomOut className="h-5 w-5" />
             <Slider
               value={[zoomLevel]}
-              onValueChange={(value) => setZoomLevel(value[0])}
+              onValueValueChange={(value) => setZoomLevel(value[0])}
               min={MIN_ZOOM}
               max={MAX_ZOOM}
               step={0.1}
