@@ -11,7 +11,7 @@ import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Briefcase, BookOp
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { format } from 'date-fns';
-import type { BubbleCategory, BubbleColor } from '@/types';
+import type { BubbleCategory } from '@/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,21 +49,6 @@ const ActiveBubbleAnimation = () => {
         </div>
     );
 };
-
-const GlowingParticles = ({ color }: { color: BubbleColor }) => {
-  const particleColor = `hsl(var(--bubble-${color}))`;
-  
-  return (
-    <div className="glowing-particles">
-      {Array.from({ length: 20 }).map((_, i) => (
-         <div key={i} className={`particle particle-${i+1}`} style={{ 
-            backgroundColor: particleColor,
-            boxShadow: `0 0 5px ${particleColor}, 0 0 10px ${particleColor}`
-         }} />
-      ))}
-    </div>
-  )
-}
 
 export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setSelectedBlock, zoomLevel } = useTimeBubbles();
@@ -242,6 +227,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const endTimeToDisplay = new Date(startTimeToDisplay.getTime() + durationToDisplay * 60000);
 
   const Icon = categoryIcons[block.category];
+  const bubbleColorValue = `hsl(var(--bubble-${block.color}))`;
   
   return (
     <div
@@ -251,19 +237,20 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         'outline outline-1 outline-slate-300/50 dark:outline-slate-700/50',
         'cursor-pointer',
         isDragging && 'shadow-lg scale-105 z-20 cursor-grabbing',
+        isCurrent && 'is-glowing',
       )}
       style={{
         top: `${top}px`,
         height: `${height}px`,
-        transition: 'top 0.2s ease-out, height 0.2s ease-out',
-        backgroundColor: `hsl(var(--bubble-${block.color}))`,
-      }}
+        transition: 'top 0.2s ease-out, height 0.2s ease-out, box-shadow 0.3s ease-in-out',
+        backgroundColor: bubbleColorValue,
+        '--glow-color': bubbleColorValue,
+      } as React.CSSProperties}
       onMouseDown={handleMouseDown}
       onClick={handleClick}
     >
        {showCelebration && <CelebrationPopper />}
        {isCurrent && <ActiveBubbleAnimation />}
-       {isCurrent && <GlowingParticles color={block.color} />}
       <div
         className={cn(
           "absolute top-1 right-1 z-20 flex items-center"
