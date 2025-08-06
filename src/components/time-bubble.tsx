@@ -85,17 +85,15 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   // Check if bubble is the current one or overdue
   useEffect(() => {
     const checkState = () => {
-      if (!isToday(currentDate)) {
-        setIsCurrent(false);
-        setIsPast(true); // If it's not today, it's in the past or future
-        return;
-      }
       const now = new Date();
       const startTime = block.startTime;
       const endTime = new Date(startTime.getTime() + block.duration * 60000);
 
-      setIsCurrent(now >= startTime && now < endTime);
-      setIsPast(now >= endTime);
+      const isForToday = isToday(currentDate);
+
+      setIsCurrent(isForToday && now >= startTime && now < endTime);
+      // A block is in the past if its end time is before now, OR if its date is before today.
+      setIsPast(now >= endTime || startOfDay(currentDate) < startOfDay(new Date()));
     };
 
     checkState();
@@ -237,7 +235,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const Icon = categoryIcons[block.category];
   
   const isOverdue = isPast && !block.completed;
-  const isInteractive = !isOverdue;
+  const isInteractive = true;
   const showAsCurrent = isCurrent && !block.completed;
 
   const bubbleStyle: React.CSSProperties = {
@@ -411,3 +409,5 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     </div>
   );
 }
+
+    

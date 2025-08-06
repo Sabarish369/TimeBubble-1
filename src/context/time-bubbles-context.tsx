@@ -311,7 +311,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   // Interval for notifications. Moved here to be after updateBlock definition.
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!isToday(currentDate) || document.hidden) return;
+      if (document.hidden) return;
   
       const now = new Date();
       timeBlocks.forEach(block => {
@@ -449,13 +449,13 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     setSuggestions([]);
   };
 
-  const setZoomLevel = useCallback((level: number) => {
+  const setZoomLevel = (level: number) => {
     const newZoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, level));
     setZoomLevelState(current => {
       if (current === newZoomLevel) return current;
       return newZoomLevel;
     });
-  }, []);
+  };
   
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
@@ -551,3 +551,5 @@ export const useTimeBubbles = () => {
   }
   return context;
 };
+
+    
