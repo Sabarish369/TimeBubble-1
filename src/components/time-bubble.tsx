@@ -53,8 +53,8 @@ const ActiveBubbleAnimation = () => {
 const GlowingParticles = () => {
   return (
     <div className="glowing-particles">
-      {Array.from({ length: 5 }).map((_, i) => (
-         <div key={i} className="particle" style={{'--angle': `${Math.random() * 360}deg`} as React.CSSProperties} />
+      {Array.from({ length: 8 }).map((_, i) => (
+         <div key={i} className="particle" />
       ))}
     </div>
   )
@@ -343,11 +343,11 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       )}
 
       <div
-        className="absolute -top-px left-0 w-full h-1.5 cursor-n-resize z-10"
+        className="absolute -top-px left-0 w-full h-1.5 cursor-n-resize z-20"
         onMouseDown={(e) => handleResizeMouseDown(e, 'top')}
       />
       <div
-        className="absolute -bottom-px left-0 w-full h-1.5 cursor-s-resize z-10"
+        className="absolute -bottom-px left-0 w-full h-1.5 cursor-s-resize z-20"
         onMouseDown={(e) => handleResizeMouseDown(e, 'bottom')}
       />
     </div>
