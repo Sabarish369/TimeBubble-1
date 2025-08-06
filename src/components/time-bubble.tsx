@@ -252,7 +252,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       onClick={isOverdue ? undefined : handleClick}
     >
        <div 
-        className={cn("absolute inset-0 rounded-lg", isOverdue && "opacity-50")}
+        className={cn("absolute inset-0 rounded-lg")}
         style={{
           background: block.completed 
             ? 'linear-gradient(to bottom, hsl(140, 60%, 65%), hsl(140, 60%, 45%))' 
@@ -267,6 +267,25 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer" onClick={(e) => {e.stopPropagation(); setReflectingBlock(block)}}>
             <MessageSquareText className="w-4 h-4 text-slate-700 dark:text-white" />
         </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer" onClick={e => e.stopPropagation()}>
+              <Trash2 className="w-4 h-4 text-slate-700 dark:text-white" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent onClick={e => e.stopPropagation()}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the "{block.title}" bubble. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteBlock(block.id)}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer">
@@ -278,26 +297,6 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
               <Copy className="mr-2 h-4 w-4" />
               <span>Duplicate</span>
             </DropdownMenuItem>
-             <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  <span>Delete</span>
-                </DropdownMenuItem>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete the "{block.title}" bubble. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => deleteBlock(block.id)}>Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
             <DropdownMenuSeparator />
             <div className="flex gap-2 p-2">
               {Object.keys(BUBBLE_COLORS).map((colorName) => (
@@ -313,7 +312,13 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         </DropdownMenu>
       </div>
 
-      <div className={cn("w-full h-full pointer-events-none relative z-10 flex-1", isOverdue && "opacity-50")}>
+      <div className={cn("w-full h-full pointer-events-none relative z-10 flex-1")}>
+         <div 
+          className={cn("absolute inset-0 rounded-lg", !isOverdue && "hidden")}
+          style={{
+            background: 'rgba(0,0,0,0.5)'
+          }}
+        />
         {showFullContent ? (
           <div className={cn("flex-grow overflow-hidden flex items-center gap-3 h-full")}>
             <Icon className="h-6 w-6 text-slate-700 dark:text-white shrink-0" />
@@ -343,7 +348,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       )}
 
       {isOverdue && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center gap-4 bg-black/30 rounded-lg">
+        <div className="absolute inset-0 z-20 flex items-center justify-center gap-4">
           <Button onClick={() => setReflectingBlock(block)}>
             <MessageSquareText className="mr-2 h-4 w-4"/>
             Reflect
@@ -366,3 +371,5 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     </div>
   );
 }
+
+    
