@@ -30,11 +30,11 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
 };
 
 const defaultTemplates: BubbleTemplate[] = [
-  { id: 'default-1', title: 'Focus Work', category: 'work', duration: 90, color: BUBBLE_COLORS.mint, isDefault: true },
-  { id: 'default-2', title: 'Study Session', category: 'study', duration: 120, color: BUBBLE_COLORS["sky-blue"], isDefault: true },
-  { id: 'default-3', title: 'Short Break', category: 'break', duration: 15, color: BUBBLE_COLORS.peach, isDefault: true },
-  { id: 'default-4', title: 'Workout', category: 'health', duration: 60, color: BUBBLE_COLORS["rose-gold"], isDefault: true },
-  { id: 'default-5', title: 'Personal Time', category: 'personal', duration: 45, color: BUBBLE_COLORS.lavender, isDefault: true },
+  { id: 'default-1', title: 'Focus Work', category: 'work', duration: 90, color: 'mint', isDefault: true },
+  { id: 'default-2', title: 'Study Session', category: 'study', duration: 120, color: 'sky-blue', isDefault: true },
+  { id: 'default-3', title: 'Short Break', category: 'break', duration: 15, color: 'peach', isDefault: true },
+  { id: 'default-4', title: 'Workout', category: 'health', duration: 60, color: 'rose-gold', isDefault: true },
+  { id: 'default-5', title: 'Personal Time', category: 'personal', duration: 45, color: 'lavender', isDefault: true },
 ];
 
 export function Sidebar() {
@@ -76,9 +76,9 @@ export function Sidebar() {
               draggable
               onDragStart={(e) => handleDragStart(e, template)}
               className="p-3 rounded-lg shadow-sm cursor-grab active:cursor-grabbing flex items-center gap-3 transition-shadow hover:shadow-md relative group"
-              style={{ backgroundColor: template.color }}
+              style={{ backgroundColor: `hsl(var(--bubble-${template.color}))` }}
             >
-              <Icon className="h-5 w-5 shrink-0 text-slate-700 dark:text-white/80" />
+              <Icon className="h-5 w-5 shrink-0 text-slate-700 dark:text-white" />
               <div className='flex-1'>
                 <p className="font-medium text-sm text-slate-800 dark:text-white">{template.title}</p>
                 <p className="text-xs text-slate-700 dark:text-white/80">{template.duration} min</p>

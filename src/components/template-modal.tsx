@@ -49,6 +49,7 @@ const templateSchema = z.object({
 type TemplateFormValues = z.infer<typeof templateSchema>;
 
 const categories: BubbleCategory[] = ['work', 'study', 'break', 'personal', 'health'];
+const colorNames = Object.keys(BUBBLE_COLORS) as (keyof typeof BUBBLE_COLORS)[];
 
 export function TemplateModal({ isOpen, onClose }: TemplateModalProps) {
   const { addTemplate } = useTimeBubbles();
@@ -59,12 +60,12 @@ export function TemplateModal({ isOpen, onClose }: TemplateModalProps) {
       title: '',
       duration: 30,
       category: 'personal',
-      color: BUBBLE_COLORS.lavender,
+      color: 'lavender',
     },
   });
 
   const onSubmit = (data: TemplateFormValues) => {
-    addTemplate(data);
+    addTemplate(data as Omit<TemplateFormValues, 'id'> & { color: keyof typeof BUBBLE_COLORS});
     onClose();
     form.reset();
   };
@@ -141,13 +142,13 @@ export function TemplateModal({ isOpen, onClose }: TemplateModalProps) {
                   <FormLabel>Color</FormLabel>
                   <FormControl>
                     <div className="flex gap-2 p-2 rounded-lg border">
-                      {Object.entries(BUBBLE_COLORS).map(([name, color]) => (
+                      {colorNames.map((name) => (
                         <button
                           type="button"
                           key={name}
-                          className={cn("w-8 h-8 rounded-full border-2", field.value === color ? "border-ring ring-2 ring-ring" : "border-transparent")}
-                          style={{ backgroundColor: color }}
-                          onClick={() => field.onChange(color)}
+                          className={cn("w-8 h-8 rounded-full border-2", field.value === name ? "border-ring ring-2 ring-ring" : "border-transparent")}
+                          style={{ backgroundColor: `hsl(var(--bubble-${name}))` }}
+                          onClick={() => field.onChange(name)}
                         />
                       ))}
                     </div>

@@ -56,10 +56,6 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
   const dragStartRef = useRef({ y: 0, initialTop: 0, initialHeight: 0 });
 
-  const minutesFromMidnight = block.startTime.getHours() * 60 + block.startTime.getMinutes();
-  const top = Math.max(0, minutesFromMidnight * PIXELS_PER_MINUTE);
-  const height = block.duration * PIXELS_PER_MINUTE;
-
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -76,12 +72,18 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   };
 
   const handleMouseUp = useCallback(() => {
+    if (isDragging) {
+      const newMinutes = (liveStartTime.getHours() * 60) + liveStartTime.getMinutes();
+      const newDate = new Date();
+      newDate.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
+      updateBlock(block.id, { startTime: newDate });
+    }
     if (isResizing) {
       updateBlock(block.id, { startTime: liveStartTime, duration: liveDuration });
     }
     setIsDragging(false);
     setIsResizing(null);
-  }, [isResizing, block.id, liveStartTime, liveDuration, updateBlock]);
+  }, [isResizing, isDragging, block.id, liveStartTime, liveDuration, updateBlock]);
 
   const handleMouseMove = useCallback((e: globalThis.MouseEvent) => {
     if (!isDragging && !isResizing) return;
@@ -101,7 +103,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       const newMinutes = Math.round(Math.max(0, newMinutesRaw) / 15) * 15;
       const newStartTime = new Date(block.startTime);
       newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
-      updateBlock(block.id, { startTime: newStartTime });
+      setLiveStartTime(newStartTime);
     }
 
     if (isResizing) {
@@ -131,16 +133,19 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         }
       }
     }
-  }, [isDragging, isResizing, block.id, block.startTime, block.duration, updateBlock, timelineRef]);
+  }, [isDragging, isResizing, block.startTime, block.duration, timelineRef]);
+
 
   useEffect(() => {
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    if (isDragging || isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [handleMouseMove, handleMouseUp]);
+  }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
@@ -159,24 +164,27 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
   const showContent = (isResizing ? liveDuration : block.duration) * PIXELS_PER_MINUTE >= 40;
 
-  const startTimeToDisplay = isResizing ? liveStartTime : block.startTime;
+  const startTimeToDisplay = isResizing || isDragging ? liveStartTime : block.startTime;
   const durationToDisplay = isResizing ? liveDuration : block.duration;
+  
+  const minutesFromMidnight = startTimeToDisplay.getHours() * 60 + startTimeToDisplay.getMinutes();
+  const top = Math.max(0, minutesFromMidnight * PIXELS_PER_MINUTE);
+  const height = durationToDisplay * PIXELS_PER_MINUTE;
+
   const endTimeToDisplay = new Date(startTimeToDisplay.getTime() + durationToDisplay * 60000);
 
-  const displayTop = Math.max(0, (startTimeToDisplay.getHours() * 60 + startTimeToDisplay.getMinutes()) * PIXELS_PER_MINUTE);
-  const displayHeight = durationToDisplay * PIXELS_PER_MINUTE;
   const Icon = categoryIcons[block.category];
   
   return (
     <div
       className={cn(
-        'absolute left-[80px] right-4 rounded-lg p-3 flex items-start shadow-md transition-all duration-200 z-10 border',
+        'absolute left-[80px] right-4 rounded-lg p-3 flex items-start shadow-md transition-all duration-200 z-10 border-2',
         'select-none', 
-        isDragging && 'shadow-lg scale-105 z-20 cursor-grabbing'
+        isDragging && 'shadow-lg scale-105 z-20 cursor-grabbing',
       )}
       style={{
-        top: `${displayTop}px`,
-        height: `${displayHeight}px`,
+        top: `${top}px`,
+        height: `${height}px`,
         backgroundColor: `hsl(var(--bubble-${block.color}))`,
         borderColor: `hsl(var(--bubble-${block.color}-dark))`,
       }}
@@ -228,7 +236,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
                   key={colorName}
                   className={cn("w-6 h-6 rounded-full border", block.color === colorName && "ring-2 ring-ring")}
                   style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
-                  onClick={() => updateBlock(block.id, { color: colorName })}
+                  onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBBLE_COLORS })}
                 />
               ))}
             </div>

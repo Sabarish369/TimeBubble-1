@@ -9,4 +9,4 @@ export const BUBBLE_COLORS = {
   'sky-blue': 'hsl(var(--bubble-sky-blue))',
   'rose-gold': 'hsl(var(--bubble-rose-gold))',
 };
-export const DEFAULT_BUBBLE_COLOR = 'hsl(var(--bubble-lavender))';
+export const DEFAULT_BUBBLE_COLOR = 'lavender';
