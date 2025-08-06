@@ -7,6 +7,7 @@ import type { TimeBlock, BubbleTemplate } from '@/types';
 import { getSmartSuggestions } from '@/ai/flows/smart-suggestions';
 import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
+import { format } from 'date-fns';
 
 type Theme = 'light' | 'dark';
 
@@ -22,6 +23,7 @@ interface TimeBubblesContextType {
   addTemplate: (template: Omit<BubbleTemplate, 'id' | 'isDefault'>) => void;
   updateTemplate: (id: string, updates: Partial<Omit<BubbleTemplate, 'id' | 'isDefault'>>) => void;
   deleteTemplate: (id: string) => void;
+  rescheduleBlock: (id: string, newDate: Date) => void;
   getBlocksForSuggestions: () => string;
   getAiSuggestions: () => Promise<void>;
   suggestions: string[];
@@ -29,6 +31,8 @@ interface TimeBubblesContextType {
   clearSuggestions: () => void;
   reflectingBlock: TimeBlock | null;
   setReflectingBlock: (block: TimeBlock | null) => void;
+  reschedulingBlock: TimeBlock | null;
+  setReschedulingBlock: (block: TimeBlock | null) => void;
   selectedBlock: TimeBlock | null;
   setSelectedBlock: (block: TimeBlock | null) => void;
   zoomLevel: number;
@@ -39,7 +43,7 @@ interface TimeBubblesContextType {
 
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
 
-const getTodayKey = () => new Date().toISOString().split('T')[0];
+const getDayKey = (date: Date) => format(date, 'yyyy-MM-dd');
 const STORAGE_KEY = 'timebubble_data';
 const ZOOM_STORAGE_KEY = 'timebubble_zoom';
 const THEME_STORAGE_KEY = 'timebubble_theme';
@@ -51,21 +55,22 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [reflectingBlock, setReflectingBlock] = useState<TimeBlock | null>(null);
+  const [reschedulingBlock, setReschedulingBlock] = useState<TimeBlock | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
   const [zoomLevel, setZoomLevelState] = useState(1);
   const [theme, setThemeState] = useState<Theme>('light');
 
   const { toast } = useToast();
-
-  useEffect(() => {
+  
+  const loadDataForDate = useCallback((date: Date) => {
     if (typeof window !== 'undefined') {
       try {
         const storedData = localStorage.getItem(STORAGE_KEY);
         if (storedData) {
           const parsedData = JSON.parse(storedData);
-          const todayKey = getTodayKey();
+          const dayKey = getDayKey(date);
           
-          const todaysBlocks = parsedData.daily_data?.[todayKey] ?? [];
+          const todaysBlocks = parsedData.daily_data?.[dayKey] ?? [];
           const blocksWithDates = todaysBlocks.map((block: any) => ({
             ...block,
             startTime: new Date(block.startTime),
@@ -76,19 +81,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
           const customTemplates = parsedData.custom_templates ?? [];
           setTemplates(customTemplates);
         }
-
-        const storedZoom = localStorage.getItem(ZOOM_STORAGE_KEY);
-        if (storedZoom) {
-            setZoomLevelState(parseFloat(storedZoom));
-        }
-
-        const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
-        if (storedTheme) {
-            setThemeState(storedTheme);
-        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            setThemeState('dark');
-        }
-
       } catch (error) {
         console.error('Failed to load from localStorage', error);
         toast({
@@ -96,18 +88,37 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
           description: 'Could not load your saved data.',
           variant: 'destructive',
         });
-      } finally {
-        setIsLoaded(true);
       }
     }
   }, [toast]);
+
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !isLoaded) {
+      loadDataForDate(new Date());
+
+      const storedZoom = localStorage.getItem(ZOOM_STORAGE_KEY);
+      if (storedZoom) {
+          setZoomLevelState(parseFloat(storedZoom));
+      }
+
+      const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
+      if (storedTheme) {
+          setThemeState(storedTheme);
+      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          setThemeState('dark');
+      }
+
+      setIsLoaded(true);
+    }
+  }, [isLoaded, loadDataForDate]);
   
   const saveData = useCallback(() => {
     if (!isLoaded || typeof window === 'undefined') return;
     try {
       const storedData = localStorage.getItem(STORAGE_KEY);
       const allData = storedData ? JSON.parse(storedData) : { user_preferences: {}, daily_data: {}, custom_templates: [] };
-      const todayKey = getTodayKey();
+      const todayKey = getDayKey(new Date());
       
       allData.daily_data[todayKey] = timeBlocks;
       allData.custom_templates = templates;
@@ -230,6 +241,42 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [toast]);
 
+  const rescheduleBlock = (id: string, newDate: Date) => {
+    const blockToReschedule = timeBlocks.find(b => b.id === id);
+    if (!blockToReschedule) return;
+
+    const newStartTime = new Date(newDate);
+    newStartTime.setHours(blockToReschedule.startTime.getHours());
+    newStartTime.setMinutes(blockToReschedule.startTime.getMinutes());
+
+    const rescheduledBlock = {
+      ...blockToReschedule,
+      startTime: newStartTime,
+    };
+    
+    // Save to the new date's storage
+    const newDayKey = getDayKey(newDate);
+    try {
+      const storedData = localStorage.getItem(STORAGE_KEY);
+      const allData = storedData ? JSON.parse(storedData) : { daily_data: {} };
+      if (!allData.daily_data[newDayKey]) {
+        allData.daily_data[newDayKey] = [];
+      }
+      allData.daily_data[newDayKey].push(rescheduledBlock);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
+
+      // Remove from the current day
+      deleteBlock(id);
+    } catch (error) {
+       console.error('Failed to reschedule block', error);
+       toast({
+         title: 'Error',
+         description: 'Could not reschedule your time bubble.',
+         variant: 'destructive',
+       });
+    }
+  };
+
   const getBlocksForSuggestions = useCallback(() => {
     return JSON.stringify(timeBlocks.map(b => ({ ...b, id: undefined })));
   }, [timeBlocks]);
@@ -280,6 +327,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     addTemplate,
     updateTemplate,
     deleteTemplate,
+    rescheduleBlock,
     getBlocksForSuggestions,
     getAiSuggestions,
     suggestions,
@@ -287,6 +335,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     clearSuggestions,
     reflectingBlock,
     setReflectingBlock,
+    reschedulingBlock,
+    setReschedulingBlock,
     selectedBlock,
     setSelectedBlock,
     zoomLevel,

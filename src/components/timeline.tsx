@@ -10,9 +10,10 @@ import { TimelineGrid } from './timeline-grid';
 import { TimeBubble } from './time-bubble';
 import { ReflectionModal } from './reflection-modal';
 import { BubbleDetailsModal } from './bubble-details-modal';
+import { RescheduleModal } from './reschedule-modal';
 
 export function Timeline() {
-  const { timeBlocks, addBlock, isLoaded, reflectingBlock, selectedBlock, zoomLevel } = useTimeBubbles();
+  const { timeBlocks, addBlock, isLoaded, reflectingBlock, selectedBlock, reschedulingBlock, zoomLevel } = useTimeBubbles();
   const timelineRef = React.useRef<HTMLDivElement>(null);
 
   const hourHeight = HOUR_HEIGHT * zoomLevel;
@@ -88,6 +89,7 @@ export function Timeline() {
       ))}
       {reflectingBlock && <ReflectionModal />}
       {selectedBlock && <BubbleDetailsModal />}
+      {reschedulingBlock && <RescheduleModal />}
     </div>
   );
 }
