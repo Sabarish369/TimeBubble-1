@@ -7,7 +7,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { BUBBLE_COLORS, HOUR_HEIGHT } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon, History } from 'lucide-react';
+import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon, History, Undo } from 'lucide-react';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { format, isToday } from 'date-fns';
@@ -242,6 +242,11 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     transition: 'top 0.2s ease-out, height 0.2s ease-out, box-shadow 0.3s ease-in-out, background 0.3s ease-in-out, opacity 0.3s ease-in-out',
     '--glow-color': `var(--bubble-${block.color})`,
   };
+
+  const handleUndoComplete = () => {
+    updateBlock(block.id, { completed: false, reflection: undefined, notified: false });
+    setShowCelebration(false);
+  };
   
   return (
     <div
@@ -303,6 +308,12 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
               <Copy className="mr-2 h-4 w-4" />
               <span>Duplicate</span>
             </DropdownMenuItem>
+             {block.completed && (
+              <DropdownMenuItem onSelect={handleUndoComplete}>
+                <Undo className="mr-2 h-4 w-4" />
+                <span>Undo Complete</span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <div className="flex gap-2 p-2">
               {Object.keys(BUBBLE_COLORS).map((colorName) => (
@@ -396,3 +407,5 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     </div>
   );
 }
+
+    
