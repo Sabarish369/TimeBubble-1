@@ -50,6 +50,16 @@ const ActiveBubbleAnimation = () => {
     );
 };
 
+const GlowingParticles = () => {
+  return (
+    <div className="glowing-particles">
+      {Array.from({ length: 5 }).map((_, i) => (
+         <div key={i} className="particle" style={{'--angle': `${Math.random() * 360}deg`} as React.CSSProperties} />
+      ))}
+    </div>
+  )
+}
+
 export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setSelectedBlock, zoomLevel } = useTimeBubbles();
   const [isDragging, setIsDragging] = useState(false);
@@ -248,6 +258,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     >
        {showCelebration && <CelebrationPopper />}
        {isCurrent && <ActiveBubbleAnimation />}
+       {isCurrent && <GlowingParticles />}
       <div
         className={cn(
           "absolute top-1 right-1 z-20 flex items-center"
