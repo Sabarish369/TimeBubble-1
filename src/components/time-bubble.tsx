@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon, History, Undo } from 'lucide-react';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { format, isToday } from 'date-fns';
+import { format, isToday, startOfDay } from 'date-fns';
 import type { BubbleCategory } from '@/types';
 import {
   AlertDialog,
@@ -235,7 +235,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const Icon = categoryIcons[block.category];
   
   const isOverdue = isPast && !block.completed;
-  const isInteractive = true;
+  const isInteractive = !isDragging && !isResizing;
   const showAsCurrent = isCurrent && !block.completed;
 
   const bubbleStyle: React.CSSProperties = {
@@ -410,4 +410,5 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   );
 }
 
+    
     
