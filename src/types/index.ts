@@ -20,12 +20,14 @@ export interface TimeBlock {
   color: keyof typeof BUBBLE_COLORS;
   category: BubbleCategory;
   completed: boolean;
+  description?: string;
   reflection?: ReflectionData;
 }
 
 export interface BubbleTemplate {
   id: string;
   title: string;
+  description?: string;
   duration: number;
   color: keyof typeof BUBBLE_COLORS;
   category: BubbleCategory;

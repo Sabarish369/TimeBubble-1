@@ -1,7 +1,7 @@
 
 'use client';
 import type { DragEvent, MouseEvent } from 'react';
-import React, { useEffect } from 'react';
+import React from 'react';
 
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { HOUR_HEIGHT, PIXELS_PER_MINUTE, TOTAL_HOURS, DEFAULT_BUBBLE_COLOR } from '@/lib/constants';
@@ -9,9 +9,10 @@ import { CurrentTimeIndicator } from './current-time-indicator';
 import { TimelineGrid } from './timeline-grid';
 import { TimeBubble } from './time-bubble';
 import { ReflectionModal } from './reflection-modal';
+import { BubbleDetailsModal } from './bubble-details-modal';
 
 export function Timeline() {
-  const { timeBlocks, addBlock, isLoaded, updateBlock, reflectingBlock, setReflectingBlock } = useTimeBubbles();
+  const { timeBlocks, addBlock, isLoaded, reflectingBlock, selectedBlock } = useTimeBubbles();
   const timelineRef = React.useRef<HTMLDivElement>(null);
 
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
@@ -58,7 +59,8 @@ export function Timeline() {
       startTime,
       duration: 60,
       category: 'personal',
-      color: DEFAULT_BUBBLE_COLOR
+      color: DEFAULT_BUBBLE_COLOR,
+      description: '',
     });
   };
 
@@ -82,6 +84,7 @@ export function Timeline() {
         <TimeBubble key={block.id} block={block} timelineRef={timelineRef} />
       ))}
       {reflectingBlock && <ReflectionModal />}
+      {selectedBlock && <BubbleDetailsModal />}
     </div>
   );
 }

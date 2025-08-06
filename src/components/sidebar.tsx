@@ -30,11 +30,11 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
 };
 
 const defaultTemplates: BubbleTemplate[] = [
-  { id: 'default-1', title: 'Focus Work', category: 'work', duration: 90, color: 'mint', isDefault: true },
-  { id: 'default-2', title: 'Study Session', category: 'study', duration: 120, color: 'sky-blue', isDefault: true },
-  { id: 'default-3', title: 'Short Break', category: 'break', duration: 15, color: 'peach', isDefault: true },
-  { id: 'default-4', title: 'Workout', category: 'health', duration: 60, color: 'rose-gold', isDefault: true },
-  { id: 'default-5', title: 'Personal Time', category: 'personal', duration: 45, color: 'lavender', isDefault: true },
+  { id: 'default-1', title: 'Focus Work', description: 'Deep work session on a key project.', category: 'work', duration: 90, color: 'mint', isDefault: true },
+  { id: 'default-2', title: 'Study Session', description: 'Review notes and practice problems.', category: 'study', duration: 120, color: 'sky-blue', isDefault: true },
+  { id: 'default-3', title: 'Short Break', description: 'Step away from the screen, stretch, or meditate.', category: 'break', duration: 15, color: 'peach', isDefault: true },
+  { id: 'default-4', title: 'Workout', description: 'Go for a run, lift weights, or do yoga.', category: 'health', duration: 60, color: 'rose-gold', isDefault: true },
+  { id: 'default-5', title: 'Personal Time', description: 'Read a book, work on a hobby, or relax.', category: 'personal', duration: 45, color: 'lavender', isDefault: true },
 ];
 
 export function Sidebar() {
@@ -49,7 +49,8 @@ export function Sidebar() {
       title: template.title,
       category: template.category,
       duration: template.duration,
-      color: template.color
+      color: template.color,
+      description: template.description
     };
     e.dataTransfer.setData('application/json', JSON.stringify(templateData));
   };

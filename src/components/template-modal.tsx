@@ -22,6 +22,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -41,6 +42,7 @@ interface TemplateModalProps {
 
 const templateSchema = z.object({
   title: z.string().min(2, { message: 'Title must be at least 2 characters.' }).max(50),
+  description: z.string().max(200).optional(),
   duration: z.coerce.number().min(15, { message: 'Duration must be at least 15 minutes.' }).max(720),
   category: z.enum(['work', 'study', 'break', 'personal', 'health']),
   color: z.string(),
@@ -58,6 +60,7 @@ export function TemplateModal({ isOpen, onClose }: TemplateModalProps) {
     resolver: zodResolver(templateSchema),
     defaultValues: {
       title: '',
+      description: '',
       duration: 30,
       category: 'personal',
       color: 'lavender',
@@ -94,6 +97,19 @@ export function TemplateModal({ isOpen, onClose }: TemplateModalProps) {
                   <FormLabel>Title</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g., Morning Walk" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Add a short description..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

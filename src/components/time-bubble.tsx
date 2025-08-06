@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils';
 import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon } from 'lucide-react';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { Input } from './ui/input';
 import { format } from 'date-fns';
 import type { BubbleCategory } from '@/types';
 import {
@@ -39,11 +38,9 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
 };
 
 export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
-  const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock } = useTimeBubbles();
+  const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setSelectedBlock } = useTimeBubbles();
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'top' | 'bottom' | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [title, setTitle] = useState(block.title);
   
   const [liveStartTime, setLiveStartTime] = useState(block.startTime);
   const [liveDuration, setLiveDuration] = useState(block.duration);
@@ -57,9 +54,17 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const dragStartRef = useRef({ y: 0, initialTop: 0, initialHeight: 0 });
 
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    // Only allow dragging, not opening the modal
+    if (e.target !== e.currentTarget) {
+        const targetElement = e.target as HTMLElement;
+        if (targetElement.closest('button')) {
+            return;
+        }
+    }
+    
     e.preventDefault();
     e.stopPropagation();
-    if(isEditing) return;
+
     setIsDragging(true);
     dragStartRef.current = { y: e.clientY, initialTop: top, initialHeight: 0 };
   };
@@ -69,6 +74,19 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     e.stopPropagation();
     setIsResizing(direction);
     dragStartRef.current = { y: e.clientY, initialTop: top, initialHeight: height };
+  };
+  
+  const handleClick = (e: MouseEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) {
+        const targetElement = e.target as HTMLElement;
+        if (targetElement.closest('button')) {
+            return;
+        }
+    }
+    if (!isDragging && !isResizing) {
+        e.stopPropagation();
+        setSelectedBlock(block);
+    }
   };
 
   const handleMouseUp = useCallback(() => {
@@ -147,21 +165,6 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     };
   }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(e.target.value);
-  };
-  
-  const handleTitleBlur = () => {
-    setIsEditing(false);
-    updateBlock(block.id, { title });
-  };
-
-  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === 'Escape') {
-      handleTitleBlur();
-    }
-  };
-
   const startTimeToDisplay = isResizing || isDragging ? liveStartTime : block.startTime;
   const durationToDisplay = isResizing ? liveDuration : block.duration;
   
@@ -182,6 +185,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         'absolute left-[80px] right-4 rounded-lg p-3 flex items-start shadow-md transition-all duration-200 z-10 border',
         'select-none', 
         'border-slate-300/50 dark:border-slate-700/50',
+        'cursor-pointer',
         isDragging && 'shadow-lg scale-105 z-20 cursor-grabbing',
       )}
       style={{
@@ -190,6 +194,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         backgroundColor: `hsl(var(--bubble-${block.color}))`,
       }}
       onMouseDown={handleMouseDown}
+      onClick={handleClick}
     >
       <div
         className={cn(
@@ -245,47 +250,21 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         </DropdownMenu>
       </div>
 
-      <div className="w-full h-full" onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
+      <div className="w-full h-full pointer-events-none">
         {showFullContent ? (
-          <div className={cn("flex-grow overflow-hidden cursor-grab flex items-center gap-3 h-full")}>
+          <div className={cn("flex-grow overflow-hidden flex items-center gap-3 h-full")}>
             <Icon className="h-6 w-6 text-slate-700 dark:text-white shrink-0" />
             <div className="flex-1 overflow-hidden">
-              {isEditing ? (
-                <Input
-                  value={title}
-                  onChange={handleTitleChange}
-                  onBlur={handleTitleBlur}
-                  onKeyDown={handleTitleKeyDown}
-                  className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-base font-semibold text-slate-800 dark:text-white"
-                  autoFocus
-                  onClick={e => e.stopPropagation()}
-                  onMouseDown={e => e.stopPropagation()}
-                />
-              ) : (
-                <p className="text-base font-semibold text-slate-800 dark:text-white pointer-events-none truncate">{block.title}</p>
-              )}
+              <p className="text-base font-semibold text-slate-800 dark:text-white pointer-events-none truncate">{block.title}</p>
               <p className="text-sm text-slate-700 dark:text-white/80 pointer-events-none">
                 {format(startTimeToDisplay, 'p')} - {format(endTimeToDisplay, 'p')}
               </p>
             </div>
           </div>
         ) : showCompactContent ? (
-           <div className={cn("flex-grow overflow-hidden cursor-grab flex items-center gap-3 h-full")}>
+           <div className={cn("flex-grow overflow-hidden flex items-center gap-3 h-full")}>
             <Icon className="h-5 w-5 text-slate-700 dark:text-white shrink-0" />
-             {isEditing ? (
-                <Input
-                  value={title}
-                  onChange={handleTitleChange}
-                  onBlur={handleTitleBlur}
-                  onKeyDown={handleTitleKeyDown}
-                  className="h-auto w-full bg-transparent border-0 focus-visible:ring-0 p-0 text-sm font-semibold text-slate-800 dark:text-white"
-                  autoFocus
-                  onClick={e => e.stopPropagation()}
-                  onMouseDown={e => e.stopPropagation()}
-                />
-              ) : (
-                <p className="text-sm font-semibold text-slate-800 dark:text-white pointer-events-none truncate">{block.title}</p>
-              )}
+            <p className="text-sm font-semibold text-slate-800 dark:text-white pointer-events-none truncate">{block.title}</p>
           </div>
         ) : (
           <div className='w-full h-full flex items-center justify-center pointer-events-none'>

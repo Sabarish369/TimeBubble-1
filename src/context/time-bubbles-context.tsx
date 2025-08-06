@@ -24,6 +24,8 @@ interface TimeBubblesContextType {
   clearSuggestions: () => void;
   reflectingBlock: TimeBlock | null;
   setReflectingBlock: (block: TimeBlock | null) => void;
+  selectedBlock: TimeBlock | null;
+  setSelectedBlock: (block: TimeBlock | null) => void;
 }
 
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
@@ -38,6 +40,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [reflectingBlock, setReflectingBlock] = useState<TimeBlock | null>(null);
+  const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
 
   const { toast } = useToast();
 
@@ -193,6 +196,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     clearSuggestions,
     reflectingBlock,
     setReflectingBlock,
+    selectedBlock,
+    setSelectedBlock,
   };
 
   return (
