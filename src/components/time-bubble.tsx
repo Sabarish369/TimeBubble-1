@@ -60,7 +60,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const [liveDuration, setLiveDuration] = useState(block.duration);
   const [showCelebration, setShowCelebration] = useState(false);
   const [isCurrent, setIsCurrent] = useState(false);
-  const [isOverdue, setIsOverdue] = useState(false);
+  const [isPast, setIsPast] = useState(false);
 
 
   const pixelsPerMinute = (HOUR_HEIGHT * zoomLevel) / 60;
@@ -85,24 +85,24 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   // Check if bubble is the current one or overdue
   useEffect(() => {
     const checkState = () => {
-      // only run these checks for today
       if (!isToday(currentDate)) {
         setIsCurrent(false);
-        setIsOverdue(false);
+        setIsPast(false);
         return;
       }
       const now = new Date();
       const startTime = block.startTime;
       const endTime = new Date(startTime.getTime() + block.duration * 60000);
-      setIsCurrent(now >= startTime && now < endTime && !block.completed);
-      setIsOverdue(now >= endTime && !block.completed);
+
+      setIsCurrent(now >= startTime && now < endTime);
+      setIsPast(now >= endTime);
     };
 
     checkState();
     const interval = setInterval(checkState, 30000); // Check every 30 seconds
 
     return () => clearInterval(interval);
-  }, [block.startTime, block.duration, block.completed, currentDate]);
+  }, [block.startTime, block.duration, currentDate]);
 
 
   const dragStartRef = useRef({ y: 0, initialTop: 0, initialHeight: 0 });
@@ -236,7 +236,9 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
   const Icon = categoryIcons[block.category];
   
+  const isOverdue = isPast && !block.completed;
   const isInteractive = !isOverdue || block.completed;
+  const showAsCurrent = isCurrent && !block.completed;
 
   const bubbleStyle: React.CSSProperties = {
     top: `${top}px`,
@@ -257,7 +259,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         'select-none', 
         'outline outline-1 outline-slate-300/50 dark:outline-slate-700/50',
         isDragging && 'shadow-lg scale-105 z-20 cursor-grabbing',
-        isCurrent && !isOverdue && 'is-glowing',
+        showAsCurrent && 'is-glowing',
         isInteractive && !isDragging && 'cursor-pointer'
       )}
       style={bubbleStyle}
@@ -274,9 +276,9 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       />
 
        {showCelebration && <CelebrationPopper />}
-       {isCurrent && !isOverdue && <ActiveBubbleAnimation />}
+       {showAsCurrent && <ActiveBubbleAnimation />}
       
-      <div className="absolute top-1 right-1 z-20 flex items-center" style={{ opacity: isOverdue && !block.completed ? 0 : 1}}>
+      <div className="absolute top-1 right-1 z-20 flex items-center" style={{ opacity: isOverdue ? 0 : 1}}>
         <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer" onClick={(e) => {e.stopPropagation(); setReflectingBlock(block)}}>
             <MessageSquareText className="w-4 h-4 text-slate-700 dark:text-white" />
         </Button>
@@ -366,7 +368,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         </div>
       )}
 
-      {isOverdue && !block.completed && (
+      {isOverdue && (
         <div className="absolute inset-0 z-20 flex items-center justify-center gap-2">
           <Button variant="reflect" onClick={() => setReflectingBlock(block)}>
             <MessageSquareText className="mr-2 h-4 w-4"/>
