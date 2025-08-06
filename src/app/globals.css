@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -170,4 +171,36 @@ body {
       opacity: 0;
     }
   }
+
+  /* Active Time Bubble Animation */
+  .active-bubble {
+    position: absolute;
+    bottom: 0;
+    width: 12px;
+    height: 12px;
+    background-color: hsla(0, 0%, 100%, 0.3);
+    border-radius: 50%;
+    animation: rise 8s infinite ease-in;
+    opacity: 0;
+  }
+  .dark .active-bubble {
+     background-color: hsla(0, 0%, 0%, 0.3);
+  }
+  .active-bubble:nth-child(1) { left: 10%; animation-delay: 0s; animation-duration: 8s; width: 10px; height: 10px; }
+  .active-bubble:nth-child(2) { left: 25%; animation-delay: 2s; animation-duration: 6s; width: 15px; height: 15px; }
+  .active-bubble:nth-child(3) { left: 45%; animation-delay: 1s; animation-duration: 9s; width: 8px; height: 8px; }
+  .active-bubble:nth-child(4) { left: 65%; animation-delay: 4s; animation-duration: 5s; width: 18px; height: 18px; }
+  .active-bubble:nth-child(5) { left: 85%; animation-delay: 3s; animation-duration: 7s; width: 12px; height: 12px; }
+
+  @keyframes rise {
+    0% {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-120px) scale(0.3);
+      opacity: 0;
+    }
+  }
+
 }

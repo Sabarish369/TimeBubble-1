@@ -38,6 +38,18 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   health: Heart,
 };
 
+const ActiveBubbleAnimation = () => {
+    return (
+        <div className="absolute inset-0 overflow-hidden rounded-lg pointer-events-none">
+            <div className="active-bubble"></div>
+            <div className="active-bubble"></div>
+            <div className="active-bubble"></div>
+            <div className="active-bubble"></div>
+            <div className="active-bubble"></div>
+        </div>
+    );
+};
+
 export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setSelectedBlock, zoomLevel } = useTimeBubbles();
   const [isDragging, setIsDragging] = useState(false);
@@ -47,6 +59,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const [liveStartTime, setLiveStartTime] = useState(block.startTime);
   const [liveDuration, setLiveDuration] = useState(block.duration);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [isCurrent, setIsCurrent] = useState(false);
+
 
   const pixelsPerMinute = (HOUR_HEIGHT * zoomLevel) / 60;
 
@@ -66,6 +80,21 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       return () => clearTimeout(timer);
     }
   }, [block.completed]);
+  
+  // Check if bubble is the current one
+  useEffect(() => {
+    const checkIsCurrent = () => {
+      const now = new Date();
+      const startTime = block.startTime;
+      const endTime = new Date(startTime.getTime() + block.duration * 60000);
+      setIsCurrent(now >= startTime && now < endTime && !block.completed);
+    };
+
+    checkIsCurrent();
+    const interval = setInterval(checkIsCurrent, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [block.startTime, block.duration, block.completed]);
 
 
   const dragStartRef = useRef({ y: 0, initialTop: 0, initialHeight: 0 });
@@ -218,6 +247,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       onClick={handleClick}
     >
        {showCelebration && <CelebrationPopper />}
+       {isCurrent && <ActiveBubbleAnimation />}
       <div
         className={cn(
           "absolute top-1 right-1 z-20 flex items-center"
@@ -264,7 +294,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
                   key={colorName}
                   className={cn("w-6 h-6 rounded-full border", block.color === colorName && "ring-2 ring-ring")}
                   style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
-                  onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBble_COLORS })}
+                  onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBBLE_COLORS })}
                 />
               ))}
             </div>
