@@ -243,7 +243,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         top: `${top}px`,
         height: `${height}px`,
         transition: 'top 0.2s ease-out, height 0.2s ease-out, box-shadow 0.3s ease-in-out',
-        backgroundColor: bubbleColorValue,
+        background: `linear-gradient(to bottom, ${bubbleColorValue}, hsl(var(--bubble-${block.color}) / 0.8))`,
         '--glow-color': `var(--bubble-${block.color})`,
       } as React.CSSProperties}
       onMouseDown={handleMouseDown}
@@ -297,7 +297,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
                   key={colorName}
                   className={cn("w-6 h-6 rounded-full border", block.color === colorName && "ring-2 ring-ring")}
                   style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
-                  onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBBLE_COLORS })}
+                  onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBble_COLORS })}
                 />
               ))}
             </div>
