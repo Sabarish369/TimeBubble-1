@@ -162,14 +162,14 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     }
   };
 
-  const showContent = (isResizing ? liveDuration : block.duration) * PIXELS_PER_MINUTE >= 40;
-
   const startTimeToDisplay = isResizing || isDragging ? liveStartTime : block.startTime;
   const durationToDisplay = isResizing ? liveDuration : block.duration;
   
   const minutesFromMidnight = startTimeToDisplay.getHours() * 60 + startTimeToDisplay.getMinutes();
   const top = Math.max(0, minutesFromMidnight * PIXELS_PER_MINUTE);
   const height = durationToDisplay * PIXELS_PER_MINUTE;
+
+  const showContent = height >= 40;
 
   const endTimeToDisplay = new Date(startTimeToDisplay.getTime() + durationToDisplay * 60000);
 
@@ -245,7 +245,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
       </div>
 
       <div className={cn("flex-grow overflow-hidden cursor-grab flex items-center gap-3 h-full")} onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}>
-        <Icon className="h-6 w-6 text-slate-700 dark:text-white shrink-0" />
+        {showContent && <Icon className="h-6 w-6 text-slate-700 dark:text-white shrink-0" />}
         <div className="flex-1 overflow-hidden">
           {isEditing ? (
             <Input
@@ -292,3 +292,5 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     </div>
   );
 }
+
+    
