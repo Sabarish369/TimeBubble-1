@@ -3,10 +3,13 @@
 import { useEffect, useState } from 'react';
 import { HOUR_HEIGHT } from '@/lib/constants';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
+import { isToday } from 'date-fns';
 
 export function CurrentTimeIndicator() {
   const [topPosition, setTopPosition] = useState(0);
-  const { zoomLevel } = useTimeBubbles();
+  const { zoomLevel, currentDate } = useTimeBubbles();
+  
+  const showIndicator = isToday(currentDate);
 
   useEffect(() => {
     const pixelsPerMinute = (HOUR_HEIGHT * zoomLevel) / 60;
@@ -16,11 +19,16 @@ export function CurrentTimeIndicator() {
       setTopPosition(minutes * pixelsPerMinute);
     };
 
-    updatePosition();
-    const interval = setInterval(updatePosition, 60000); // Update every minute
+    if(showIndicator) {
+      updatePosition();
+      const interval = setInterval(updatePosition, 60000); // Update every minute
+      return () => clearInterval(interval);
+    }
+  }, [zoomLevel, showIndicator]);
 
-    return () => clearInterval(interval);
-  }, [zoomLevel]);
+  if (!showIndicator) {
+    return null;
+  }
 
   return (
     <div

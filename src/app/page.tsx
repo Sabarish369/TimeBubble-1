@@ -9,23 +9,29 @@ import { useEffect, useRef } from "react";
 import { useTimeBubbles } from "@/context/time-bubbles-context";
 import { HOUR_HEIGHT } from "@/lib/constants";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import { isToday } from "date-fns";
 
 function AppContent() {
   const mainRef = useRef<HTMLElement>(null);
-  const { isLoaded, zoomLevel } = useTimeBubbles();
+  const { isLoaded, zoomLevel, currentDate } = useTimeBubbles();
 
   useEffect(() => {
     if (mainRef.current && isLoaded) {
-      const pixelsPerMinute = (HOUR_HEIGHT * zoomLevel) / 60;
-      const now = new Date();
-      const minutes = now.getHours() * 60 + now.getMinutes();
-      const scrollToPosition = minutes * pixelsPerMinute - mainRef.current.clientHeight / 2;
-      mainRef.current.scrollTo({
-        top: scrollToPosition,
-        behavior: 'smooth',
-      });
+      if (isToday(currentDate)) {
+        const pixelsPerMinute = (HOUR_HEIGHT * zoomLevel) / 60;
+        const now = new Date();
+        const minutes = now.getHours() * 60 + now.getMinutes();
+        const scrollToPosition = minutes * pixelsPerMinute - mainRef.current.clientHeight / 2;
+        mainRef.current.scrollTo({
+          top: scrollToPosition,
+          behavior: 'smooth',
+        });
+      } else {
+        // Scroll to the top for other days
+        mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
-  }, [isLoaded, zoomLevel]);
+  }, [isLoaded, zoomLevel, currentDate]);
 
   if (!isLoaded) {
     return (

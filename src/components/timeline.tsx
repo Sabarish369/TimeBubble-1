@@ -13,7 +13,7 @@ import { BubbleDetailsModal } from './bubble-details-modal';
 import { RescheduleModal } from './reschedule-modal';
 
 export function Timeline() {
-  const { timeBlocks, addBlock, isLoaded, reflectingBlock, selectedBlock, reschedulingBlock, zoomLevel } = useTimeBubbles();
+  const { timeBlocks, addBlock, isLoaded, reflectingBlock, selectedBlock, reschedulingBlock, zoomLevel, currentDate } = useTimeBubbles();
   const timelineRef = React.useRef<HTMLDivElement>(null);
 
   const hourHeight = HOUR_HEIGHT * zoomLevel;
@@ -37,7 +37,7 @@ export function Timeline() {
       const minutesFromTop = Math.round(dropY / pixelsPerMinute);
       const clampedMinutes = Math.max(0, minutesFromTop);
       
-      const startTime = new Date();
+      const startTime = new Date(currentDate);
       startTime.setHours(Math.floor(clampedMinutes / 60), clampedMinutes % 60, 0, 0);
 
       addBlock({ ...template, startTime });
@@ -55,7 +55,7 @@ export function Timeline() {
     const y = e.clientY - rect.top + (timelineRef.current.parentElement?.scrollTop ?? 0);
     const minutesFromTop = Math.round(y / pixelsPerMinute);
 
-    const startTime = new Date();
+    const startTime = new Date(currentDate);
     startTime.setHours(Math.floor(minutesFromTop/60), minutesFromTop % 60, 0, 0);
     
     addBlock({

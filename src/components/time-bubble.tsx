@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon, History } from 'lucide-react';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { format } from 'date-fns';
+import { format, isToday } from 'date-fns';
 import type { BubbleCategory } from '@/types';
 import {
   AlertDialog,
@@ -51,7 +51,7 @@ const ActiveBubbleAnimation = () => {
 };
 
 export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
-  const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setSelectedBlock, setReschedulingBlock, zoomLevel } = useTimeBubbles();
+  const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setSelectedBlock, setReschedulingBlock, zoomLevel, currentDate } = useTimeBubbles();
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'top' | 'bottom' | null>(null);
   const [didMove, setDidMove] = useState(false);
@@ -85,6 +85,12 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   // Check if bubble is the current one or overdue
   useEffect(() => {
     const checkState = () => {
+      // only run these checks for today
+      if (!isToday(currentDate)) {
+        setIsCurrent(false);
+        setIsOverdue(false);
+        return;
+      }
       const now = new Date();
       const startTime = block.startTime;
       const endTime = new Date(startTime.getTime() + block.duration * 60000);
@@ -96,7 +102,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     const interval = setInterval(checkState, 30000); // Check every 30 seconds
 
     return () => clearInterval(interval);
-  }, [block.startTime, block.duration, block.completed]);
+  }, [block.startTime, block.duration, block.completed, currentDate]);
 
 
   const dragStartRef = useRef({ y: 0, initialTop: 0, initialHeight: 0 });

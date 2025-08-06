@@ -7,7 +7,7 @@ import type { TimeBlock, BubbleTemplate } from '@/types';
 import { getSmartSuggestions } from '@/ai/flows/smart-suggestions';
 import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
-import { format } from 'date-fns';
+import { addDays, format, startOfDay } from 'date-fns';
 
 type Theme = 'light' | 'dark';
 
@@ -15,6 +15,11 @@ interface TimeBubblesContextType {
   timeBlocks: TimeBlock[];
   templates: BubbleTemplate[];
   isLoaded: boolean;
+  currentDate: Date;
+  setCurrentDate: (date: Date) => void;
+  goToToday: () => void;
+  goToNextDay: () => void;
+  goToPreviousDay: () => void;
   addBlock: (block: Omit<TimeBlock, 'id' | 'completed'>) => void;
   updateBlock: (id: string, updates: Partial<TimeBlock>) => void;
   deleteBlock: (id: string) => void;
@@ -59,6 +64,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
   const [templates, setTemplates] = useState<BubbleTemplate[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [currentDate, setCurrentDateState] = useState(startOfDay(new Date()));
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [reflectingBlock, setReflectingBlock] = useState<TimeBlock | null>(null);
@@ -69,6 +75,13 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
   const { toast } = useToast();
 
+  // Load data whenever the current date changes
+  useEffect(() => {
+    if (isLoaded) {
+      loadDataForDate(currentDate);
+    }
+  }, [currentDate, isLoaded]);
+
   const updateHistory = useCallback((newBlocks: TimeBlock[]) => {
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newBlocks);
@@ -77,10 +90,12 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   }, [history, historyIndex]);
   
   const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: TimeBlock[]) => TimeBlock[])) => {
-    const updatedBlocks = typeof newBlocks === 'function' ? newBlocks(timeBlocks) : newBlocks;
-    setTimeBlocks(updatedBlocks);
-    updateHistory(updatedBlocks);
-  }, [timeBlocks, updateHistory]);
+    setTimeBlocks(prevBlocks => {
+      const updatedBlocks = typeof newBlocks === 'function' ? newBlocks(prevBlocks) : newBlocks;
+      updateHistory(updatedBlocks);
+      return updatedBlocks;
+    });
+  }, [updateHistory]);
 
   const loadDataForDate = useCallback((date: Date) => {
     if (typeof window !== 'undefined') {
@@ -103,6 +118,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
           const customTemplates = parsedData.custom_templates ?? [];
           setTemplates(customTemplates);
         } else {
+            setTimeBlocks([]);
             setHistory([[]]);
             setHistoryIndex(0);
         }
@@ -120,7 +136,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (typeof window !== 'undefined' && !isLoaded) {
-      loadDataForDate(new Date());
+      loadDataForDate(currentDate);
 
       const storedZoom = localStorage.getItem(ZOOM_STORAGE_KEY);
       if (storedZoom) {
@@ -136,16 +152,16 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
       setIsLoaded(true);
     }
-  }, [isLoaded, loadDataForDate]);
+  }, [isLoaded, loadDataForDate, currentDate]);
   
   const saveData = useCallback(() => {
     if (!isLoaded || typeof window === 'undefined') return;
     try {
       const storedData = localStorage.getItem(STORAGE_KEY);
       const allData = storedData ? JSON.parse(storedData) : { user_preferences: {}, daily_data: {}, custom_templates: [] };
-      const todayKey = getDayKey(new Date());
+      const dayKey = getDayKey(currentDate);
       
-      allData.daily_data[todayKey] = timeBlocks;
+      allData.daily_data[dayKey] = timeBlocks;
       allData.custom_templates = templates;
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
@@ -159,7 +175,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         variant: 'destructive',
       });
     }
-  }, [timeBlocks, templates, isLoaded, toast, zoomLevel, theme]);
+  }, [timeBlocks, templates, isLoaded, toast, zoomLevel, theme, currentDate]);
   
   useEffect(() => {
     const debounceSave = setTimeout(() => {
@@ -365,12 +381,33 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       setTimeBlocks(history[newIndex]);
     }
   };
+  
+  const setCurrentDate = (date: Date) => {
+    setCurrentDateState(startOfDay(date));
+  };
+  
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
+  
+  const goToNextDay = () => {
+    setCurrentDate(addDays(currentDate, 1));
+  };
+  
+  const goToPreviousDay = () => {
+    setCurrentDate(addDays(currentDate, -1));
+  };
 
 
   const value = {
     timeBlocks,
     templates,
     isLoaded,
+    currentDate,
+    setCurrentDate,
+    goToToday,
+    goToNextDay,
+    goToPreviousDay,
     addBlock,
     updateBlock,
     deleteBlock,
@@ -415,5 +452,3 @@ export const useTimeBubbles = () => {
   }
   return context;
 };
-
-    
