@@ -40,3 +40,18 @@ export const SmartSuggestionsOutputSchema = z.object({
   suggestions: z.array(z.string()).describe('An array of suggestions to improve the user\'s time planning.'),
 });
 export type SmartSuggestionsOutput = z.infer<typeof SmartSuggestionsOutputSchema>;
+
+// Types for daily-insights.ts
+export const DailyInsightsInputSchema = z.object({
+  dailyData: z.string().describe('A JSON string representing the user\'s time blocks for the day. Includes titles, categories, durations, and reflection data (mood, productivity).'),
+});
+export type DailyInsightsInput = z.infer<typeof DailyInsightsInputSchema>;
+
+export const DailyInsightsOutputSchema = z.object({
+  title: z.string().describe("A creative and fitting title for the day, like 'A Productive Wednesday' or 'A Focus-Filled Friday'."),
+  summary: z.string().describe("A brief, engaging summary of the user's day, highlighting key activities and achievements."),
+  productivityInsight: z.string().describe("An insight into the user's productivity patterns, e.g., 'Your productivity scores are 23% higher on days when you start with exercise'."),
+  moodInsight: z.string().describe("An observation about the user's mood correlations, e.g., 'You felt most focused during your 'Deep Work' blocks this week'."),
+  recommendation: z.string().describe("An actionable recommendation for future planning, e.g., 'Consider scheduling creative tasks between 2-4 PM when your mood is typically highest'."),
+});
+export type DailyInsights = z.infer<typeof DailyInsightsOutputSchema>;

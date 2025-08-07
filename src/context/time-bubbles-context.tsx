@@ -3,8 +3,8 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import type { TimeBlock, BubbleTemplate } from '@/types';
-import { getSmartSuggestions } from '@/ai/flows/smart-suggestions';
+import type { TimeBlock, BubbleTemplate, DailyInsights } from '@/types';
+import { getDailyInsights as fetchDailyInsights } from '@/ai/flows/daily-insights';
 import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
 import { addDays, format, startOfDay, isToday } from 'date-fns';
@@ -31,10 +31,10 @@ interface TimeBubblesContextType {
   deleteTemplate: (id: string) => void;
   rescheduleBlock: (id: string, newStartTime: Date) => void;
   getBlocksForSuggestions: () => string;
-  getAiSuggestions: () => Promise<void>;
-  suggestions: string[];
-  isLoadingSuggestions: boolean;
-  clearSuggestions: () => void;
+  getDailyInsights: () => Promise<void>;
+  dailyInsights: DailyInsights | null;
+  isLoadingInsights: boolean;
+  clearDailyInsights: () => void;
   reflectingBlock: TimeBlock | null;
   setReflectingBlock: (block: TimeBlock | null) => void;
   reschedulingBlock: TimeBlock | null;
@@ -85,8 +85,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [templates, setTemplates] = useState<BubbleTemplate[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentDate, setCurrentDateState] = useState(startOfDay(new Date()));
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [dailyInsights, setDailyInsights] = useState<DailyInsights | null>(null);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [reflectingBlock, setReflectingBlock] = useState<TimeBlock | null>(null);
   const [reschedulingBlock, setReschedulingBlock] = useState<TimeBlock | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
@@ -425,28 +425,28 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     return JSON.stringify(timeBlocks.map(b => ({ ...b, id: undefined })));
   }, [timeBlocks]);
   
-  const getAiSuggestions = async () => {
-    setIsLoadingSuggestions(true);
+  const getDailyInsights = async () => {
+    setIsLoadingInsights(true);
+    setDailyInsights(null);
     try {
       const dailyData = getBlocksForSuggestions();
-      const userPreferences = JSON.stringify({ theme: 'light', working_hours: { start: 9, end: 17 } });
-      const result = await getSmartSuggestions({ dailyData, userPreferences });
-      setSuggestions(result.suggestions);
+      const result = await fetchDailyInsights({ dailyData });
+      setDailyInsights(result);
     } catch (error) {
-      console.error('Error getting AI suggestions:', error);
+      console.error('Error getting AI insights:', error);
       toast({
         title: 'AI Error',
-        description: 'Could not get smart suggestions.',
+        description: 'Could not get daily insights.',
         variant: 'destructive',
       });
-      setSuggestions([]);
+      setDailyInsights(null);
     } finally {
-      setIsLoadingSuggestions(false);
+      setIsLoadingInsights(false);
     }
   };
 
-  const clearSuggestions = () => {
-    setSuggestions([]);
+  const clearDailyInsights = () => {
+    setDailyInsights(null);
   };
 
   const setZoomLevel = (level: number) => {
@@ -517,10 +517,10 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     deleteTemplate,
     rescheduleBlock,
     getBlocksForSuggestions,
-    getAiSuggestions,
-    suggestions,
-    isLoadingSuggestions,
-    clearSuggestions,
+    getDailyInsights,
+    dailyInsights,
+    isLoadingInsights,
+    clearDailyInsights,
     reflectingBlock,
     setReflectingBlock,
     reschedulingBlock,
@@ -551,5 +551,3 @@ export const useTimeBubbles = () => {
   }
   return context;
 };
-
-    
