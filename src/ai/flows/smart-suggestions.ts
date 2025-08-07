@@ -18,7 +18,7 @@ export async function getSmartSuggestions(input: SmartSuggestionsInput): Promise
 
 const prompt = ai.definePrompt({
   name: 'smartSuggestionsPrompt',
-  model: googleAI.model('gemini-1.5-flash-preview'),
+  model: googleAI.model('gemini-1.5-flash'),
   input: {schema: SmartSuggestionsInputSchema},
   output: {schema: SmartSuggestionsOutputSchema},
   prompt: `You are a personal time management assistant. Analyze the user's daily data and preferences to provide smart suggestions to improve their time planning.
