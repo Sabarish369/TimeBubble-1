@@ -7,6 +7,7 @@
  */
 
 import {ai} from '@/ai/genkit';
+import {googleAI} from '@genkit-ai/googleai';
 import {z} from 'genkit';
 import { SmartSuggestionsInputSchema, SmartSuggestionsOutputSchema, type SmartSuggestionsInput, type SmartSuggestionsOutput } from '@/types/ai-types';
 
@@ -17,6 +18,7 @@ export async function getSmartSuggestions(input: SmartSuggestionsInput): Promise
 
 const prompt = ai.definePrompt({
   name: 'smartSuggestionsPrompt',
+  model: googleAI.model('gemini-1.5-flash-preview'),
   input: {schema: SmartSuggestionsInputSchema},
   output: {schema: SmartSuggestionsOutputSchema},
   prompt: `You are a personal time management assistant. Analyze the user's daily data and preferences to provide smart suggestions to improve their time planning.

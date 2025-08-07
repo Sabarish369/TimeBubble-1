@@ -6,6 +6,7 @@
  */
 
 import {ai} from '@/ai/genkit';
+import {googleAI} from '@genkit-ai/googleai';
 import {z} from 'genkit';
 import { DiagnosePlantInputSchema, DiagnosePlantOutputSchema, type DiagnosePlantInput, type DiagnosePlantOutput } from '@/types/ai-types';
 
@@ -15,6 +16,7 @@ export async function diagnosePlant(input: DiagnosePlantInput): Promise<Diagnose
 
 const prompt = ai.definePrompt({
   name: 'diagnosePlantPrompt',
+  model: googleAI.model('gemini-1.5-flash-preview'),
   input: {schema: DiagnosePlantInputSchema},
   output: {schema: DiagnosePlantOutputSchema},
   prompt: `You are an expert botanist specializing diagnosing plant illnesses.
