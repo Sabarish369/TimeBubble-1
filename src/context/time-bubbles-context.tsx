@@ -11,6 +11,11 @@ import { addDays, format, startOfDay, isToday } from 'date-fns';
 
 type Theme = 'light' | 'dark';
 
+export interface MissedTaskGroup {
+    date: string;
+    tasks: TimeBlock[];
+}
+
 interface TimeBubblesContextType {
   timeBlocks: TimeBlock[];
   templates: BubbleTemplate[];
@@ -24,6 +29,7 @@ interface TimeBubblesContextType {
   addBlockOnDate: (block: Omit<TimeBlock, 'id' | 'completed'>, date: Date) => void;
   updateBlock: (id: string, updates: Partial<TimeBlock>) => void;
   deleteBlock: (id: string) => void;
+  deleteBlockFromDate: (id: string, date: Date | string) => void;
   duplicateBlock: (id: string) => void;
   clearAllBlocks: () => void;
   addTemplate: (template: Omit<BubbleTemplate, 'id' | 'isDefault'>) => void;
@@ -35,6 +41,8 @@ interface TimeBubblesContextType {
   dailyInsights: DailyInsights | null;
   isLoadingInsights: boolean;
   clearDailyInsights: () => void;
+  getMissedTasks: () => MissedTaskGroup[];
+  clearAllMissedTasks: () => void;
   reflectingBlock: TimeBlock | null;
   setReflectingBlock: (block: TimeBlock | null) => void;
   reschedulingBlock: TimeBlock | null;
@@ -55,7 +63,7 @@ interface TimeBubblesContextType {
 
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
 
-const getDayKey = (date: Date) => format(date, 'yyyy-MM-dd');
+const getDayKey = (date: Date | string) => format(new Date(date), 'yyyy-MM-dd');
 const STORAGE_KEY = 'timebubble_data';
 const ZOOM_STORAGE_KEY = 'timebubble_zoom';
 const THEME_STORAGE_KEY = 'timebubble_theme';
@@ -345,6 +353,27 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const deleteBlock = useCallback((id: string) => {
     setTimeBlocksWithHistory(prev => prev.filter(b => b.id !== id));
   }, [setTimeBlocksWithHistory]);
+  
+  const deleteBlockFromDate = (id: string, date: Date | string) => {
+    const dayKey = getDayKey(date);
+    if (dayKey === getDayKey(currentDate)) {
+        deleteBlock(id);
+        return;
+    }
+
+    try {
+        const storedData = localStorage.getItem(STORAGE_KEY);
+        const allData = storedData ? JSON.parse(storedData) : { daily_data: {} };
+        if (allData.daily_data[dayKey]) {
+            allData.daily_data[dayKey] = allData.daily_data[dayKey].filter((b: TimeBlock) => b.id !== id);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
+        }
+    } catch (e) {
+        console.error("Failed to delete block from other date", e);
+        toast({ title: "Error deleting task", variant: "destructive" });
+    }
+  };
+
 
   const clearAllBlocks = useCallback(() => {
     setTimeBlocksWithHistory([]);
@@ -387,33 +416,77 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   }, [toast]);
 
   const rescheduleBlock = (id: string, newStartTime: Date) => {
-    const blockToReschedule = timeBlocks.find(b => b.id === id);
-    if (!blockToReschedule) return;
+    // This function can be called from the main timeline or the missed tasks drawer.
+    // If it's on the current day, we can use the existing logic.
+    // If it's for a past day, we need to manipulate localStorage directly for other dates.
 
-    const rescheduledBlock = {
+    const dayKeyOfBlock = getDayKey(newStartTime);
+    const dayKeyOfCurrentDate = getDayKey(currentDate);
+
+    // Find the block from ANYWHERE to get its data
+    let blockToReschedule: TimeBlock | null = null;
+    let sourceDayKey: string | null = null;
+
+    const storedData = localStorage.getItem(STORAGE_KEY);
+    const allData = storedData ? JSON.parse(storedData) : { daily_data: {} };
+
+    if (dayKeyOfBlock === dayKeyOfCurrentDate) {
+        blockToReschedule = timeBlocks.find(b => b.id === id) || null;
+        sourceDayKey = dayKeyOfCurrentDate;
+    } else {
+        // Find the block in the entire dataset
+        for (const dateKey in allData.daily_data) {
+            const found = allData.daily_data[dateKey].find((b: TimeBlock) => b.id === id);
+            if (found) {
+                blockToReschedule = { ...found, startTime: new Date(found.startTime) };
+                sourceDayKey = dateKey;
+                break;
+            }
+        }
+    }
+    
+    if (!blockToReschedule || !sourceDayKey) {
+        toast({ title: 'Error', description: 'Could not find the task to reschedule.', variant: 'destructive' });
+        return;
+    }
+
+    // 1. Prepare the rescheduled block data
+    const rescheduledBlock: TimeBlock = {
       ...blockToReschedule,
       startTime: newStartTime,
       notified: false,
+      actionable: false,
+      completed: false,
     };
     
-    // Save to the new date's storage
-    const newDayKey = getDayKey(newStartTime);
     try {
-      const storedData = localStorage.getItem(STORAGE_KEY);
-      const allData = storedData ? JSON.parse(storedData) : { daily_data: {} };
-      
-      const blocksForNewDate = (allData.daily_data[newDayKey] || []).map((b: any) => ({...b, startTime: new Date(b.startTime)}));
-      const resolvedStartTime = findAvailableSlot(newStartTime, rescheduledBlock.duration, blocksForNewDate);
-      rescheduledBlock.startTime = resolvedStartTime;
+        // 2. Add to the new date's storage
+        const newDayKey = getDayKey(newStartTime);
+        const blocksForNewDate = (allData.daily_data[newDayKey] || []).map((b: any) => ({...b, startTime: new Date(b.startTime)}));
+        const resolvedStartTime = findAvailableSlot(newStartTime, rescheduledBlock.duration, blocksForNewDate);
+        rescheduledBlock.startTime = resolvedStartTime;
 
-      if (!allData.daily_data[newDayKey]) {
-        allData.daily_data[newDayKey] = [];
-      }
-      allData.daily_data[newDayKey].push(rescheduledBlock);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
+        if (!allData.daily_data[newDayKey]) {
+            allData.daily_data[newDayKey] = [];
+        }
+        allData.daily_data[newDayKey].push(rescheduledBlock);
+        
+        // 3. Remove from the old date
+        allData.daily_data[sourceDayKey] = allData.daily_data[sourceDayKey].filter((b: TimeBlock) => b.id !== id);
+        
+        // 4. Save all changes
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
 
-      // Remove from the current day
-      setTimeBlocksWithHistory(prev => prev.filter(b => b.id !== id));
+        // 5. If the source was the current day, update the UI state
+        if (sourceDayKey === dayKeyOfCurrentDate) {
+            setTimeBlocksWithHistory(prev => prev.filter(b => b.id !== id));
+        }
+
+        toast({
+            title: 'Bubble Rescheduled',
+            description: `"${rescheduledBlock.title}" has been moved to the new date and time.`,
+        });
+
     } catch (error) {
        console.error('Failed to reschedule block', error);
        toast({
@@ -423,6 +496,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
        });
     }
   };
+
 
   const getBlocksForSuggestions = useCallback(() => {
     return JSON.stringify(timeBlocks.map(b => ({ ...b, id: undefined })));
@@ -445,6 +519,65 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       setDailyInsights(null);
     } finally {
       setIsLoadingInsights(false);
+    }
+  };
+
+  const getMissedTasks = (): MissedTaskGroup[] => {
+    if (typeof window === 'undefined') return [];
+
+    const storedData = localStorage.getItem(STORAGE_KEY);
+    if (!storedData) return [];
+
+    const allData = JSON.parse(storedData);
+    if (!allData.daily_data) return [];
+    
+    const now = new Date();
+    const missedTasksByDate: Record<string, TimeBlock[]> = {};
+
+    Object.keys(allData.daily_data).forEach(dateKey => {
+        const blocks = allData.daily_data[dateKey] as TimeBlock[];
+        const missed = blocks.filter(block => {
+            const endTime = new Date(new Date(block.startTime).getTime() + block.duration * 60000);
+            return endTime < now && !block.completed;
+        });
+
+        if (missed.length > 0) {
+            missedTasksByDate[dateKey] = missed.map(m => ({...m, startTime: new Date(m.startTime)}));
+        }
+    });
+
+    return Object.entries(missedTasksByDate)
+        .map(([date, tasks]) => ({ date, tasks }))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  };
+
+  const clearAllMissedTasks = () => {
+    if (typeof window === 'undefined') return;
+    try {
+        const storedData = localStorage.getItem(STORAGE_KEY);
+        if (!storedData) return;
+        
+        const allData = JSON.parse(storedData);
+        if (!allData.daily_data) return;
+
+        const now = new Date();
+        Object.keys(allData.daily_data).forEach(dateKey => {
+            const blocks = allData.daily_data[dateKey] as TimeBlock[];
+            // Keep only the blocks that are not missed
+            allData.daily_data[dateKey] = blocks.filter(block => {
+                const endTime = new Date(new Date(block.startTime).getTime() + block.duration * 60000);
+                return endTime >= now || block.completed;
+            });
+        });
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
+        // If any missed tasks from the current day were cleared, update the view
+        loadDataForDate(currentDate);
+
+        toast({ title: "All missed tasks have been cleared." });
+    } catch (e) {
+        console.error("Failed to clear all missed tasks", e);
+        toast({ title: "Error clearing tasks", variant: "destructive" });
     }
   };
 
@@ -513,6 +646,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     addBlockOnDate,
     updateBlock,
     deleteBlock,
+    deleteBlockFromDate,
     duplicateBlock,
     clearAllBlocks,
     addTemplate,
@@ -524,6 +658,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     dailyInsights,
     isLoadingInsights,
     clearDailyInsights,
+    getMissedTasks,
+    clearAllMissedTasks,
     reflectingBlock,
     setReflectingBlock,
     reschedulingBlock,

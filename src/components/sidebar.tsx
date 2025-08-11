@@ -2,7 +2,7 @@
 'use client';
 
 import type { DragEvent } from 'react';
-import { Briefcase, BookOpen, Coffee, User, Heart, Plus, Trash2, Pencil, type LucideIcon, CalendarPlus } from 'lucide-react';
+import { Briefcase, BookOpen, Coffee, User, Heart, Plus, Trash2, Pencil, type LucideIcon, CalendarPlus, History } from 'lucide-react';
 import { BUBBLE_COLORS, SIDEBAR_WIDTH } from '@/lib/constants';
 import type { BubbleCategory, BubbleTemplate } from '@/types';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
@@ -21,6 +21,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { BubbleCreateModal } from './bubble-create-modal';
+import { MissedTasksDrawer } from './missed-tasks-drawer';
 
 const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   work: Briefcase,
@@ -42,6 +43,7 @@ export function Sidebar() {
   const { templates, updateTemplate, deleteTemplate } = useTimeBubbles();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isBubbleCreateModalOpen, setIsBubbleCreateModalOpen] = useState(false);
+  const [isMissedTasksDrawerOpen, setIsMissedTasksDrawerOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<BubbleTemplate | undefined>(undefined);
 
   const allTemplates = [...defaultTemplates.map(t => {
@@ -71,7 +73,7 @@ export function Sidebar() {
     dragImage.style.opacity = '0.8'; // Make it semi-transparent
     dragImage.style.pointerEvents = 'none';
     dragImage.classList.add('is-glowing');
-    (dragImage.style as any).setProperty('--glow-color', `var(--bubble-${template.color})`);
+    (dragImage.style as any).setProperty('--glow-color', `hsl(var(--bubble-${template.color}))`);
 
     document.body.appendChild(dragImage);
     e.dataTransfer.setDragImage(dragImage, target.offsetWidth / 2, target.offsetHeight / 2);
@@ -104,10 +106,14 @@ export function Sidebar() {
       className="p-4 border-r bg-gradient-to-br from-primary/10 via-background to-accent/10 shrink-0 flex flex-col"
       style={{ width: `${SIDEBAR_WIDTH}px` }}
     >
-      <div className='p-2 mb-4'>
+      <div className='p-2 mb-4 flex items-center gap-2'>
         <Button className='w-full' onClick={() => setIsBubbleCreateModalOpen(true)}>
           <CalendarPlus className="mr-2 h-5 w-5" />
           Add Bubble
+        </Button>
+        <Button variant="outline" size="icon" onClick={() => setIsMissedTasksDrawerOpen(true)}>
+            <History className="h-5 w-5" />
+            <span className="sr-only">Show missed tasks</span>
         </Button>
       </div>
 
@@ -183,6 +189,10 @@ export function Sidebar() {
       <BubbleCreateModal 
         isOpen={isBubbleCreateModalOpen}
         onClose={() => setIsBubbleCreateModalOpen(false)}
+      />
+      <MissedTasksDrawer
+        isOpen={isMissedTasksDrawerOpen}
+        onClose={() => setIsMissedTasksDrawerOpen(false)}
       />
     </aside>
   );
