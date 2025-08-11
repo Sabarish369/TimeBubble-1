@@ -136,12 +136,12 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
     setSelectedBlock(block);
   };
 
-  const stopAutoScroll = () => {
+  const stopAutoScroll = useCallback(() => {
     if (scrollIntervalRef.current) {
         clearInterval(scrollIntervalRef.current);
         scrollIntervalRef.current = null;
     }
-  };
+  }, []);
 
 
   const handleMouseUp = useCallback(() => {
@@ -154,7 +154,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
     setIsDragging(false);
     setIsResizing(null);
     stopAutoScroll();
-  }, [isResizing, isDragging, block.id, liveStartTime, liveDuration, updateBlock]);
+  }, [isResizing, isDragging, block.id, liveStartTime, liveDuration, updateBlock, stopAutoScroll]);
 
   const handleMouseMove = useCallback((e: globalThis.MouseEvent) => {
     if (!isDragging && !isResizing) return;
@@ -229,7 +229,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
     }
 
 
-  }, [isDragging, isResizing, block.startTime, block.duration, timelineRef, pixelsPerMinute, scrollContainerRef]);
+  }, [isDragging, isResizing, block.startTime, block.duration, timelineRef, pixelsPerMinute, scrollContainerRef, stopAutoScroll]);
 
 
   useEffect(() => {
@@ -242,7 +242,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
       document.removeEventListener('mouseup', handleMouseUp);
       stopAutoScroll();
     };
-  }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
+  }, [isDragging, isResizing, handleMouseMove, handleMouseUp, stopAutoScroll]);
 
   const startTimeToDisplay = isResizing || isDragging ? liveStartTime : block.startTime;
   const durationToDisplay = isResizing || isDragging ? liveDuration : block.duration;
