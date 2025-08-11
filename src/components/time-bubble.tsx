@@ -29,6 +29,7 @@ import { ActiveBubbleAnimation } from './active-bubble-animation';
 interface TimeBubbleProps {
   block: TimeBlockType;
   timelineRef: RefObject<HTMLDivElement>;
+  scrollContainerRef: RefObject<HTMLElement>;
 }
 
 const categoryIcons: Record<BubbleCategory, LucideIcon> = {
@@ -39,7 +40,7 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   health: Heart,
 };
 
-export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
+export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbleProps) {
   const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setSelectedBlock, setReschedulingBlock, zoomLevel, currentDate } = useTimeBubbles();
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'top' | 'bottom' | null>(null);
@@ -53,6 +54,8 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
 
 
   const pixelsPerMinute = (HOUR_HEIGHT * zoomLevel) / 60;
+  const scrollIntervalRef = useRef<number | null>(null);
+
 
   // Keep live state in sync with block prop, but only if not actively being manipulated
   useEffect(() => {
@@ -133,6 +136,14 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     setSelectedBlock(block);
   };
 
+  const stopAutoScroll = () => {
+    if (scrollIntervalRef.current) {
+        clearInterval(scrollIntervalRef.current);
+        scrollIntervalRef.current = null;
+    }
+  };
+
+
   const handleMouseUp = useCallback(() => {
     if (isDragging) {
       updateBlock(block.id, { startTime: liveStartTime });
@@ -142,6 +153,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     }
     setIsDragging(false);
     setIsResizing(null);
+    stopAutoScroll();
   }, [isResizing, isDragging, block.id, liveStartTime, liveDuration, updateBlock]);
 
   const handleMouseMove = useCallback((e: globalThis.MouseEvent) => {
@@ -195,7 +207,29 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
         }
       }
     }
-  }, [isDragging, isResizing, block.startTime, block.duration, timelineRef, pixelsPerMinute]);
+
+    // Auto-scroll logic
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+        const { top: containerTop, bottom: containerBottom, height: containerHeight } = scrollContainer.getBoundingClientRect();
+        const threshold = 60; // pixels from the edge to trigger scroll
+        stopAutoScroll();
+
+        if (e.clientY < containerTop + threshold) {
+            scrollIntervalRef.current = window.setInterval(() => {
+                const scrollSpeed = (threshold - (e.clientY - containerTop)) / 5;
+                scrollContainer.scrollTop -= scrollSpeed;
+            }, 15);
+        } else if (e.clientY > containerBottom - threshold) {
+            scrollIntervalRef.current = window.setInterval(() => {
+                const scrollSpeed = (threshold - (containerBottom - e.clientY)) / 5;
+                scrollContainer.scrollTop += scrollSpeed;
+            }, 15);
+        }
+    }
+
+
+  }, [isDragging, isResizing, block.startTime, block.duration, timelineRef, pixelsPerMinute, scrollContainerRef]);
 
 
   useEffect(() => {
@@ -206,6 +240,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      stopAutoScroll();
     };
   }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
@@ -230,7 +265,7 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
   const bubbleStyle: React.CSSProperties = {
     top: `${top}px`,
     height: `${height}px`,
-    transition: 'top 0.2s ease-out, height 0.2s ease-out, box-shadow 0.3s ease-in-out, background 0.3s ease-in-out, opacity 0.3s ease-in-out',
+    transition: isDragging || isResizing ? 'none' : 'top 0.2s ease-out, height 0.2s ease-out, box-shadow 0.3s ease-in-out, background 0.3s ease-in-out, opacity 0.3s ease-in-out',
     '--glow-color': `var(--bubble-${block.color})`,
   };
 

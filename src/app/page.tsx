@@ -59,7 +59,7 @@ function AppContent() {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <main ref={mainRef} className="flex-1 overflow-y-auto bg-gradient-to-b from-primary/5 via-background to-accent/5">
-          <Timeline />
+          <Timeline scrollContainerRef={mainRef} />
         </main>
       </div>
       <ActionPromptModal

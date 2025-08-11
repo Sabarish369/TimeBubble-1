@@ -1,6 +1,6 @@
 
 'use client';
-import type { DragEvent, MouseEvent } from 'react';
+import type { DragEvent, MouseEvent, RefObject } from 'react';
 import React from 'react';
 
 import { useTimeBubbles } from '@/context/time-bubbles-context';
@@ -15,7 +15,11 @@ import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast } from 'date-fns';
 import { BubbleCreateModal } from './bubble-create-modal';
 
-export function Timeline() {
+interface TimelineProps {
+  scrollContainerRef: RefObject<HTMLElement>;
+}
+
+export function Timeline({ scrollContainerRef }: TimelineProps) {
   const { timeBlocks, addBlock, isLoaded, reflectingBlock, selectedBlock, reschedulingBlock, zoomLevel, currentDate } = useTimeBubbles();
   const timelineRef = React.useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -97,7 +101,7 @@ export function Timeline() {
       <TimelineGrid />
       <CurrentTimeIndicator />
       {isLoaded && timeBlocks.map(block => (
-        <TimeBubble key={block.id} block={block} timelineRef={timelineRef} />
+        <TimeBubble key={block.id} block={block} timelineRef={timelineRef} scrollContainerRef={scrollContainerRef} />
       ))}
       {reflectingBlock && <ReflectionModal />}
       {selectedBlock && <BubbleDetailsModal />}
