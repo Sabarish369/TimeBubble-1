@@ -42,7 +42,7 @@ body {
     --bubble-rose-gold: 0 74% 82%;
   }
   .dark {
-    --background: 240 10% 3.9% / 0.95;
+    --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
     --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
