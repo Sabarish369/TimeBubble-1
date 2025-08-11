@@ -8,6 +8,10 @@ export const BUBBLE_COLORS = {
   peach: 'hsl(var(--bubble-peach))',
   'sky-blue': 'hsl(var(--bubble-sky-blue))',
   'rose-gold': 'hsl(var(--bubble-rose-gold))',
+  lime: 'hsl(var(--bubble-lime))',
+  coral: 'hsl(var(--bubble-coral))',
+  canary: 'hsl(var(--bubble-canary))',
+  aqua: 'hsl(var(--bubble-aqua))',
 };
 export const DEFAULT_BUBBLE_COLOR = 'lavender';
 export const MIN_ZOOM = 0.5;

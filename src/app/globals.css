@@ -40,6 +40,10 @@ body {
     --bubble-peach: 28 100% 86%;
     --bubble-sky-blue: 197 92% 85%;
     --bubble-rose-gold: 0 74% 82%;
+    --bubble-lime: 90 70% 80%;
+    --bubble-coral: 10 80% 80%;
+    --bubble-canary: 54 100% 80%;
+    --bubble-aqua: 180 60% 80%;
   }
   .dark {
     --background: 240 10% 3.9%;
@@ -72,6 +76,10 @@ body {
     --bubble-peach: 28 100% 39%;
     --bubble-sky-blue: 197 92% 38%;
     --bubble-rose-gold: 0 74% 35%;
+    --bubble-lime: 90 70% 35%;
+    --bubble-coral: 10 80% 35%;
+    --bubble-canary: 54 100% 35%;
+    --bubble-aqua: 180 60% 35%;
   }
 }
 
