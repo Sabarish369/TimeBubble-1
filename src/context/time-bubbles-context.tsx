@@ -7,7 +7,8 @@ import type { TimeBlock, BubbleTemplate, DailyInsights } from '@/types';
 import { getDailyInsights as fetchDailyInsights } from '@/ai/flows/daily-insights';
 import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
-import { addDays, format, startOfDay, isToday } from 'date-fns';
+import { addDays, format, startOfDay, isToday, isPast } from 'date-fns';
+import * as NotificationManager from '@/lib/notification-manager';
 
 type Theme = 'light' | 'dark';
 
@@ -107,21 +108,40 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
    useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      toast({
-        title: 'Enable Notifications',
-        description: 'Get notified when your time bubbles end.',
-        action: (
-          <button
-            onClick={() => Notification.requestPermission()}
-            className="inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium"
-          >
-            Enable
-          </button>
-        ),
-      });
-    }
+    NotificationManager.requestPermission(toast);
   }, [toast]);
+
+  // Centralized effect for managing all notifications
+  useEffect(() => {
+    const onNotify = (block: TimeBlock) => {
+      // This function is called when a notification fires
+      playNotificationSound();
+      updateBlock(block.id, { notified: true, actionable: true, notificationScheduled: false });
+      setActionableBlock(block);
+    };
+
+    // Clear all previous notifications before setting new ones
+    NotificationManager.clearAllNotifications();
+
+    timeBlocks.forEach(block => {
+      // Don't schedule for completed or past, unscheduled bubbles
+      if (block.completed || block.notificationScheduled) return;
+      
+      const endTime = new Date(block.startTime.getTime() + block.duration * 60000);
+      if (endTime > new Date()) {
+        NotificationManager.scheduleNotification(block, endTime, onNotify);
+        // Mark as scheduled to prevent duplicates
+        updateBlock(block.id, { notificationScheduled: true });
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      NotificationManager.clearAllNotifications();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeBlocks]);
+
 
   const updateHistory = useCallback((newBlocks: TimeBlock[]) => {
     const newHistory = history.slice(0, historyIndex + 1);
@@ -270,7 +290,12 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
-    // This is a special case. Reflections shouldn't be part of the undo/redo history.
+    if ('notificationScheduled' in updates && Object.keys(updates).length === 1) {
+       setTimeBlocks(prev => prev.map(b => (b.id === id ? { ...b, ...updates } : b)));
+       return;
+    }
+
+    // Reflections are not part of history
     if ('completed' in updates || 'reflection' in updates || 'notified' in updates || 'actionable' in updates) {
       setTimeBlocks(prev => prev.map(b => (b.id === id ? { ...b, ...updates } : b)));
       return;
@@ -283,7 +308,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         const tentativeBlock = { ...originalBlock, ...updates };
         const newStartTime = findAvailableSlot(tentativeBlock.startTime, tentativeBlock.duration, prev, id);
 
-        return prev.map(b => (b.id === id ? { ...b, ...updates, startTime: newStartTime } : b));
+        return prev.map(b => (b.id === id ? { ...b, ...updates, startTime: newStartTime, notificationScheduled: false } : b));
     });
   }, [findAvailableSlot, setTimeBlocksWithHistory]);
   
@@ -319,38 +344,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   }, [addBlockOnDate]);
 
 
-  // Interval for notifications. Moved here to be after updateBlock definition.
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (document.hidden) return;
-  
-      const now = new Date();
-      timeBlocks.forEach(block => {
-        const endTime = new Date(block.startTime.getTime() + block.duration * 60000);
-        if (now >= endTime && !block.completed && !block.notified) {
-            updateBlock(block.id, { notified: true, actionable: true });
-            
-            if (Notification.permission === 'granted') {
-                const notification = new Notification(`Time's up for "${block.title}"!`, {
-                    body: 'Time to reflect on your task.',
-                    icon: '/favicon.ico', 
-                });
-                playNotificationSound();
-
-                notification.onclick = () => {
-                    window.focus();
-                    setActionableBlock(block);
-                };
-            }
-        }
-      });
-    }, 10000); // Check every 10 seconds
-  
-    return () => clearInterval(interval);
-  }, [timeBlocks, currentDate, updateBlock]);
-
-
   const deleteBlock = useCallback((id: string) => {
+    NotificationManager.clearNotification(id);
     setTimeBlocksWithHistory(prev => prev.filter(b => b.id !== id));
   }, [setTimeBlocksWithHistory]);
   
@@ -401,15 +396,17 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
   const updateTemplate = useCallback((id: string, updates: Partial<Omit<BubbleTemplate, 'id' | 'isDefault'>>) => {
     setTemplates(prev => {
-        const existingTemplate = prev.find(t => t.id === id);
-        if (existingTemplate) {
-            // It's a custom template, just update it
-            return prev.map(t => (t.id === id ? { ...t, ...updates } : t));
-        } else {
-            // It's a default template being edited for the first time.
-            // Create a new custom template that acts as an override.
-            return [...prev, { ...updates, id: id, isDefault: false } as BubbleTemplate];
+        const isDefaultTemplate = defaultTemplates.some(t => t.id === id);
+        const customTemplateExists = prev.some(t => t.id === id);
+
+        if (customTemplateExists) {
+             return prev.map(t => (t.id === id ? { ...t, ...updates } : t));
+        } else if (isDefaultTemplate) {
+            const defaultTemplate = defaultTemplates.find(t => t.id === id)!;
+            const newCustomTemplate = { ...defaultTemplate, ...updates, id };
+            return [...prev, newCustomTemplate];
         }
+        return prev;
     });
     toast({
         title: 'Template Updated',
@@ -426,25 +423,21 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   }, [toast]);
 
   const rescheduleBlock = (id: string, newStartTime: Date) => {
-    // This function can be called from the main timeline or the missed tasks drawer.
-    // If it's on the current day, we can use the existing logic.
-    // If it's for a past day, we need to manipulate localStorage directly for other dates.
-
     const dayKeyOfBlock = getDayKey(newStartTime);
     const dayKeyOfCurrentDate = getDayKey(currentDate);
 
-    // Find the block from ANYWHERE to get its data
     let blockToReschedule: TimeBlock | null = null;
     let sourceDayKey: string | null = null;
 
     const storedData = localStorage.getItem(STORAGE_KEY);
     const allData = storedData ? JSON.parse(storedData) : { daily_data: {} };
 
-    if (dayKeyOfBlock === dayKeyOfCurrentDate) {
-        blockToReschedule = timeBlocks.find(b => b.id === id) || null;
-        sourceDayKey = dayKeyOfCurrentDate;
+    // Find block on current day first
+    blockToReschedule = timeBlocks.find(b => b.id === id) || null;
+    if (blockToReschedule) {
+      sourceDayKey = dayKeyOfCurrentDate;
     } else {
-        // Find the block in the entire dataset
+        // Find the block in the entire dataset if not on current day
         for (const dateKey in allData.daily_data) {
             const found = allData.daily_data[dateKey].find((b: TimeBlock) => b.id === id);
             if (found) {
@@ -459,27 +452,30 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         toast({ title: 'Error', description: 'Could not find the task to reschedule.', variant: 'destructive' });
         return;
     }
+    
+    NotificationManager.clearNotification(id);
 
     // 1. Prepare the rescheduled block data
-    const rescheduledBlock: TimeBlock = {
+    const rescheduledBlockData: TimeBlock = {
       ...blockToReschedule,
       startTime: newStartTime,
       notified: false,
       actionable: false,
       completed: false,
+      notificationScheduled: false,
     };
     
     try {
         // 2. Add to the new date's storage
         const newDayKey = getDayKey(newStartTime);
         const blocksForNewDate = (allData.daily_data[newDayKey] || []).map((b: any) => ({...b, startTime: new Date(b.startTime)}));
-        const resolvedStartTime = findAvailableSlot(newStartTime, rescheduledBlock.duration, blocksForNewDate);
-        rescheduledBlock.startTime = resolvedStartTime;
+        const resolvedStartTime = findAvailableSlot(newStartTime, rescheduledBlockData.duration, blocksForNewDate);
+        rescheduledBlockData.startTime = resolvedStartTime;
 
         if (!allData.daily_data[newDayKey]) {
             allData.daily_data[newDayKey] = [];
         }
-        allData.daily_data[newDayKey].push(rescheduledBlock);
+        allData.daily_data[newDayKey].push(rescheduledBlockData);
         
         // 3. Remove from the old date
         allData.daily_data[sourceDayKey] = allData.daily_data[sourceDayKey].filter((b: TimeBlock) => b.id !== id);
@@ -494,7 +490,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
         toast({
             title: 'Bubble Rescheduled',
-            description: `"${rescheduledBlock.title}" has been moved to the new date and time.`,
+            description: `"${rescheduledBlockData.title}" has been moved to the new date and time.`,
         });
 
     } catch (error) {
@@ -642,7 +638,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     setCurrentDate(addDays(currentDate, -1));
   };
 
-
   const value = {
     timeBlocks,
     templates,
@@ -702,3 +697,12 @@ export const useTimeBubbles = () => {
   }
   return context;
 };
+
+// Add default templates here to avoid circular dependency
+const defaultTemplates: BubbleTemplate[] = [
+  { id: 'default-1', title: 'Focus Work', description: 'Deep work session on a key project.', category: 'work', duration: 90, color: 'mint', isDefault: true },
+  { id: 'default-2', title: 'Study Session', description: 'Review notes and practice problems.', category: 'study', duration: 120, color: 'sky-blue', isDefault: true },
+  { id: 'default-3', title: 'Short Break', description: 'Step away from the screen, stretch, or meditate.', category: 'break', duration: 15, color: 'peach', isDefault: true },
+  { id: 'default-4', title: 'Workout', description: 'Go for a run, lift weights, or do yoga.', category: 'health', duration: 60, color: 'rose-gold', isDefault: true },
+  { id: 'default-5', title: 'Personal Time', description: 'Read a book, work on a hobby, or relax.', category: 'personal', duration: 45, color: 'lavender', isDefault: true },
+];
