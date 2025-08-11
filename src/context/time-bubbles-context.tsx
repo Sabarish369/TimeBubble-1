@@ -41,6 +41,8 @@ interface TimeBubblesContextType {
   setReschedulingBlock: (block: TimeBlock | null) => void;
   selectedBlock: TimeBlock | null;
   setSelectedBlock: (block: TimeBlock | null) => void;
+  actionableBlock: TimeBlock | null;
+  setActionableBlock: (block: TimeBlock | null) => void;
   zoomLevel: number;
   setZoomLevel: (level: number) => void;
   theme: Theme;
@@ -90,6 +92,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [reflectingBlock, setReflectingBlock] = useState<TimeBlock | null>(null);
   const [reschedulingBlock, setReschedulingBlock] = useState<TimeBlock | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
+  const [actionableBlock, setActionableBlock] = useState<TimeBlock | null>(null);
   const [zoomLevel, setZoomLevelState] = useState(1);
   const [theme, setThemeState] = useState<Theme>('light');
 
@@ -260,7 +263,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
   const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
     // This is a special case. Reflections shouldn't be part of the undo/redo history.
-    if ('completed' in updates || 'reflection' in updates || 'notified' in updates) {
+    if ('completed' in updates || 'reflection' in updates || 'notified' in updates || 'actionable' in updates) {
       setTimeBlocks(prev => prev.map(b => (b.id === id ? { ...b, ...updates } : b)));
       return;
     }
@@ -286,7 +289,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }));
 
     const newStartTime = findAvailableSlot(block.startTime, block.duration, blocksForDate);
-    const newBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false, notified: false };
+    const newBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false, notified: false, actionable: false };
     
     allData.daily_data[dayKey] = [...blocksForDate, newBlock];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
@@ -317,20 +320,20 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       timeBlocks.forEach(block => {
         const endTime = new Date(block.startTime.getTime() + block.duration * 60000);
         if (now >= endTime && !block.completed && !block.notified) {
-          if (Notification.permission === 'granted') {
-            const notification = new Notification(`Time's up for "${block.title}"!`, {
-              body: 'Time to reflect on your task.',
-              icon: '/favicon.ico', 
-            });
-            playNotificationSound();
-
-            notification.onclick = () => {
-              window.focus();
-              setReflectingBlock(block);
-            };
+            updateBlock(block.id, { notified: true, actionable: true });
             
-            updateBlock(block.id, { notified: true });
-          }
+            if (Notification.permission === 'granted') {
+                const notification = new Notification(`Time's up for "${block.title}"!`, {
+                    body: 'Time to reflect on your task.',
+                    icon: '/favicon.ico', 
+                });
+                playNotificationSound();
+
+                notification.onclick = () => {
+                    window.focus();
+                    setActionableBlock(block);
+                };
+            }
         }
       });
     }, 10000); // Check every 10 seconds
@@ -527,6 +530,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     setReschedulingBlock,
     selectedBlock,
     setSelectedBlock,
+    actionableBlock,
+    setActionableBlock,
     zoomLevel,
     setZoomLevel,
     theme,

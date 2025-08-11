@@ -10,10 +10,14 @@ import { useTimeBubbles } from "@/context/time-bubbles-context";
 import { HOUR_HEIGHT } from "@/lib/constants";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { isToday } from "date-fns";
+import { ActionPromptModal } from "@/components/action-prompt-modal";
 
 function AppContent() {
   const mainRef = useRef<HTMLElement>(null);
-  const { isLoaded, zoomLevel, currentDate } = useTimeBubbles();
+  const { isLoaded, zoomLevel, currentDate, actionableBlock, setActionableBlock, timeBlocks, updateBlock } = useTimeBubbles();
+
+  // Find the first actionable block to show in the modal
+  const blockToShow = actionableBlock ?? timeBlocks.find(b => b.actionable);
 
   useEffect(() => {
     if (mainRef.current && isLoaded) {
@@ -41,6 +45,14 @@ function AppContent() {
     );
   }
 
+  const handleClosePrompt = () => {
+    if (blockToShow) {
+      // Mark it as not actionable anymore so it doesn't pop up again
+      updateBlock(blockToShow.id, { actionable: false });
+    }
+    setActionableBlock(null);
+  }
+
   return (
     <div className="flex flex-col h-screen bg-background text-foreground font-body overflow-hidden">
       <Header />
@@ -50,6 +62,11 @@ function AppContent() {
           <Timeline />
         </main>
       </div>
+      <ActionPromptModal
+        isOpen={!!blockToShow}
+        onClose={handleClosePrompt}
+        block={blockToShow}
+      />
     </div>
   );
 }

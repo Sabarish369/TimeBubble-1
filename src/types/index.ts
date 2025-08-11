@@ -27,6 +27,7 @@ export interface TimeBlock {
   description?: string;
   reflection?: ReflectionData;
   notified?: boolean;
+  actionable?: boolean;
 }
 
 export interface BubbleTemplate {

@@ -19,7 +19,9 @@ const buttonVariants = cva(
         ghost: "hover:bg-white/20",
         link: "text-primary underline-offset-4 hover:underline",
         "link-destructive": "text-destructive-foreground hover:text-destructive-foreground/80 hover:underline underline-offset-4",
-        reflect: "bg-gradient-to-r from-[hsl(var(--bubble-mint))] to-[hsl(var(--chart-2))] text-primary-foreground hover:opacity-90 transition-opacity"
+        reflect: "bg-gradient-to-r from-[hsl(var(--bubble-mint))] to-[hsl(var(--chart-2))] text-primary-foreground hover:opacity-90 transition-opacity",
+        'secondary-outline': "bg-secondary/20 border border-border text-secondary-foreground hover:bg-secondary/40",
+        'ghost-destructive': "text-destructive hover:bg-destructive/10"
       },
       size: {
         default: "h-10 px-4 py-2",
