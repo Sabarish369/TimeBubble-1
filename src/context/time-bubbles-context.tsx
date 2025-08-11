@@ -400,7 +400,17 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   }, [toast]);
 
   const updateTemplate = useCallback((id: string, updates: Partial<Omit<BubbleTemplate, 'id' | 'isDefault'>>) => {
-    setTemplates(prev => prev.map(t => (t.id === id ? { ...t, ...updates } : t)));
+    setTemplates(prev => {
+        const existingTemplate = prev.find(t => t.id === id);
+        if (existingTemplate) {
+            // It's a custom template, just update it
+            return prev.map(t => (t.id === id ? { ...t, ...updates } : t));
+        } else {
+            // It's a default template being edited for the first time.
+            // Create a new custom template that acts as an override.
+            return [...prev, { ...updates, id: id, isDefault: false } as BubbleTemplate];
+        }
+    });
     toast({
         title: 'Template Updated',
         description: `Your template has been updated.`,

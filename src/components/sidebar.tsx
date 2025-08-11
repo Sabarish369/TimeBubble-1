@@ -48,8 +48,8 @@ export function Sidebar() {
 
   const allTemplates = [...defaultTemplates.map(t => {
     const userOverride = templates.find(ut => ut.id === t.id);
-    return userOverride ? { ...t, ...userOverride } : t;
-  }), ...templates.filter(t => !t.isDefault)];
+    return userOverride ? { ...t, ...userOverride, isDefault: true } : t;
+  }), ...templates.filter(t => !defaultTemplates.some(dt => dt.id === t.id))];
 
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, template: BubbleTemplate) => {
@@ -128,6 +128,8 @@ export function Sidebar() {
       <div className="space-y-3 overflow-y-auto flex-1">
         {allTemplates.map((template) => {
           const Icon = categoryIcons[template.category];
+          const isUserCreated = !template.isDefault || templates.some(t => t.id === template.id && !t.isDefault);
+
           return (
             <div
               key={template.id}
