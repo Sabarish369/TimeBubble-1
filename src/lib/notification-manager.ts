@@ -16,24 +16,13 @@ const PRE_ALERT_MINUTES = 15;
 /**
  * Request notification permission from the user.
  */
-export function requestPermission(toast: any) {
+export function requestPermission() {
   if (typeof window === 'undefined' || !('Notification' in window)) {
     return;
   }
 
   if (Notification.permission === 'default') {
-    toast({
-      title: 'Enable Notifications',
-      description: 'Get reminded when your bubbles are about to end.',
-      action: (
-        <button
-          onClick={() => Notification.requestPermission()}
-          className="inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium"
-        >
-          Enable
-        </button>
-      ),
-    });
+    Notification.requestPermission();
   }
 }
 

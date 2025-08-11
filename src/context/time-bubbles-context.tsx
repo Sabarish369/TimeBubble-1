@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
 import { addDays, format, startOfDay, isToday, isPast } from 'date-fns';
 import * as NotificationManager from '@/lib/notification-manager';
+import { Button } from '@/components/ui/button';
 
 type Theme = 'light' | 'dark';
 
@@ -108,7 +109,23 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
    useEffect(() => {
-    NotificationManager.requestPermission(toast);
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        toast({
+          title: 'Enable Notifications',
+          description: 'Get reminded when your bubbles are about to end.',
+          action: (
+            <Button
+              onClick={() => NotificationManager.requestPermission()}
+              variant="outline"
+              size="sm"
+            >
+              Enable
+            </Button>
+          ),
+        });
+      }
+    }
   }, [toast]);
 
   // Centralized effect for managing all notifications
