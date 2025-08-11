@@ -1,9 +1,6 @@
 /**
  * @fileOverview Central configuration for the Genkit AI plugin.
  */
-import { config } from 'dotenv';
-config();
-
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 
