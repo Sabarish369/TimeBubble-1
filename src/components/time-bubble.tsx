@@ -24,6 +24,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { CelebrationPopper } from './celebration-popper';
+import { ActiveBubbleAnimation } from './active-bubble-animation';
 
 interface TimeBubbleProps {
   block: TimeBlockType;
@@ -260,8 +261,9 @@ export function TimeBubble({ block, timelineRef }: TimeBubbleProps) {
             : `linear-gradient(to bottom, hsl(var(--bubble-${block.color})), hsl(var(--bubble-${block.color}) / 0.8))`
         }}
       />
-
-       {showCelebration && <CelebrationPopper />}
+      
+      {showAsCurrent && <ActiveBubbleAnimation />}
+      {showCelebration && <CelebrationPopper />}
       
       <div className="absolute top-1 right-1 z-20 flex items-center" style={{ opacity: isOverdue ? 0 : 1}}>
         <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer" onClick={(e) => {e.stopPropagation(); setReflectingBlock(block)}}>
