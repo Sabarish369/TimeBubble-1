@@ -2,7 +2,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react';
 import type { TimeBlock, BubbleTemplate, DailyInsights } from '@/types';
 import { getDailyInsights as fetchDailyInsights } from '@/ai/flows/daily-insights';
 import { useToast } from '@/hooks/use-toast';
@@ -211,6 +211,38 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [toast]);
 
+  const previousDateRef = useRef(currentDate);
+
+  useEffect(() => {
+    const saveDataForPreviousDate = () => {
+        if (!isLoaded || typeof window === 'undefined') return;
+        try {
+          const storedData = localStorage.getItem(STORAGE_KEY);
+          const allData = storedData ? JSON.parse(storedData) : { user_preferences: {}, daily_data: {}, custom_templates: [] };
+          const dayKey = getDayKey(previousDateRef.current);
+          
+          allData.daily_data[dayKey] = timeBlocks;
+          allData.custom_templates = templates;
+
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
+        } catch (error) {
+          console.error('Failed to save to localStorage', error);
+          toast({
+            title: 'Error',
+            description: 'Could not save your changes.',
+            variant: 'destructive',
+          });
+        }
+    }
+
+    if (isLoaded) {
+      if (getDayKey(previousDateRef.current) !== getDayKey(currentDate)) {
+        saveDataForPreviousDate();
+        loadDataForDate(currentDate);
+        previousDateRef.current = currentDate;
+      }
+    }
+  }, [currentDate, isLoaded, loadDataForDate, timeBlocks, templates, toast]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && !isLoaded) {
@@ -262,15 +294,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   
     return () => clearTimeout(debounceSave);
   }, [saveData]);
-  
-  // Load data whenever the current date changes
-  useEffect(() => {
-    if (isLoaded) {
-      saveData(); // Save data for the old date first
-      loadDataForDate(currentDate);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentDate, isLoaded, loadDataForDate]);
   
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -723,3 +746,5 @@ const defaultTemplates: BubbleTemplate[] = [
   { id: 'default-4', title: 'Workout', description: 'Go for a run, lift weights, or do yoga.', category: 'health', duration: 60, color: 'rose-gold', isDefault: true },
   { id: 'default-5', title: 'Personal Time', description: 'Read a book, work on a hobby, or relax.', category: 'personal', duration: 45, color: 'lavender', isDefault: true },
 ];
+
+    
