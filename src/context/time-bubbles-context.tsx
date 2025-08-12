@@ -158,7 +158,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         const tip = result.tips[0];
         toast({
           title: tip.type,
-          description: tip.suggestion
+          description: tip.suggestion,
+          variant: 'dark',
+          tipType: tip.type
         });
       }
     } catch (error) {
@@ -174,7 +176,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   }, [lastCompletedBlock, timeBlocks, getProactiveTip]);
 
   const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
-    setTimeBlocks(prev => {
+    setTimeBlocksWithHistory(prev => {
         const blockIndex = prev.findIndex(b => b.id === id);
         if (blockIndex === -1) return prev;
         
@@ -188,8 +190,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
         return newBlocks;
     });
-  }, []);
-
+  }, [setTimeBlocksWithHistory]);
+  
   useEffect(() => {
     const onNotify = (block: TimeBlock) => {
       playNotificationSound();
@@ -205,7 +207,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       const endTime = new Date(block.startTime.getTime() + block.duration * 60000);
       if (endTime > new Date()) {
         NotificationManager.scheduleNotification(block, endTime, onNotify);
-        setTimeBlocks(prev => prev.map(b => b.id === block.id ? { ...b, notificationScheduled: true } : b));
+        updateBlock(block.id, { notificationScheduled: true });
       }
     });
 
@@ -659,19 +661,15 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setZoomLevel = (level: number) => {
-    const newZoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, level));
-    setZoomLevelState(newZoomLevel);
+    setZoomLevelState(level);
   };
   
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
   };
 
-  const canUndo = historyIndex > 0;
-  const canRedo = historyIndex < history.length - 1;
-
   const undo = () => {
-    if (canUndo) {
+    if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
       setHistoryIndex(newIndex);
       setTimeBlocks(history[newIndex]);
@@ -679,7 +677,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const redo = () => {
-    if (canRedo) {
+    if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1;
       setHistoryIndex(newIndex);
       setTimeBlocks(history[newIndex]);
@@ -701,6 +699,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const goToPreviousDay = () => {
     setCurrentDate(addDays(currentDate, -1));
   };
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
 
   const value = {
     timeBlocks,
