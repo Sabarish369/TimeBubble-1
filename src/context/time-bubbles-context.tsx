@@ -3,8 +3,9 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react';
-import type { TimeBlock, BubbleTemplate, DailyInsights } from '@/types';
+import type { TimeBlock, BubbleTemplate, DailyInsights, DailyTips } from '@/types';
 import { getDailyInsights as fetchDailyInsights } from '@/ai/flows/daily-insights';
+import { getDailyTips as fetchDailyTips } from '@/ai/flows/daily-tips';
 import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
 import { addDays, format, startOfDay, isToday, isPast } from 'date-fns';
@@ -43,6 +44,9 @@ interface TimeBubblesContextType {
   dailyInsights: DailyInsights | null;
   isLoadingInsights: boolean;
   clearDailyInsights: () => void;
+  getDailyTips: () => Promise<void>;
+  dailyTips: DailyTips | null;
+  isLoadingTips: boolean;
   getMissedTasks: () => MissedTaskGroup[];
   clearAllMissedTasks: () => void;
   reflectingBlock: TimeBlock | null;
@@ -101,8 +105,12 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [templates, setTemplates] = useState<BubbleTemplate[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentDate, setCurrentDateState] = useState(startOfDay(new Date()));
+  
   const [dailyInsights, setDailyInsights] = useState<DailyInsights | null>(null);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  const [dailyTips, setDailyTips] = useState<DailyTips | null>(null);
+  const [isLoadingTips, setIsLoadingTips] = useState(false);
+
   const [reflectingBlock, setReflectingBlock] = useState<TimeBlock | null>(null);
   const [reschedulingBlock, setReschedulingBlock] = useState<TimeBlock | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
@@ -561,6 +569,29 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       setIsLoadingInsights(false);
     }
   };
+  
+  const getDailyTips = async () => {
+    setIsLoadingTips(true);
+    try {
+      const schedule = JSON.stringify(timeBlocks);
+      // NOTE: This could be enhanced with real historical data.
+      const productivityPatterns = "User tends to be most productive in the morning and after short breaks.";
+      const currentTime = new Date().toISOString();
+      
+      const result = await fetchDailyTips({ schedule, productivityPatterns, currentTime });
+      setDailyTips(result);
+    } catch (error) {
+      console.error('Error getting AI tips:', error);
+      toast({
+        title: 'AI Error',
+        description: 'Could not retrieve daily tips.',
+        variant: 'destructive',
+      });
+      setDailyTips(null);
+    } finally {
+      setIsLoadingTips(false);
+    }
+  };
 
   const getMissedTasks = (): MissedTaskGroup[] => {
     if (typeof window === 'undefined') return [];
@@ -697,6 +728,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     dailyInsights,
     isLoadingInsights,
     clearDailyInsights,
+    getDailyTips,
+    dailyTips,
+    isLoadingTips,
     getMissedTasks,
     clearAllMissedTasks,
     reflectingBlock,

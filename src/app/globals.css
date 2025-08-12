@@ -225,4 +225,18 @@ body {
       box-shadow: 0 0 5px 2px hsl(var(--glow-color)), 0 0 10px 2px hsl(var(--glow-color)), 0 0 15px 2px hsl(var(--glow-color));
     }
   }
+
+  /* AI Tips Drawer Animation */
+  .pulse-glow {
+    animation: pulse-glow 2.5s infinite alternate;
+  }
+
+  @keyframes pulse-glow {
+    from {
+      box-shadow: 0 0 8px -2px hsl(var(--primary) / 0.7), 0 0 12px -2px hsl(var(--primary) / 0.7);
+    }
+    to {
+      box-shadow: 0 0 8px 2px hsl(var(--primary) / 0.7), 0 0 12px 2px hsl(var(--primary) / 0.7);
+    }
+  }
 }

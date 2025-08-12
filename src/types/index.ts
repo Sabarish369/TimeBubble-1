@@ -1,5 +1,5 @@
 import { BUBBLE_COLORS } from "@/lib/constants";
-import { DailyInsightsOutputSchema } from "./ai-types";
+import { DailyInsightsOutputSchema, DailyTipsOutputSchema } from "./ai-types";
 import { z } from "zod";
 
 export type BubbleCategory = 'work' | 'study' | 'break' | 'personal' | 'health';
@@ -42,3 +42,4 @@ export interface BubbleTemplate {
 }
 
 export type DailyInsights = z.infer<typeof DailyInsightsOutputSchema>;
+export type DailyTips = z.infer<typeof DailyTipsOutputSchema>;

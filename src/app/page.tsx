@@ -12,6 +12,7 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 import { isToday } from "date-fns";
 import { ActionPromptModal } from "@/components/action-prompt-modal";
 import { BubbleCreateModal } from "@/components/bubble-create-modal";
+import { DailyTipsDrawer } from "@/components/daily-tips-drawer";
 
 function AppContent() {
   const mainRef = useRef<HTMLElement>(null);
@@ -68,11 +69,12 @@ function AppContent() {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground font-body overflow-hidden">
       <Header />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         <Sidebar />
         <main ref={mainRef} className="flex-1 overflow-y-auto bg-gradient-to-b from-primary/5 via-background to-accent/5">
           <Timeline scrollContainerRef={mainRef} />
         </main>
+        <DailyTipsDrawer />
       </div>
       <ActionPromptModal
         isOpen={!!blockToShow}
