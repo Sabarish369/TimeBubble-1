@@ -12,7 +12,6 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 import { isToday } from "date-fns";
 import { ActionPromptModal } from "@/components/action-prompt-modal";
 import { BubbleCreateModal } from "@/components/bubble-create-modal";
-import { DailyTipsDrawer } from "@/components/daily-tips-drawer";
 
 function AppContent() {
   const mainRef = useRef<HTMLElement>(null);
@@ -74,7 +73,6 @@ function AppContent() {
         <main ref={mainRef} className="flex-1 overflow-y-auto bg-gradient-to-b from-primary/5 via-background to-accent/5">
           <Timeline scrollContainerRef={mainRef} />
         </main>
-        <DailyTipsDrawer />
       </div>
       <ActionPromptModal
         isOpen={!!blockToShow}
