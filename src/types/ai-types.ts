@@ -55,3 +55,21 @@ export const DailyInsightsOutputSchema = z.object({
   recommendation: z.string().describe("An actionable recommendation for future planning, e.g., 'Consider scheduling creative tasks between 2-4 PM when your mood is typically highest'."),
 });
 export type DailyInsights = z.infer<typeof DailyInsightsOutputSchema>;
+
+// Types for daily-tips.ts
+export const DailyTipsInputSchema = z.object({
+  schedule: z.string().describe("A JSON string of the user's schedule for today. Includes titles, categories, start times, and durations."),
+  productivityPatterns: z.string().describe("A summary of the user's historical productivity and mood patterns."),
+  currentTime: z.string().describe("The current time in ISO format."),
+});
+export type DailyTipsInput = z.infer<typeof DailyTipsInputSchema>;
+
+const TipSchema = z.object({
+  type: z.enum(["Productivity", "Health", "Mindfulness", "Efficiency", "Motivation"]).describe("The category of the tip."),
+  suggestion: z.string().describe("The concise, actionable suggestion. Maximum 12 words."),
+});
+
+export const DailyTipsOutputSchema = z.object({
+  tips: z.array(TipSchema).describe("An array of 5-7 actionable and motivational tips."),
+});
+export type DailyTips = z.infer<typeof DailyTipsOutputSchema>;
