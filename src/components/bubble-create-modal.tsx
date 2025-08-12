@@ -37,12 +37,13 @@ import type { BubbleCategory, BubbleColor } from '@/types';
 import { useEffect, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { CalendarIcon } from 'lucide-react';
-import { format, setHours, setMinutes, startOfDay } from 'date-fns';
+import { format, setHours, setMinutes, startOfDay, getHours, getMinutes, addHours } from 'date-fns';
 import { Calendar } from './ui/calendar';
 
 interface BubbleCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
+  startTime?: Date | null;
 }
 
 const createSchema = z.object({
@@ -74,7 +75,7 @@ const colorNames = Object.keys(BUBBLE_COLORS) as (keyof typeof BUBBLE_COLORS)[];
 const hourOptions = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
 const minuteOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
 
-export function BubbleCreateModal({ isOpen, onClose }: BubbleCreateModalProps) {
+export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime }: BubbleCreateModalProps) {
   const { addBlockOnDate, currentDate } = useTimeBubbles();
   
   const form = useForm<CreateFormValues>({
@@ -94,19 +95,22 @@ export function BubbleCreateModal({ isOpen, onClose }: BubbleCreateModalProps) {
 
   useEffect(() => {
     if (isOpen) {
-        form.reset({
-            title: '',
-            description: '',
-            date: currentDate,
-            startHour: '09',
-            startMinute: '00',
-            endHour: '10',
-            endMinute: '00',
-            category: 'personal',
-            color: 'lavender',
-        });
+      const startTime = initialStartTime || new Date();
+      const endTime = addHours(startTime, 1);
+
+      form.reset({
+        title: '',
+        description: '',
+        date: startTime,
+        startHour: getHours(startTime).toString().padStart(2, '0'),
+        startMinute: getMinutes(startTime).toString().padStart(2, '0'),
+        endHour: getHours(endTime).toString().padStart(2, '0'),
+        endMinute: getMinutes(endTime).toString().padStart(2, '0'),
+        category: 'personal',
+        color: 'lavender',
+      });
     }
-  }, [isOpen, currentDate, form]);
+  }, [isOpen, initialStartTime, currentDate, form]);
 
   const onSubmit = (data: CreateFormValues) => {
     const newStartTime = setMinutes(setHours(startOfDay(data.date), parseInt(data.startHour)), parseInt(data.startMinute));

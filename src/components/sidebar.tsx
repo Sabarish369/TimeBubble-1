@@ -20,7 +20,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { BubbleCreateModal } from './bubble-create-modal';
 import { MissedTasksDrawer } from './missed-tasks-drawer';
 
 const categoryIcons: Record<BubbleCategory, LucideIcon> = {
@@ -40,9 +39,8 @@ const defaultTemplates: BubbleTemplate[] = [
 ];
 
 export function Sidebar() {
-  const { templates, updateTemplate, deleteTemplate } = useTimeBubbles();
+  const { templates, updateTemplate, deleteTemplate, setIsBubbleCreateModalOpen } = useTimeBubbles();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
-  const [isBubbleCreateModalOpen, setIsBubbleCreateModalOpen] = useState(false);
   const [isMissedTasksDrawerOpen, setIsMissedTasksDrawerOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<BubbleTemplate | undefined>(undefined);
 
@@ -100,6 +98,11 @@ export function Sidebar() {
     setIsTemplateModalOpen(false);
     setEditingTemplate(undefined);
   }
+  
+  const handleOpenCreateBubbleModal = () => {
+    setIsBubbleCreateModalOpen(true);
+  }
+
 
   return (
     <aside
@@ -107,7 +110,7 @@ export function Sidebar() {
       style={{ width: `${SIDEBAR_WIDTH}px` }}
     >
       <div className='p-2 mb-4 flex items-center gap-2'>
-        <Button className='w-full' onClick={() => setIsBubbleCreateModalOpen(true)}>
+        <Button className='w-full' onClick={handleOpenCreateBubbleModal}>
           <CalendarPlus className="mr-2 h-5 w-5" />
           Add Bubble
         </Button>
@@ -187,10 +190,6 @@ export function Sidebar() {
         isOpen={isTemplateModalOpen} 
         onClose={handleCloseTemplateModal}
         template={editingTemplate}
-      />
-      <BubbleCreateModal 
-        isOpen={isBubbleCreateModalOpen}
-        onClose={() => setIsBubbleCreateModalOpen(false)}
       />
       <MissedTasksDrawer
         isOpen={isMissedTasksDrawerOpen}

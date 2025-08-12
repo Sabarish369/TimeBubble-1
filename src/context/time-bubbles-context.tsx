@@ -53,6 +53,10 @@ interface TimeBubblesContextType {
   setSelectedBlock: (block: TimeBlock | null) => void;
   actionableBlock: TimeBlock | null;
   setActionableBlock: (block: TimeBlock | null) => void;
+  isBubbleCreateModalOpen: boolean;
+  setIsBubbleCreateModalOpen: (isOpen: boolean) => void;
+  newBubbleStartTime: Date | null;
+  setNewBubbleStartTime: (date: Date | null) => void;
   zoomLevel: number;
   setZoomLevel: (level: number) => void;
   theme: Theme;
@@ -103,6 +107,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [reschedulingBlock, setReschedulingBlock] = useState<TimeBlock | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
   const [actionableBlock, setActionableBlock] = useState<TimeBlock | null>(null);
+  const [isBubbleCreateModalOpen, setIsBubbleCreateModalOpen] = useState(false);
+  const [newBubbleStartTime, setNewBubbleStartTime] = useState<Date | null>(null);
   const [zoomLevel, setZoomLevelState] = useState(1);
   const [theme, setThemeState] = useState<Theme>('light');
 
@@ -111,19 +117,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
    useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'default') {
-        toast({
-          title: 'Enable Notifications',
-          description: 'Get reminded when your bubbles are about to end.',
-          action: (
-            <Button
-              onClick={() => NotificationManager.requestPermission()}
-              variant="outline"
-              size="sm"
-            >
-              Enable
-            </Button>
-          ),
-        });
+        NotificationManager.requestPermission(toast);
       }
     }
   }, [toast]);
@@ -713,6 +707,10 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     setSelectedBlock,
     actionableBlock,
     setActionableBlock,
+    isBubbleCreateModalOpen,
+    setIsBubbleCreateModalOpen,
+    newBubbleStartTime,
+    setNewBubbleStartTime,
     zoomLevel,
     setZoomLevel,
     theme,
@@ -746,5 +744,3 @@ const defaultTemplates: BubbleTemplate[] = [
   { id: 'default-4', title: 'Workout', description: 'Go for a run, lift weights, or do yoga.', category: 'health', duration: 60, color: 'rose-gold', isDefault: true },
   { id: 'default-5', title: 'Personal Time', description: 'Read a book, work on a hobby, or relax.', category: 'personal', duration: 45, color: 'lavender', isDefault: true },
 ];
-
-    

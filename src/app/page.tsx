@@ -11,10 +11,22 @@ import { HOUR_HEIGHT } from "@/lib/constants";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import { isToday } from "date-fns";
 import { ActionPromptModal } from "@/components/action-prompt-modal";
+import { BubbleCreateModal } from "@/components/bubble-create-modal";
 
 function AppContent() {
   const mainRef = useRef<HTMLElement>(null);
-  const { isLoaded, zoomLevel, currentDate, actionableBlock, setActionableBlock, timeBlocks, updateBlock } = useTimeBubbles();
+  const { 
+    isLoaded, 
+    zoomLevel, 
+    currentDate, 
+    actionableBlock, 
+    setActionableBlock, 
+    timeBlocks, 
+    updateBlock,
+    isBubbleCreateModalOpen,
+    setIsBubbleCreateModalOpen,
+    newBubbleStartTime
+  } = useTimeBubbles();
 
   // Find the first actionable block to show in the modal
   const blockToShow = actionableBlock ?? timeBlocks.find(b => b.actionable);
@@ -66,6 +78,11 @@ function AppContent() {
         isOpen={!!blockToShow}
         onClose={handleClosePrompt}
         block={blockToShow}
+      />
+      <BubbleCreateModal
+        isOpen={isBubbleCreateModalOpen}
+        onClose={() => setIsBubbleCreateModalOpen(false)}
+        startTime={newBubbleStartTime}
       />
     </div>
   );

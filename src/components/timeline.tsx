@@ -13,14 +13,24 @@ import { BubbleDetailsModal } from './bubble-details-modal';
 import { RescheduleModal } from './reschedule-modal';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, isPast } from 'date-fns';
-import { BubbleCreateModal } from './bubble-create-modal';
 
 interface TimelineProps {
   scrollContainerRef: RefObject<HTMLElement>;
 }
 
 export function Timeline({ scrollContainerRef }: TimelineProps) {
-  const { timeBlocks, addBlock, isLoaded, reflectingBlock, selectedBlock, reschedulingBlock, zoomLevel, currentDate } = useTimeBubbles();
+  const { 
+    timeBlocks, 
+    addBlock, 
+    isLoaded, 
+    reflectingBlock, 
+    selectedBlock, 
+    reschedulingBlock, 
+    zoomLevel, 
+    currentDate,
+    setIsBubbleCreateModalOpen,
+    setNewBubbleStartTime
+  } = useTimeBubbles();
   const timelineRef = React.useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -67,21 +77,14 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
     if (!timelineRef.current) return;
     
     const rect = timelineRef.current.getBoundingClientRect();
-    // Adjust for the main container's scroll position
-    const y = e.clientY - rect.top + (timelineRef.current.parentElement?.scrollTop ?? 0);
+    const y = e.clientY - rect.top;
     const minutesFromTop = Math.round(y / pixelsPerMinute);
 
     const startTime = new Date(currentDate);
     startTime.setHours(Math.floor(minutesFromTop/60), minutesFromTop % 60, 0, 0);
     
-    addBlock({
-      title: 'New Bubble',
-      startTime,
-      duration: 60,
-      category: 'personal',
-      color: DEFAULT_BUBBLE_COLOR,
-      description: '',
-    });
+    setNewBubbleStartTime(startTime);
+    setIsBubbleCreateModalOpen(true);
   };
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
