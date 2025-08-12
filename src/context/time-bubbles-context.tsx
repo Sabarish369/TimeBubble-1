@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react';
-import type { TimeBlock, BubbleTemplate, DailyInsights } from '@/types';
+import type { TimeBlock, BubbleTemplate, DailyInsights, DailyTips } from '@/types';
 import { getDailyInsights as fetchDailyInsights } from '@/ai/flows/daily-insights';
 import { getDailyTips as fetchDailyTips } from '@/ai/flows/daily-tips';
 import { useToast } from '@/hooks/use-toast';
@@ -43,6 +43,9 @@ interface TimeBubblesContextType {
   dailyInsights: DailyInsights | null;
   isLoadingInsights: boolean;
   clearDailyInsights: () => void;
+  getDailyTips: () => Promise<void>;
+  dailyTips: DailyTips | null;
+  isLoadingTips: boolean;
   getMissedTasks: () => MissedTaskGroup[];
   clearAllMissedTasks: () => void;
   reflectingBlock: TimeBlock | null;
@@ -105,6 +108,10 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [dailyInsights, setDailyInsights] = useState<DailyInsights | null>(null);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
 
+  const [dailyTips, setDailyTips] = useState<DailyTips | null>(null);
+  const [isLoadingTips, setIsLoadingTips] = useState(false);
+  const [lastCompletedBlock, setLastCompletedBlock] = useState<TimeBlock | null>(null);
+
   const [reflectingBlock, setReflectingBlock] = useState<TimeBlock | null>(null);
   const [reschedulingBlock, setReschedulingBlock] = useState<TimeBlock | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
@@ -124,56 +131,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
-    setTimeBlocks(prev => {
-        const blockIndex = prev.findIndex(b => b.id === id);
-        if (blockIndex === -1) return prev;
-        
-        const updatedBlock = { ...prev[blockIndex], ...updates, notificationScheduled: false };
-        const newBlocks = [...prev];
-        newBlocks[blockIndex] = updatedBlock;
-
-        // If a block was just completed, trigger a proactive tip
-        if (updates.completed && !prev[blockIndex].completed) {
-            getProactiveTip(updatedBlock, newBlocks);
-        }
-
-        return newBlocks;
-    });
-  }, []);
-
-  // Centralized effect for managing all notifications
-  useEffect(() => {
-    const onNotify = (block: TimeBlock) => {
-      // This function is called when a notification fires
-      playNotificationSound();
-      updateBlock(block.id, { notified: true, actionable: true, notificationScheduled: false });
-      setActionableBlock(block);
-    };
-
-    // Clear all previous notifications before setting new ones
-    NotificationManager.clearAllNotifications();
-
-    timeBlocks.forEach(block => {
-      // Don't schedule for completed or past, unscheduled bubbles
-      if (block.completed || block.notificationScheduled) return;
-      
-      const endTime = new Date(block.startTime.getTime() + block.duration * 60000);
-      if (endTime > new Date()) {
-        NotificationManager.scheduleNotification(block, endTime, onNotify);
-        // Mark as scheduled to prevent duplicates.
-        // This direct update avoids being part of history and causing loops.
-        setTimeBlocks(prev => prev.map(b => b.id === block.id ? { ...b, notificationScheduled: true } : b));
-      }
-    });
-
-    // Cleanup on unmount
-    return () => {
-      NotificationManager.clearAllNotifications();
-    }
-  }, [timeBlocks, updateBlock]);
-
-
   const updateHistory = useCallback((newBlocks: TimeBlock[]) => {
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newBlocks);
@@ -188,6 +145,74 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       return updatedBlocks;
     });
   }, [updateHistory]);
+
+  const getProactiveTip = useCallback(async (completedBlock: TimeBlock, allBlocks: TimeBlock[]) => {
+    try {
+      const schedule = JSON.stringify({ completedBlock, allBlocks });
+      const productivityPatterns = "User tends to be most productive in the morning and after short breaks.";
+      const currentTime = new Date().toISOString();
+      
+      const result = await fetchDailyTips({ schedule, productivityPatterns, currentTime });
+      
+      if (result.tips && result.tips.length > 0) {
+        const tip = result.tips[0];
+        toast({
+          title: tip.type,
+          description: tip.suggestion
+        });
+      }
+    } catch (error) {
+      console.error('Error getting AI proactive tip:', error);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (lastCompletedBlock) {
+      getProactiveTip(lastCompletedBlock, timeBlocks);
+      setLastCompletedBlock(null); 
+    }
+  }, [lastCompletedBlock, timeBlocks, getProactiveTip]);
+
+  const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
+    setTimeBlocks(prev => {
+        const blockIndex = prev.findIndex(b => b.id === id);
+        if (blockIndex === -1) return prev;
+        
+        const updatedBlock = { ...prev[blockIndex], ...updates };
+        const newBlocks = [...prev];
+        newBlocks[blockIndex] = updatedBlock;
+
+        if (updates.completed && !prev[blockIndex].completed) {
+            setLastCompletedBlock(updatedBlock);
+        }
+
+        return newBlocks;
+    });
+  }, []);
+
+  useEffect(() => {
+    const onNotify = (block: TimeBlock) => {
+      playNotificationSound();
+      updateBlock(block.id, { notified: true, actionable: true, notificationScheduled: false });
+      setActionableBlock(block);
+    };
+
+    NotificationManager.clearAllNotifications();
+
+    timeBlocks.forEach(block => {
+      if (block.completed || block.notificationScheduled) return;
+      
+      const endTime = new Date(block.startTime.getTime() + block.duration * 60000);
+      if (endTime > new Date()) {
+        NotificationManager.scheduleNotification(block, endTime, onNotify);
+        setTimeBlocks(prev => prev.map(b => b.id === block.id ? { ...b, notificationScheduled: true } : b));
+      }
+    });
+
+    return () => {
+      NotificationManager.clearAllNotifications();
+    }
+  }, [timeBlocks, updateBlock]);
 
   const loadDataForDate = useCallback((date: Date) => {
     if (typeof window !== 'undefined') {
@@ -359,7 +384,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     allData.daily_data[dayKey] = [...blocksForDate, newBlock];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
 
-    // If the date is the currently viewed date, update the state as well
     if (dayKey === getDayKey(currentDate)) {
       setTimeBlocksWithHistory(prev => [...prev, newBlock]);
     }
@@ -464,12 +488,10 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     const storedData = localStorage.getItem(STORAGE_KEY);
     const allData = storedData ? JSON.parse(storedData) : { daily_data: {} };
 
-    // Find block on current day first
     blockToReschedule = timeBlocks.find(b => b.id === id) || null;
     if (blockToReschedule) {
       sourceDayKey = dayKeyOfCurrentDate;
     } else {
-        // Find the block in the entire dataset if not on current day
         for (const dateKey in allData.daily_data) {
             const found = allData.daily_data[dateKey].find((b: TimeBlock) => b.id === id);
             if (found) {
@@ -487,7 +509,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     
     NotificationManager.clearNotification(id);
 
-    // 1. Prepare the rescheduled block data
     const rescheduledBlockData: TimeBlock = {
       ...blockToReschedule,
       startTime: newStartTime,
@@ -498,7 +519,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     };
     
     try {
-        // 2. Add to the new date's storage
         const newDayKey = getDayKey(newStartTime);
         const blocksForNewDate = (allData.daily_data[newDayKey] || []).map((b: any) => ({...b, startTime: new Date(b.startTime)}));
         const resolvedStartTime = findAvailableSlot(newStartTime, rescheduledBlockData.duration, blocksForNewDate);
@@ -509,13 +529,10 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         }
         allData.daily_data[newDayKey].push(rescheduledBlockData);
         
-        // 3. Remove from the old date
         allData.daily_data[sourceDayKey] = allData.daily_data[sourceDayKey].filter((b: TimeBlock) => b.id !== id);
         
-        // 4. Save all changes
         localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
 
-        // 5. If the source was the current day, update the UI state
         if (sourceDayKey === dayKeyOfCurrentDate) {
             setTimeBlocksWithHistory(prev => prev.filter(b => b.id !== id));
         }
@@ -560,26 +577,25 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  const getProactiveTip = async (completedBlock: TimeBlock, allBlocks: TimeBlock[]) => {
+  const getDailyTips = useCallback(async () => {
+    setIsLoadingTips(true);
     try {
-      const schedule = JSON.stringify({ completedBlock, allBlocks });
-      const productivityPatterns = "User tends to be most productive in the morning and after short breaks.";
+      const schedule = JSON.stringify(timeBlocks);
+      const productivityPatterns = "User is generally focused in the mornings.";
       const currentTime = new Date().toISOString();
-      
       const result = await fetchDailyTips({ schedule, productivityPatterns, currentTime });
-      
-      if (result.tips && result.tips.length > 0) {
-        const tip = result.tips[0];
-        toast({
-          title: tip.type,
-          description: tip.suggestion
-        });
-      }
+      setDailyTips(result);
     } catch (error) {
-      console.error('Error getting AI proactive tip:', error);
-      // Fail silently, as this is a non-critical background task
+       console.error('Error getting AI tips:', error);
+      toast({
+        title: 'AI Error',
+        description: 'Could not get daily tips.',
+        variant: 'destructive',
+      });
+    } finally {
+        setIsLoadingTips(false);
     }
-  };
+  }, [timeBlocks, toast]);
 
   const getMissedTasks = (): MissedTaskGroup[] => {
     if (typeof window === 'undefined') return [];
@@ -622,7 +638,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         const now = new Date();
         Object.keys(allData.daily_data).forEach(dateKey => {
             const blocks = allData.daily_data[dateKey] as TimeBlock[];
-            // Keep only the blocks that are not missed
             allData.daily_data[dateKey] = blocks.filter(block => {
                 const endTime = new Date(new Date(block.startTime).getTime() + block.duration * 60000);
                 return endTime >= now || block.completed;
@@ -630,7 +645,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         });
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
-        // If any missed tasks from the current day were cleared, update the view
         loadDataForDate(currentDate);
 
         toast({ title: "All missed tasks have been cleared." });
@@ -646,9 +660,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
   const setZoomLevel = (level: number) => {
     const newZoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, level));
-    if (zoomLevel !== newZoomLevel) {
-      setZoomLevelState(newZoomLevel);
-    }
+    setZoomLevelState(newZoomLevel);
   };
   
   const setTheme = (newTheme: Theme) => {
@@ -715,6 +727,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     dailyInsights,
     isLoadingInsights,
     clearDailyInsights,
+    getDailyTips,
+    dailyTips,
+    isLoadingTips,
     getMissedTasks,
     clearAllMissedTasks,
     reflectingBlock,
@@ -754,7 +769,6 @@ export const useTimeBubbles = () => {
   return context;
 };
 
-// Add default templates here to avoid circular dependency
 const defaultTemplates: BubbleTemplate[] = [
   { id: 'default-1', title: 'Focus Work', description: 'Deep work session on a key project.', category: 'work', duration: 90, color: 'mint', isDefault: true },
   { id: 'default-2', title: 'Study Session', description: 'Review notes and practice problems.', category: 'study', duration: 120, color: 'sky-blue', isDefault: true },
@@ -762,3 +776,5 @@ const defaultTemplates: BubbleTemplate[] = [
   { id: 'default-4', title: 'Workout', description: 'Go for a run, lift weights, or do yoga.', category: 'health', duration: 60, color: 'rose-gold', isDefault: true },
   { id: 'default-5', title: 'Personal Time', description: 'Read a book, work on a hobby, or relax.', category: 'personal', duration: 45, color: 'lavender', isDefault: true },
 ];
+
+    
