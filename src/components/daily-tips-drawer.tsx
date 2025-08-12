@@ -17,6 +17,8 @@ import { Skeleton } from './ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { cn } from '@/lib/utils';
 import type { DailyTips } from '@/types';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from './ui/carousel';
+import { Card, CardContent } from './ui/card';
 
 const tipIcons: Record<string, LucideIcon> = {
   Productivity: Zap,
@@ -39,7 +41,7 @@ export function DailyTipsDrawer() {
   
   const TipIcon = ({ type }: { type: string }) => {
     const Icon = tipIcons[type] || Lightbulb;
-    return <Icon className="h-5 w-5 mr-3 text-primary" />;
+    return <Icon className="h-6 w-6 mb-3 text-primary" />;
   };
 
   return (
@@ -63,36 +65,40 @@ export function DailyTipsDrawer() {
                 AI Daily Optimizer
             </SheetTitle>
             <SheetDescription>
-                Actionable tips to enhance your focus and well-being, updated throughout your day.
+                Actionable insights to enhance your focus and well-being, updated throughout your day.
             </SheetDescription>
           </SheetHeader>
 
           {isLoadingTips && (
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center space-x-4">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-[250px]" />
-                    <Skeleton className="h-4 w-[200px]" />
-                  </div>
+            <div className="space-y-4 pt-4">
+              <Skeleton className="h-40 w-full" />
+               <div className="flex justify-center gap-4">
+                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-8 w-16" />
                 </div>
-              ))}
             </div>
           )}
           
           {!isLoadingTips && dailyTips && dailyTips.tips.length > 0 && (
-             <div className="space-y-3">
-                {dailyTips.tips.map((tip, index) => (
-                    <div key={index} className="flex items-start p-3 rounded-lg bg-secondary/50">
-                        <TipIcon type={tip.type} />
-                        <div>
-                            <p className='font-semibold text-primary/90'>{tip.type}</p>
-                            <p className="text-sm text-foreground/80">{tip.suggestion}</p>
-                        </div>
-                    </div>
-                ))}
-             </div>
+             <Carousel className="w-full" opts={{loop: true}}>
+                <CarouselContent>
+                  {dailyTips.tips.map((tip, index) => (
+                    <CarouselItem key={index}>
+                      <div className="p-1">
+                        <Card className='bg-secondary/40 border-none'>
+                          <CardContent className="flex flex-col items-center justify-center p-6 aspect-square">
+                            <TipIcon type={tip.type} />
+                             <p className='text-lg font-semibold text-primary/90 text-center mb-2'>{tip.type}</p>
+                             <p className="text-sm text-center text-foreground/80">{tip.suggestion}</p>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className='-left-4' />
+                <CarouselNext className='-right-4' />
+              </Carousel>
           )}
 
           {!isLoadingTips && (!dailyTips || dailyTips.tips.length === 0) && (
