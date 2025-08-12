@@ -60,13 +60,10 @@ interface State {
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
-const addToRemoveQueue = (toastId: string, isAiTip: boolean) => {
+const addToRemoveQueue = (toastId: string) => {
   if (toastTimeouts.has(toastId)) {
     return
   }
-
-  // Do not automatically remove AI tips
-  if (isAiTip) return;
 
   const timeout = setTimeout(() => {
     toastTimeouts.delete(toastId)
@@ -97,13 +94,14 @@ export const reducer = (state: State, action: Action): State => {
 
     case "DISMISS_TOAST": {
       const { toastId } = action
-      const toast = state.toasts.find(t => t.id === toastId);
-      
+
+      // ! Side effects ! - This could be extracted into a dismissToast() action,
+      // but I'll keep it here for simplicity
       if (toastId) {
-        addToRemoveQueue(toastId, !!toast?.tipType)
+        addToRemoveQueue(toastId)
       } else {
         state.toasts.forEach((t) => {
-          addToRemoveQueue(t.id, !!t.tipType)
+          addToRemoveQueue(t.id)
         })
       }
 

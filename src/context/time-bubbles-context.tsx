@@ -43,11 +43,6 @@ interface TimeBubblesContextType {
   dailyInsights: DailyInsights | null;
   isLoadingInsights: boolean;
   clearDailyInsights: () => void;
-  getDailyTips: () => Promise<void>;
-  dailyTips: DailyTips | null;
-  isLoadingTips: boolean;
-  getMissedTasks: () => MissedTaskGroup[];
-  clearAllMissedTasks: () => void;
   reflectingBlock: TimeBlock | null;
   setReflectingBlock: (block: TimeBlock | null) => void;
   reschedulingBlock: TimeBlock | null;
@@ -68,6 +63,8 @@ interface TimeBubblesContextType {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  getMissedTasks: () => MissedTaskGroup[];
+  clearAllMissedTasks: () => void;
 }
 
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
@@ -108,8 +105,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [dailyInsights, setDailyInsights] = useState<DailyInsights | null>(null);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
 
-  const [dailyTips, setDailyTips] = useState<DailyTips | null>(null);
-  const [isLoadingTips, setIsLoadingTips] = useState(false);
   const [lastCompletedBlock, setLastCompletedBlock] = useState<TimeBlock | null>(null);
 
   const [reflectingBlock, setReflectingBlock] = useState<TimeBlock | null>(null);
@@ -160,7 +155,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
           title: tip.type,
           description: tip.suggestion,
           variant: 'dark',
-          tipType: tip.type
+          tipType: tip.type,
+          duration: Infinity,
         });
       }
     } catch (error) {
@@ -211,9 +207,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    return () => {
-      NotificationManager.clearAllNotifications();
-    }
   }, [timeBlocks, updateBlock]);
 
   const loadDataForDate = useCallback((date: Date) => {
@@ -291,19 +284,20 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
       const storedZoom = localStorage.getItem(ZOOM_STORAGE_KEY);
       if (storedZoom) {
-          setZoomLevelState(parseFloat(storedZoom));
+          const newZoom = parseFloat(storedZoom);
+          if(zoomLevel !== newZoom) setZoomLevelState(newZoom);
       }
 
       const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
       if (storedTheme) {
-          setThemeState(storedTheme);
+          if (theme !== storedTheme) setThemeState(storedTheme);
       } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-          setThemeState('dark');
+          if (theme !== 'dark') setThemeState('dark');
       }
 
       setIsLoaded(true);
     }
-  }, [isLoaded, loadDataForDate, currentDate]);
+  }, [isLoaded, loadDataForDate, currentDate, zoomLevel, theme]);
   
   const saveData = useCallback(() => {
     if (!isLoaded || typeof window === 'undefined') return;
@@ -579,26 +573,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  const getDailyTips = useCallback(async () => {
-    setIsLoadingTips(true);
-    try {
-      const schedule = JSON.stringify(timeBlocks);
-      const productivityPatterns = "User is generally focused in the mornings.";
-      const currentTime = new Date().toISOString();
-      const result = await fetchDailyTips({ schedule, productivityPatterns, currentTime });
-      setDailyTips(result);
-    } catch (error) {
-       console.error('Error getting AI tips:', error);
-      toast({
-        title: 'AI Error',
-        description: 'Could not get daily tips.',
-        variant: 'destructive',
-      });
-    } finally {
-        setIsLoadingTips(false);
-    }
-  }, [timeBlocks, toast]);
-
   const getMissedTasks = (): MissedTaskGroup[] => {
     if (typeof window === 'undefined') return [];
 
@@ -661,11 +635,16 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setZoomLevel = (level: number) => {
-    setZoomLevelState(level);
+    const newLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, level));
+    if(zoomLevel !== newLevel) {
+      setZoomLevelState(newLevel);
+    }
   };
   
   const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
+    if(theme !== newTheme) {
+      setThemeState(newTheme);
+    }
   };
 
   const undo = () => {
@@ -728,11 +707,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     dailyInsights,
     isLoadingInsights,
     clearDailyInsights,
-    getDailyTips,
-    dailyTips,
-    isLoadingTips,
-    getMissedTasks,
-    clearAllMissedTasks,
     reflectingBlock,
     setReflectingBlock,
     reschedulingBlock,
@@ -753,6 +727,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     redo,
     canUndo,
     canRedo,
+    getMissedTasks,
+    clearAllMissedTasks,
   };
 
   return (
