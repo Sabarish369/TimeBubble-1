@@ -22,17 +22,15 @@ export function DailySidebarTip() {
       setError(null);
       
       const dayKey = format(currentDate, 'yyyy-MM-dd');
-      const scheduleForDay = getBlocksForDate(currentDate);
-      const scheduleString = JSON.stringify(scheduleForDay.map(b => ({ title: b.title, category: b.category, duration: b.duration })));
-      
-      // Use a combination of the day and schedule content for a more robust cache key
-      const storageKey = `daily_tip_${dayKey}_${scheduleString}`;
+      const storageKey = `daily_tip_${dayKey}`; // Simplified key: one tip per day
 
       try {
         const cachedTip = localStorage.getItem(storageKey);
         if (cachedTip) {
           setTip(JSON.parse(cachedTip));
         } else {
+          const scheduleForDay = getBlocksForDate(currentDate);
+          const scheduleString = JSON.stringify(scheduleForDay.map(b => ({ title: b.title, category: b.category, duration: b.duration })));
           const result = await getDailySidebarTip({ scheduleData: scheduleString });
           setTip(result);
           localStorage.setItem(storageKey, JSON.stringify(result));
@@ -46,7 +44,10 @@ export function DailySidebarTip() {
     };
 
     fetchTip();
-  }, [currentDate, getBlocksForDate]);
+  // Using getBlocksForDate in the dependency array would cause refetches on every change.
+  // We only want to refetch when the date changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDate]);
 
   return (
     <Card className="bg-primary/5 border-primary/20 shadow-sm">
