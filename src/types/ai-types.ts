@@ -73,3 +73,14 @@ export const DailyTipsOutputSchema = z.object({
   tips: z.array(TipSchema).describe("An array of 5-7 actionable and motivational tips."),
 });
 export type DailyTips = z.infer<typeof DailyTipsOutputSchema>;
+
+// Types for daily-sidebar-tip.ts
+export const DailySidebarTipInputSchema = z.object({
+  date: z.string().describe('The current date in YYYY-MM-DD format.'),
+});
+export type DailySidebarTipInput = z.infer<typeof DailySidebarTipInputSchema>;
+
+export const DailySidebarTipOutputSchema = z.object({
+  tip: z.string().describe('A single, insightful, and inspiring tip for the day.'),
+});
+export type DailySidebarTip = z.infer<typeof DailySidebarTipOutputSchema>;

@@ -21,6 +21,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { MissedTasksDrawer } from './missed-tasks-drawer';
+import { DailySidebarTip } from './daily-sidebar-tip';
 
 const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   work: Briefcase,
@@ -106,10 +107,12 @@ export function Sidebar() {
 
   return (
     <aside
-      className="p-4 border-r bg-gradient-to-br from-primary/10 via-background to-accent/10 shrink-0 flex flex-col"
+      className="p-4 border-r bg-gradient-to-br from-primary/10 via-background to-accent/10 shrink-0 flex flex-col space-y-4"
       style={{ width: `${SIDEBAR_WIDTH}px` }}
     >
-      <div className='p-2 mb-4 flex items-center gap-2'>
+      <DailySidebarTip />
+
+      <div className='p-2 flex items-center gap-2'>
         <Button className='w-full' onClick={handleOpenCreateBubbleModal}>
           <CalendarPlus className="mr-2 h-5 w-5" />
           Add Bubble
@@ -120,7 +123,7 @@ export function Sidebar() {
         </Button>
       </div>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-center">Templates</h2>
         <Button variant="ghost" size="icon" onClick={handleOpenCreateTemplateModal}>
           <Plus className="h-5 w-5" />
