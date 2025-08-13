@@ -14,8 +14,8 @@ export function SmartSuggestions() {
 
   const renderInsight = (title: string, content: string) => (
     <div className="mb-4">
-      <p className="font-semibold text-base">{title}</p>
-      <p className="text-sm text-muted-foreground">{content}</p>
+      <p className="font-semibold text-base text-muted-foreground">{title}</p>
+      <p className="text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">{content}</p>
     </div>
   );
 
@@ -49,7 +49,7 @@ export function SmartSuggestions() {
           ) : dailyInsights ? (
             <Card className="border-none shadow-none bg-transparent">
               <CardContent className="p-0">
-                <h3 className="font-bold text-xl mb-3 text-primary">{dailyInsights.title}</h3>
+                <h3 className="font-bold text-xl mb-3 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">{dailyInsights.title}</h3>
                 <p className="text-base text-muted-foreground mb-6">{dailyInsights.summary}</p>
                 {renderInsight("💡 Productivity Insight", dailyInsights.productivityInsight)}
                 {renderInsight("😊 Mood Insight", dailyInsights.moodInsight)}
