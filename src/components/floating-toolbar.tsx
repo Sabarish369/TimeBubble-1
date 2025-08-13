@@ -31,7 +31,7 @@ export function FloatingToolbar() {
     <div 
       className="absolute bottom-6 z-40"
       style={{ 
-        left: `calc(${SIDEBAR_WIDTH}px + 50%)`,
+        left: `calc(${SIDEBAR_WIDTH}px + (100% - ${SIDEBAR_WIDTH}px) / 2)`,
         transform: 'translateX(-50%)',
       }}
     >
