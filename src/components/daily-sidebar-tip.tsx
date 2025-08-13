@@ -7,25 +7,32 @@ import { Lightbulb } from 'lucide-react';
 import { getDailySidebarTip } from '@/ai/flows/daily-sidebar-tip';
 import { format } from 'date-fns';
 import type { DailySidebarTip as DailySidebarTipType } from '@/types';
+import { useTimeBubbles } from '@/context/time-bubbles-context';
 
 export function DailySidebarTip() {
   const [tip, setTip] = useState<DailySidebarTipType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getBlocksForDate, currentDate } = useTimeBubbles();
 
   useEffect(() => {
     const fetchTip = async () => {
       setIsLoading(true);
       setError(null);
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const storageKey = `daily_tip_${today}`;
+      
+      const dayKey = format(currentDate, 'yyyy-MM-dd');
+      const scheduleForDay = getBlocksForDate(currentDate);
+      const scheduleString = JSON.stringify(scheduleForDay.map(b => ({ title: b.title, category: b.category, duration: b.duration })));
+      
+      // Use a combination of the day and schedule content for a more robust cache key
+      const storageKey = `daily_tip_${dayKey}_${scheduleString}`;
 
       try {
         const cachedTip = localStorage.getItem(storageKey);
         if (cachedTip) {
           setTip(JSON.parse(cachedTip));
         } else {
-          const result = await getDailySidebarTip({ date: today });
+          const result = await getDailySidebarTip({ scheduleData: scheduleString });
           setTip(result);
           localStorage.setItem(storageKey, JSON.stringify(result));
         }
@@ -38,7 +45,7 @@ export function DailySidebarTip() {
     };
 
     fetchTip();
-  }, []);
+  }, [currentDate, getBlocksForDate]);
 
   return (
     <Card className="bg-primary/5 border-primary/20 shadow-sm">

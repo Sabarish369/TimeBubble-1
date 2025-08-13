@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview Generates a single, inspiring tip for the day.
+ * @fileOverview Generates a single, inspiring and personalized tip for the day based on the user's schedule.
  *
  * - getDailySidebarTip - A function that returns an insightful tip.
  */
@@ -20,14 +20,19 @@ const prompt = ai.definePrompt({
   input: { schema: DailySidebarTipInputSchema },
   output: { schema: DailySidebarTipOutputSchema },
   prompt: `You are an inspiring and insightful wellness and productivity coach. 
-  Your goal is to provide a single, thought-provoking, and actionable tip for the user's day, based on the date: {{{date}}}.
+  Your goal is to provide a single, thought-provoking, and actionable tip for the user's day, based on their schedule.
+  
+  Analyze the user's schedule for today: {{{scheduleData}}}
 
-  The tip should be a short, single paragraph. It should be encouraging and focused on well-being, mindfulness, or gentle productivity.
+  Generate ONE reflective tip based on the schedule.
+  The tip MUST be a maximum of 20 words.
+  The tip should be encouraging and focused on well-being, mindfulness, or gentle productivity in the context of their planned day.
 
-  Example Tip: "A 5-minute walk can reset your entire day. Notice the small things on your path – the color of the sky, the sound of your footsteps. It’s a simple way to practice mindfulness and boost your mood."
-  Example Tip: "Instead of multitasking, try 'single-tasking'. Give one activity your full attention, even if just for 15 minutes. You'll be amazed at the clarity and quality you achieve."
+  Example for a busy day: "Your day looks full. Remember to breathe between tasks. Small pauses make a big difference in maintaining your energy."
+  Example for a day with a workout: "Great to see you're prioritizing your health today. That workout will boost your focus for everything that follows."
+  Example for a light day: "A lighter schedule today offers a chance for deep focus or spontaneous rest. Embrace the opportunity for quality over quantity."
 
-  Generate one inspiring tip for today.
+  Generate one inspiring, reflective, and concise tip now.
   `,
 });
 
@@ -38,6 +43,10 @@ const dailySidebarTipFlow = ai.defineFlow(
     outputSchema: DailySidebarTipOutputSchema,
   },
   async (input) => {
+    // If the schedule is empty, return a generic tip to avoid calling the AI with no data.
+    if (!input.scheduleData || JSON.parse(input.scheduleData).length === 0) {
+      return { tip: "A fresh start. What's one small thing you can accomplish today to feel great?" };
+    }
     try {
       const { output } = await prompt(input);
       return output!;

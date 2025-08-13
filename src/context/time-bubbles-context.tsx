@@ -39,6 +39,7 @@ interface TimeBubblesContextType {
   deleteTemplate: (id: string) => void;
   rescheduleBlock: (id: string, newStartTime: Date) => void;
   getBlocksForSuggestions: () => string;
+  getBlocksForDate: (date: Date) => TimeBlock[];
   getDailyInsights: () => Promise<void>;
   dailyInsights: DailyInsights | null;
   isLoadingInsights: boolean;
@@ -605,6 +606,32 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const getBlocksForSuggestions = useCallback(() => {
     return JSON.stringify(timeBlocks.map(b => ({ ...b, id: undefined })));
   }, [timeBlocks]);
+
+  const getBlocksForDate = useCallback((date: Date): TimeBlock[] => {
+    const dayKey = getDayKey(date);
+    const dayKeyOfCurrentDate = getDayKey(currentDate);
+
+    if (dayKey === dayKeyOfCurrentDate) {
+      return timeBlocks;
+    }
+
+    if (typeof window !== 'undefined') {
+      try {
+        const storedData = localStorage.getItem(STORAGE_KEY);
+        if (storedData) {
+          const parsedData = JSON.parse(storedData);
+          const blocksForDate = parsedData.daily_data?.[dayKey] ?? [];
+          return blocksForDate.map((block: any) => ({
+            ...block,
+            startTime: new Date(block.startTime),
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load blocks for date from localStorage', error);
+      }
+    }
+    return [];
+  }, [timeBlocks, currentDate]);
   
   const getDailyInsights = async () => {
     setIsLoadingInsights(true);
@@ -756,6 +783,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     deleteTemplate,
     rescheduleBlock,
     getBlocksForSuggestions,
+    getBlocksForDate,
     getDailyInsights,
     dailyInsights,
     isLoadingInsights,
@@ -813,3 +841,4 @@ const defaultTemplates: BubbleTemplate[] = [
     
 
     
+
