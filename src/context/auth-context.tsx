@@ -61,6 +61,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             case 'auth/invalid-email':
                 message = 'Please enter a valid email address.';
                 break;
+            case 'auth/invalid-api-key':
+                message = 'Invalid API Key. Please check your Firebase configuration.';
+                break;
             default:
                 message = err.message;
         }
@@ -136,7 +139,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signOut,
   };
 
-  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
