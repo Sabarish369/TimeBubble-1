@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -62,7 +63,9 @@ export function DailySidebarTip() {
             ) : error ? (
               <p className="text-xs text-destructive">{error}</p>
             ) : (
-              <p className="text-xs text-muted-foreground">{tip?.tip}</p>
+              <p className="text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                {tip?.tip}
+              </p>
             )}
           </div>
         </div>
