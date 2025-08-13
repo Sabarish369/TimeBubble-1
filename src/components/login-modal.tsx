@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,6 +22,8 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
+  const [activeTab, setActiveTab] = useState("sign-in");
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md p-0">
@@ -28,7 +31,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
           <div className="flex justify-center mb-6">
             <TimeBubbleLogo className="h-8 w-auto" />
           </div>
-          <Tabs defaultValue="sign-in" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="sign-in">Sign In</TabsTrigger>
               <TabsTrigger value="create-account">Create Account</TabsTrigger>
@@ -66,6 +69,15 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   <GoogleIcon className="mr-2 h-4 w-4" />
                   Sign in with Google
                 </Button>
+                <div className="mt-4 text-center text-sm">
+                  Don&apos;t have an account?{" "}
+                  <button
+                    onClick={() => setActiveTab("create-account")}
+                    className="underline text-primary"
+                  >
+                    Sign up
+                  </button>
+                </div>
               </div>
             </TabsContent>
             <TabsContent value="create-account" className="mt-4">
@@ -91,6 +103,15 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 <Button type="submit" className="w-full">
                   Create Account
                 </Button>
+                <div className="mt-4 text-center text-sm">
+                  Already have an account?{" "}
+                  <button
+                    onClick={() => setActiveTab("sign-in")}
+                    className="underline text-primary"
+                  >
+                    Sign in
+                  </button>
+                </div>
               </div>
             </TabsContent>
           </Tabs>
