@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
 import { addDays, format, startOfDay, isToday, isPast } from 'date-fns';
 import * as NotificationManager from '@/lib/notification-manager';
+import { useAuth } from './auth-context';
 
 type Theme = 'light' | 'dark';
 
@@ -76,7 +77,9 @@ interface TimeBubblesContextType {
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
 
 const getDayKey = (date: Date | string) => format(new Date(date), 'yyyy-MM-dd');
-const STORAGE_KEY = 'timebubble_data';
+
+const getStorageKey = (userId: string | null) => userId ? `timebubble_data_${userId}` : 'timebubble_data_guest';
+
 const ZOOM_STORAGE_KEY = 'timebubble_zoom';
 const THEME_STORAGE_KEY = 'timebubble_theme';
 
@@ -100,6 +103,7 @@ const playNotificationSound = () => {
 };
 
 export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [history, setHistory] = useState<TimeBlock[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -247,9 +251,10 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
   }, [timeBlocks, updateBlock]);
 
-  const loadDataForDate = useCallback((date: Date) => {
+  const loadDataForDate = useCallback((date: Date, userId: string | null) => {
     if (typeof window !== 'undefined') {
       try {
+        const STORAGE_KEY = getStorageKey(userId);
         const storedData = localStorage.getItem(STORAGE_KEY);
         if (storedData) {
           const parsedData = JSON.parse(storedData);
@@ -269,6 +274,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
           setTemplates(customTemplates);
         } else {
             setTimeBlocks([]);
+            setTemplates([]);
             setHistory([[]]);
             setHistoryIndex(0);
         }
@@ -284,11 +290,13 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   }, [toast]);
 
   const previousDateRef = useRef(currentDate);
+  const previousUserRef = useRef(user);
 
   useEffect(() => {
-    const saveDataForPreviousDate = () => {
+    const saveDataForPreviousState = () => {
         if (!isLoaded || typeof window === 'undefined') return;
         try {
+          const STORAGE_KEY = getStorageKey(previousUserRef.current?.uid || null);
           const storedData = localStorage.getItem(STORAGE_KEY);
           const allData = storedData ? JSON.parse(storedData) : { user_preferences: {}, daily_data: {}, custom_templates: [] };
           const dayKey = getDayKey(previousDateRef.current);
@@ -308,17 +316,18 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (isLoaded) {
-      if (getDayKey(previousDateRef.current) !== getDayKey(currentDate)) {
-        saveDataForPreviousDate();
-        loadDataForDate(currentDate);
+      if (getDayKey(previousDateRef.current) !== getDayKey(currentDate) || previousUserRef.current?.uid !== user?.uid) {
+        saveDataForPreviousState();
+        loadDataForDate(currentDate, user?.uid || null);
         previousDateRef.current = currentDate;
+        previousUserRef.current = user;
       }
     }
-  }, [currentDate, isLoaded, loadDataForDate, timeBlocks, templates, toast]);
+  }, [currentDate, user, isLoaded, loadDataForDate, timeBlocks, templates, toast]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && !isLoaded) {
-      loadDataForDate(currentDate);
+      loadDataForDate(currentDate, user?.uid || null);
 
       const storedZoom = localStorage.getItem(ZOOM_STORAGE_KEY);
       if (storedZoom) {
@@ -335,11 +344,12 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
       setIsLoaded(true);
     }
-  }, [isLoaded, loadDataForDate, currentDate, zoomLevel, theme]);
+  }, [isLoaded, loadDataForDate, currentDate, user, zoomLevel, theme]);
   
   const saveData = useCallback(() => {
     if (!isLoaded || typeof window === 'undefined') return;
     try {
+      const STORAGE_KEY = getStorageKey(user?.uid || null);
       const storedData = localStorage.getItem(STORAGE_KEY);
       const allData = storedData ? JSON.parse(storedData) : { user_preferences: {}, daily_data: {}, custom_templates: [] };
       const dayKey = getDayKey(currentDate);
@@ -358,7 +368,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         variant: 'destructive',
       });
     }
-  }, [timeBlocks, templates, isLoaded, toast, zoomLevel, theme, currentDate]);
+  }, [timeBlocks, templates, isLoaded, toast, zoomLevel, theme, currentDate, user]);
   
   useEffect(() => {
     const debounceSave = setTimeout(() => {
@@ -422,6 +432,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
   
   const addBlockOnDate = useCallback((block: Omit<TimeBlock, 'id' | 'completed'>, date: Date) => {
+    const STORAGE_KEY = getStorageKey(user?.uid || null);
     const dayKey = getDayKey(date);
     const storedData = localStorage.getItem(STORAGE_KEY);
     const allData = storedData ? JSON.parse(storedData) : { daily_data: {} };
@@ -445,7 +456,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       description: `"${block.title}" added to ${format(date, 'MMMM do')}.`
     });
 
-  }, [findAvailableSlot, setTimeBlocksWithHistory, currentDate, toast]);
+  }, [findAvailableSlot, setTimeBlocksWithHistory, currentDate, toast, user]);
 
   const addBlock = useCallback((block: Omit<TimeBlock, 'id' | 'completed'>) => {
     addBlockOnDate(block, block.startTime);
@@ -465,6 +476,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
+        const STORAGE_KEY = getStorageKey(user?.uid || null);
         const storedData = localStorage.getItem(STORAGE_KEY);
         const allData = storedData ? JSON.parse(storedData) : { daily_data: {} };
         if (allData.daily_data[dayKey]) {
@@ -536,7 +548,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
     let blockToReschedule: TimeBlock | null = null;
     let sourceDayKey: string | null = null;
-
+    
+    const STORAGE_KEY = getStorageKey(user?.uid || null);
     const storedData = localStorage.getItem(STORAGE_KEY);
     const allData = storedData ? JSON.parse(storedData) : { daily_data: {} };
 
@@ -619,6 +632,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
     if (typeof window !== 'undefined') {
       try {
+        const STORAGE_KEY = getStorageKey(user?.uid || null);
         const storedData = localStorage.getItem(STORAGE_KEY);
         if (storedData) {
           const parsedData = JSON.parse(storedData);
@@ -633,7 +647,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       }
     }
     return [];
-  }, [timeBlocks, currentDate]);
+  }, [timeBlocks, currentDate, user]);
   
   const getDailyInsights = async () => {
     setIsLoadingInsights(true);
@@ -663,6 +677,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const getMissedTasks = (): MissedTaskGroup[] => {
     if (typeof window === 'undefined') return [];
 
+    const STORAGE_KEY = getStorageKey(user?.uid || null);
     const storedData = localStorage.getItem(STORAGE_KEY);
     if (!storedData) return [];
 
@@ -692,6 +707,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const clearAllMissedTasks = () => {
     if (typeof window === 'undefined') return;
     try {
+        const STORAGE_KEY = getStorageKey(user?.uid || null);
         const storedData = localStorage.getItem(STORAGE_KEY);
         if (!storedData) return;
         
@@ -708,7 +724,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         });
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
-        loadDataForDate(currentDate);
+        loadDataForDate(currentDate, user?.uid || null);
 
         toast({ title: "All missed tasks have been cleared." });
     } catch (e) {
@@ -845,7 +861,3 @@ const defaultTemplates: BubbleTemplate[] = [
   { id: 'default-4', title: 'Workout', description: 'Go for a run, lift weights, or do yoga.', category: 'health', duration: 60, color: 'rose-gold', isDefault: true },
   { id: 'default-5', title: 'Personal Time', description: 'Read a book, work on a hobby, or relax.', category: 'personal', duration: 45, color: 'lavender', isDefault: true },
 ];
-
-    
-
-    

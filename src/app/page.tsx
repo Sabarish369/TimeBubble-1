@@ -15,6 +15,8 @@ import { BubbleCreateModal } from "@/components/bubble-create-modal";
 import { cn } from "@/lib/utils";
 import { FloatingToolbar } from "@/components/floating-toolbar";
 import { LoginModal } from "@/components/login-modal";
+import { AuthGuard } from "@/components/auth-guard";
+import { useAuth } from "@/context/auth-context";
 
 function AppContent() {
   const mainRef = useRef<HTMLElement>(null);
@@ -31,10 +33,13 @@ function AppContent() {
     newBubbleStartTime
   } = useTimeBubbles();
   
-  // For now, we'll simulate an unauthenticated user by showing the modal by default.
-  // This would be replaced with actual authentication state later.
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(true);
+  const { user } = useAuth();
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
+  useEffect(() => {
+    // Show login modal if user is not authenticated
+    setIsLoginModalOpen(!user);
+  }, [user]);
 
   // Find the first actionable block to show in the modal
   const blockToShow = actionableBlock ?? timeBlocks.find(b => b.actionable);
@@ -104,8 +109,10 @@ function AppContent() {
 
 export default function Home() {
   return (
-    <TimeBubblesProvider>
-      <AppContent />
-    </TimeBubblesProvider>
+    <AuthGuard>
+      <TimeBubblesProvider>
+        <AppContent />
+      </TimeBubblesProvider>
+    </AuthGuard>
   );
 }

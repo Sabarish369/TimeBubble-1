@@ -2,7 +2,7 @@
 'use client';
 
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -15,6 +15,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { SmartSuggestions } from '@/components/smart-suggestions';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/auth-context';
 
 export function Header() {
   const {
@@ -24,6 +25,8 @@ export function Header() {
     goToNextDay,
     goToPreviousDay,
   } = useTimeBubbles();
+  
+  const { user, signOut } = useAuth();
 
   return (
     <header className="flex items-center justify-between p-4 border-b shrink-0 bg-gradient-to-r from-primary/10 via-background to-accent/10">
@@ -69,6 +72,12 @@ export function Header() {
       <div className="flex items-center gap-4">
         <SmartSuggestions />
         <ThemeToggle />
+         {user && (
+          <Button variant="ghost" size="icon" onClick={signOut}>
+            <LogOut className="h-5 w-5" />
+            <span className="sr-only">Sign Out</span>
+          </Button>
+        )}
       </div>
     </header>
   );
