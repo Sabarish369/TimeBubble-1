@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { ZoomControls } from './zoom-controls';
+import { SIDEBAR_WIDTH } from '@/lib/constants';
 
 export function FloatingToolbar() {
   const {
@@ -27,8 +28,14 @@ export function FloatingToolbar() {
   } = useTimeBubbles();
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40">
-      <div className="flex items-center gap-2 p-2 rounded-full border bg-background/80 backdrop-blur-lg shadow-lg">
+    <div 
+      className="absolute bottom-6 z-40"
+      style={{ 
+        left: `calc(${SIDEBAR_WIDTH}px + 50%)`,
+        transform: 'translateX(-50%)',
+      }}
+    >
+      <div className="flex items-center gap-1 p-1.5 rounded-full border bg-background/70 backdrop-blur-lg shadow-lg">
         <Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo}>
           <Undo2 className="h-5 w-5" />
           <span className="sr-only">Undo</span>
@@ -37,9 +44,9 @@ export function FloatingToolbar() {
           <Redo2 className="h-5 w-5" />
           <span className="sr-only">Redo</span>
         </Button>
-        <div className='w-px h-6 bg-border mx-2'></div>
+        <div className='w-px h-6 bg-border mx-1'></div>
         <ZoomControls />
-        <div className='w-px h-6 bg-border mx-2'></div>
+        <div className='w-px h-6 bg-border mx-1'></div>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="ghost-destructive" size="icon">
