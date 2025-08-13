@@ -2,23 +2,12 @@
 'use client';
 
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Sparkles, Trash2, Undo2, Redo2 } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { TimeBubbleLogo } from '@/components/timebubble-logo';
@@ -26,15 +15,9 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { SmartSuggestions } from '@/components/smart-suggestions';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { cn } from '@/lib/utils';
-import { ZoomControls } from './zoom-controls';
 
 export function Header() {
   const {
-    clearAllBlocks,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
     currentDate,
     setCurrentDate,
     goToToday,
@@ -84,40 +67,7 @@ export function Header() {
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo}>
-            <Undo2 className="h-5 w-5" />
-            <span className="sr-only">Undo</span>
-          </Button>
-          <Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo}>
-            <Redo2 className="h-5 w-5" />
-            <span className="sr-only">Redo</span>
-          </Button>
-        </div>
-        <ZoomControls />
         <SmartSuggestions />
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Trash2 className="h-5 w-5" />
-              <span className="sr-only">Clear all bubbles</span>
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete all time bubbles for the selected day. This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={clearAllBlocks}>
-                Yes, clear all
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
         <ThemeToggle />
       </div>
     </header>

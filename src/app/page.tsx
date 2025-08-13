@@ -13,6 +13,7 @@ import { isToday } from "date-fns";
 import { ActionPromptModal } from "@/components/action-prompt-modal";
 import { BubbleCreateModal } from "@/components/bubble-create-modal";
 import { cn } from "@/lib/utils";
+import { FloatingToolbar } from "@/components/floating-toolbar";
 
 function AppContent() {
   const mainRef = useRef<HTMLElement>(null);
@@ -74,6 +75,7 @@ function AppContent() {
         <main ref={mainRef} className={cn("flex-1 overflow-y-auto bg-gradient-to-b from-primary/5 via-background to-accent/5 no-scrollbar")}>
           <Timeline scrollContainerRef={mainRef} />
         </main>
+        <FloatingToolbar />
       </div>
       <ActionPromptModal
         isOpen={!!blockToShow}
