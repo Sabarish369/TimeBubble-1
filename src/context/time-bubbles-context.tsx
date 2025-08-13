@@ -65,6 +65,9 @@ interface TimeBubblesContextType {
   canRedo: boolean;
   getMissedTasks: () => MissedTaskGroup[];
   clearAllMissedTasks: () => void;
+  getDailyTips: () => Promise<void>;
+  dailyTips: DailyTips | null;
+  isLoadingTips: boolean;
 }
 
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
@@ -105,6 +108,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [dailyInsights, setDailyInsights] = useState<DailyInsights | null>(null);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
 
+  const [dailyTips, setDailyTips] = useState<DailyTips | null>(null);
+  const [isLoadingTips, setIsLoadingTips] = useState(false);
+  
   const [lastCompletedBlock, setLastCompletedBlock] = useState<TimeBlock | null>(null);
 
   const [reflectingBlock, setReflectingBlock] = useState<TimeBlock | null>(null);
@@ -141,46 +147,75 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [updateHistory]);
 
-  const getProactiveTip = useCallback(async (completedBlock: TimeBlock, allBlocks: TimeBlock[]) => {
+  const getDailyTips = useCallback(async () => {
+    setIsLoadingTips(true);
     try {
-      const schedule = JSON.stringify({ completedBlock, allBlocks });
-      const productivityPatterns = "User tends to be most productive in the morning and after short breaks.";
-      const currentTime = new Date().toISOString();
-      
-      const result = await fetchDailyTips({ schedule, productivityPatterns, currentTime });
-      
-      if (result.tips && result.tips.length > 0) {
-        const tip = result.tips[0];
-        toast({
-          title: tip.type,
-          description: tip.suggestion,
-          variant: 'dark',
-          tipType: tip.type,
-          duration: Infinity,
-        });
-      }
+        const sortedBlocks = timeBlocks
+            .map(b => ({ ...b, startTime: new Date(b.startTime) }))
+            .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+        
+        const now = new Date();
+        const completedBlock = lastCompletedBlock;
+        const nextTask = sortedBlocks.find(b => b.startTime > now && !b.completed);
+
+        const input = {
+            schedule: JSON.stringify({ completedBlock, nextTask }),
+            productivityPatterns: "User tends to be most productive in the morning and after short breaks.",
+            currentTime: now.toISOString(),
+        };
+
+        const result = await fetchDailyTips(input);
+        
+        if (result.tips && result.tips.length > 0) {
+            setDailyTips(result);
+            const randomTip = result.tips[Math.floor(Math.random() * result.tips.length)];
+            toast({
+                title: randomTip.type,
+                description: randomTip.suggestion,
+                variant: 'dark',
+                tipType: randomTip.type,
+            });
+        } else {
+            setDailyTips(null);
+        }
     } catch (error) {
-      console.error('Error getting AI proactive tip:', error);
+        console.error('Error getting AI proactive tip:', error);
+        toast({
+            title: 'AI Tip Error',
+            description: 'Could not fetch a tip right now.',
+            variant: 'destructive',
+        });
+        setDailyTips(null);
+    } finally {
+        setIsLoadingTips(false);
     }
-  }, [toast]);
+  }, [toast, timeBlocks, lastCompletedBlock, setDailyTips, setIsLoadingTips]);
+
 
   useEffect(() => {
     if (lastCompletedBlock) {
-      getProactiveTip(lastCompletedBlock, timeBlocks);
+      getDailyTips();
       setLastCompletedBlock(null); 
     }
-  }, [lastCompletedBlock, timeBlocks, getProactiveTip]);
+  }, [lastCompletedBlock, getDailyTips]);
 
   const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
     setTimeBlocksWithHistory(prev => {
         const blockIndex = prev.findIndex(b => b.id === id);
         if (blockIndex === -1) return prev;
         
-        const updatedBlock = { ...prev[blockIndex], ...updates };
+        const existingBlock = prev[blockIndex];
+        const updatedBlock = { ...existingBlock, ...updates };
+
+        if (updates.startTime) {
+            const resolvedStartTime = findAvailableSlot(updates.startTime, updatedBlock.duration, prev, id);
+            updatedBlock.startTime = resolvedStartTime;
+        }
+
         const newBlocks = [...prev];
         newBlocks[blockIndex] = updatedBlock;
 
-        if (updates.completed && !prev[blockIndex].completed) {
+        if (updates.completed && !existingBlock.completed) {
             setLastCompletedBlock(updatedBlock);
         }
 
@@ -339,29 +374,47 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   }, [theme]);
   
   const findAvailableSlot = useCallback((requestedStartTime: Date, duration: number, blocksToCheck: TimeBlock[], excludeId?: string): Date => {
-    const sortedBlocks = [...blocksToCheck]
-      .filter(b => b.id !== excludeId)
-      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+    const getEndTime = (start: Date, dur: number) => new Date(start.getTime() + dur * 60000);
+    let resolvedStartTime = new Date(requestedStartTime);
   
-    let newStartTime = new Date(requestedStartTime);
-  
-    for (const block of sortedBlocks) {
-      const blockStartTime = block.startTime;
-      const blockEndTime = new Date(block.startTime.getTime() + block.duration * 60000);
-      const newEndTime = new Date(newStartTime.getTime() + duration * 60000);
-      
-      if (newStartTime < blockEndTime && newEndTime > blockStartTime) {
-        newStartTime = new Date(blockEndTime);
-      }
-    }
-    
-    const today = new Date(requestedStartTime);
-    today.setHours(0, 0, 0, 0);
-    if (newStartTime < today) {
-        return today;
-    }
+    while (true) {
+        const resolvedEndTime = getEndTime(resolvedStartTime, duration);
+        const collidingBlock = blocksToCheck.find(block => {
+            if (block.id === excludeId) return false;
+            const blockStartTime = new Date(block.startTime);
+            const blockEndTime = getEndTime(blockStartTime, block.duration);
+            return resolvedStartTime < blockEndTime && resolvedEndTime > blockStartTime;
+        });
 
-    return newStartTime;
+        if (!collidingBlock) {
+            break; // No collision, the slot is valid
+        }
+
+        // Collision detected, find the closest available slot
+        const collidingEndTime = getEndTime(new Date(collidingBlock.startTime), collidingBlock.duration);
+        const slotAfter = new Date(collidingEndTime);
+        const slotBefore = new Date(new Date(collidingBlock.startTime).getTime() - duration * 60000);
+        
+        const diffAfter = Math.abs(slotAfter.getTime() - requestedStartTime.getTime());
+        const diffBefore = Math.abs(slotBefore.getTime() - requestedStartTime.getTime());
+
+        // Check if the "before" slot is valid and doesn't create new collisions
+        const isBeforeValid = !blocksToCheck.some(block => {
+            if (block.id === excludeId || block.id === collidingBlock.id) return false;
+            const blockStartTime = new Date(block.startTime);
+            const blockEndTime = getEndTime(blockStartTime, block.duration);
+            const slotBeforeEndTime = getEndTime(slotBefore, duration);
+            return slotBefore < blockEndTime && slotBeforeEndTime > blockStartTime;
+        });
+        
+        if (isBeforeValid && diffBefore <= diffAfter) {
+            resolvedStartTime = slotBefore;
+        } else {
+            resolvedStartTime = slotAfter;
+        }
+    }
+  
+    return resolvedStartTime;
   }, []);
 
   
@@ -729,6 +782,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     canRedo,
     getMissedTasks,
     clearAllMissedTasks,
+    getDailyTips,
+    dailyTips,
+    isLoadingTips,
   };
 
   return (
@@ -753,5 +809,7 @@ const defaultTemplates: BubbleTemplate[] = [
   { id: 'default-4', title: 'Workout', description: 'Go for a run, lift weights, or do yoga.', category: 'health', duration: 60, color: 'rose-gold', isDefault: true },
   { id: 'default-5', title: 'Personal Time', description: 'Read a book, work on a hobby, or relax.', category: 'personal', duration: 45, color: 'lavender', isDefault: true },
 ];
+
+    
 
     
