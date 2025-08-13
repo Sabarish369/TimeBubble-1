@@ -12,6 +12,7 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 import { isToday } from "date-fns";
 import { ActionPromptModal } from "@/components/action-prompt-modal";
 import { BubbleCreateModal } from "@/components/bubble-create-modal";
+import { cn } from "@/lib/utils";
 
 function AppContent() {
   const mainRef = useRef<HTMLElement>(null);
@@ -70,7 +71,7 @@ function AppContent() {
       <Header />
       <div className="flex flex-1 overflow-hidden relative">
         <Sidebar />
-        <main ref={mainRef} className="flex-1 overflow-y-auto bg-gradient-to-b from-primary/5 via-background to-accent/5">
+        <main ref={mainRef} className={cn("flex-1 overflow-y-auto bg-gradient-to-b from-primary/5 via-background to-accent/5 no-scrollbar")}>
           <Timeline scrollContainerRef={mainRef} />
         </main>
       </div>

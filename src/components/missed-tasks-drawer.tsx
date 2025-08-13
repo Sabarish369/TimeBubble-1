@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from './ui/alert-dialog';
+import { cn } from '@/lib/utils';
 
 interface MissedTasksDrawerProps {
   isOpen: boolean;
@@ -88,7 +89,7 @@ export function MissedTasksDrawer({ isOpen, onClose }: MissedTasksDrawerProps) {
                 </Alert>
             </div>
         ) : (
-          <div className="flex-1 overflow-y-auto -mx-6 px-6 divide-y divide-border">
+          <div className={cn("flex-1 overflow-y-auto -mx-6 px-6 divide-y divide-border no-scrollbar")}>
             {missedTasks.map(group => (
               <div key={group.date} className="py-4">
                 <h3 className="font-semibold mb-2">{format(new Date(group.date), 'MMMM do, yyyy')}</h3>

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { MissedTasksDrawer } from './missed-tasks-drawer';
 import { DailySidebarTip } from './daily-sidebar-tip';
+import { cn } from '@/lib/utils';
 
 const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   work: Briefcase,
@@ -131,7 +132,7 @@ export function Sidebar() {
         </Button>
       </div>
       
-      <div className="space-y-3 overflow-y-auto flex-1">
+      <div className={cn("space-y-3 overflow-y-auto flex-1 no-scrollbar")}>
         {allTemplates.map((template) => {
           const Icon = categoryIcons[template.category];
           const isUserCreated = !template.isDefault || templates.some(t => t.id === template.id && !t.isDefault);
