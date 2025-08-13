@@ -63,7 +63,7 @@ export function DailySidebarTip() {
             ) : error ? (
               <p className="text-xs text-destructive">{error}</p>
             ) : (
-              <p className="text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              <p className="text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">
                 {tip?.tip}
               </p>
             )}
