@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Generates a single, inspiring tip for the day.
@@ -37,7 +38,15 @@ const dailySidebarTipFlow = ai.defineFlow(
     outputSchema: DailySidebarTipOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
-    return output!;
+    try {
+      const { output } = await prompt(input);
+      return output!;
+    } catch (error) {
+      // Simple retry mechanism for transient errors like 503
+      console.warn('First attempt to get daily tip failed, retrying in 2 seconds...', error);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const { output } = await prompt(input);
+      return output!;
+    }
   }
 );
