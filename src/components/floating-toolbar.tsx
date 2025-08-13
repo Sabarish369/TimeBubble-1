@@ -35,7 +35,7 @@ export function FloatingToolbar() {
         transform: 'translateX(-50%)',
       }}
     >
-      <div className="flex items-center gap-1 p-1.5 rounded-full border bg-background/70 backdrop-blur-lg shadow-lg">
+      <div className="flex items-center gap-1 p-1.5 rounded-full border bg-background/60 backdrop-blur-lg shadow-lg">
         <Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo}>
           <Undo2 className="h-5 w-5" />
           <span className="sr-only">Undo</span>
