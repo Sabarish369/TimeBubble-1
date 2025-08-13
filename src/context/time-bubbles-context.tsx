@@ -3,9 +3,10 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react';
-import type { TimeBlock, BubbleTemplate, DailyInsights, DailyTips } from '@/types';
+import type { TimeBlock, BubbleTemplate, DailyInsights, DailyTips, DailySidebarTip, DailySidebarTipInput } from '@/types';
 import { getDailyInsights as fetchDailyInsights } from '@/ai/flows/daily-insights';
 import { getDailyTips as fetchDailyTips } from '@/ai/flows/daily-tips';
+import { getDailySidebarTip } from '@/ai/flows/daily-sidebar-tip';
 import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
 import { addDays, format, startOfDay, isToday, isPast } from 'date-fns';
@@ -44,6 +45,7 @@ interface TimeBubblesContextType {
   dailyInsights: DailyInsights | null;
   isLoadingInsights: boolean;
   clearDailyInsights: () => void;
+  getNewDailySidebarTip: (input: DailySidebarTipInput) => Promise<DailySidebarTip>;
   reflectingBlock: TimeBlock | null;
   setReflectingBlock: (block: TimeBlock | null) => void;
   reschedulingBlock: TimeBlock | null;
@@ -652,6 +654,11 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       setIsLoadingInsights(false);
     }
   };
+
+  const getNewDailySidebarTip = useCallback(async (input: DailySidebarTipInput): Promise<DailySidebarTip> => {
+    const result = await getDailySidebarTip(input);
+    return result;
+  }, []);
   
   const getMissedTasks = (): MissedTaskGroup[] => {
     if (typeof window === 'undefined') return [];
@@ -788,6 +795,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     dailyInsights,
     isLoadingInsights,
     clearDailyInsights,
+    getNewDailySidebarTip,
     reflectingBlock,
     setReflectingBlock,
     reschedulingBlock,
@@ -841,4 +849,3 @@ const defaultTemplates: BubbleTemplate[] = [
     
 
     
-
