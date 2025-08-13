@@ -14,8 +14,8 @@ export function SmartSuggestions() {
 
   const renderInsight = (title: string, content: string) => (
     <div className="mb-4">
-      <p className="font-semibold text-base text-muted-foreground">{title}</p>
-      <p className="text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">{content}</p>
+      <p className="font-bold text-lg bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">{title}</p>
+      <p className="text-sm text-muted-foreground">{content}</p>
     </div>
   );
 
