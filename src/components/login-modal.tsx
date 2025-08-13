@@ -1,39 +1,46 @@
 
+'use client';
+
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TimeBubbleLogo } from "@/components/timebubble-logo";
 import { GoogleIcon } from "@/components/icons/google-icon";
 
-export default function LoginPage() {
+interface LoginModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="flex justify-center mb-6">
-          <TimeBubbleLogo className="h-8 w-auto" />
-        </div>
-        <Tabs defaultValue="sign-in" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="sign-in">Sign In</TabsTrigger>
-            <TabsTrigger value="create-account">Create Account</TabsTrigger>
-          </TabsList>
-          <TabsContent value="sign-in">
-            <Card>
-              <CardHeader>
-                <CardTitle>Welcome Back</CardTitle>
-                <CardDescription>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md p-0">
+        <div className="p-6">
+          <div className="flex justify-center mb-6">
+            <TimeBubbleLogo className="h-8 w-auto" />
+          </div>
+          <Tabs defaultValue="sign-in" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="sign-in">Sign In</TabsTrigger>
+              <TabsTrigger value="create-account">Create Account</TabsTrigger>
+            </TabsList>
+            <TabsContent value="sign-in" className="mt-4">
+              <DialogHeader className="mb-4">
+                <DialogTitle>Welcome Back</DialogTitle>
+                <DialogDescription>
                   Enter your credentials to access your timeline.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email-signin">Email</Label>
                   <Input id="email-signin" type="email" placeholder="m@example.com" required />
@@ -59,18 +66,16 @@ export default function LoginPage() {
                   <GoogleIcon className="mr-2 h-4 w-4" />
                   Sign in with Google
                 </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="create-account">
-            <Card>
-              <CardHeader>
-                <CardTitle>Create an Account</CardTitle>
-                <CardDescription>
+              </div>
+            </TabsContent>
+            <TabsContent value="create-account" className="mt-4">
+              <DialogHeader className="mb-4">
+                <DialogTitle>Create an Account</DialogTitle>
+                <DialogDescription>
                   Enter your email below to create your account.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email-signup">Email</Label>
                   <Input id="email-signup" type="email" placeholder="m@example.com" required />
@@ -79,18 +84,18 @@ export default function LoginPage() {
                   <Label htmlFor="password-signup">Password</Label>
                   <Input id="password-signup" type="password" required />
                 </div>
-                 <div className="space-y-2">
+                <div className="space-y-2">
                   <Label htmlFor="password-confirm">Confirm Password</Label>
                   <Input id="password-confirm" type="password" required />
                 </div>
                 <Button type="submit" className="w-full">
                   Create Account
                 </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

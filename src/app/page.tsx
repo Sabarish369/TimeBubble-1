@@ -5,7 +5,7 @@ import { Header } from "@/components/header";
 import { Sidebar } from "@/components/sidebar";
 import { Timeline } from "@/components/timeline";
 import { TimeBubblesProvider } from "@/context/time-bubbles-context";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTimeBubbles } from "@/context/time-bubbles-context";
 import { HOUR_HEIGHT } from "@/lib/constants";
 import { LoadingSpinner } from "@/components/loading-spinner";
@@ -14,6 +14,7 @@ import { ActionPromptModal } from "@/components/action-prompt-modal";
 import { BubbleCreateModal } from "@/components/bubble-create-modal";
 import { cn } from "@/lib/utils";
 import { FloatingToolbar } from "@/components/floating-toolbar";
+import { LoginModal } from "@/components/login-modal";
 
 function AppContent() {
   const mainRef = useRef<HTMLElement>(null);
@@ -29,6 +30,11 @@ function AppContent() {
     setIsBubbleCreateModalOpen,
     newBubbleStartTime
   } = useTimeBubbles();
+  
+  // For now, we'll simulate an unauthenticated user by showing the modal by default.
+  // This would be replaced with actual authentication state later.
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(true);
+
 
   // Find the first actionable block to show in the modal
   const blockToShow = actionableBlock ?? timeBlocks.find(b => b.actionable);
@@ -86,6 +92,10 @@ function AppContent() {
         isOpen={isBubbleCreateModalOpen}
         onClose={() => setIsBubbleCreateModalOpen(false)}
         startTime={newBubbleStartTime}
+      />
+      <LoginModal 
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
       />
     </div>
   );
