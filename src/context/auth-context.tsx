@@ -4,7 +4,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import {
   onAuthStateChanged,
-  getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -35,6 +34,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Check if auth object is valid before trying to use it
+    if (!auth || !Object.keys(auth).length) {
+      setError("Firebase is not configured. Please add your NEXT_PUBLIC_FIREBASE_ keys to the .env file.");
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
@@ -62,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 message = 'Please enter a valid email address.';
                 break;
             case 'auth/invalid-api-key':
-                message = 'Invalid API Key. Please check your Firebase configuration.';
+                message = 'Invalid API Key. Please check your Firebase configuration in the .env file.';
                 break;
             default:
                 message = err.message;
@@ -71,44 +77,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setError(message);
   }
 
-  const signUp = async (email: string, password: string, displayName: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(userCredential.user, { displayName });
-      // This will trigger onAuthStateChanged to update the user state
-      toast({
-          title: 'Account Created!',
-          description: 'Welcome to TimeBubble!',
-      });
-    } catch (err) {
-        handleAuthError(err);
-    } finally {
-      setLoading(false);
+  const performAuthAction = async (action: () => Promise<any>) => {
+    if (!auth || !Object.keys(auth).length) {
+      setError("Firebase is not configured. Cannot perform authentication.");
+      return;
     }
-  };
-
-  const signIn = async (email: string, password: string) => {
     setLoading(true);
     setError(null);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle the rest
-    } catch (err) {
-        handleAuthError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signInWithGoogle = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle the rest
+      await action();
     } catch (err) {
       handleAuthError(err);
     } finally {
@@ -116,17 +93,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+
+  const signUp = async (email: string, password: string, displayName: string) => {
+    await performAuthAction(async () => {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(userCredential.user, { displayName });
+        toast({
+            title: 'Account Created!',
+            description: 'Welcome to TimeBubble!',
+        });
+    });
+  };
+
+  const signIn = async (email: string, password: string) => {
+    await performAuthAction(() => signInWithEmailAndPassword(auth, email, password));
+  };
+
+  const signInWithGoogle = async () => {
+    await performAuthAction(() => {
+        const provider = new GoogleAuthProvider();
+        return signInWithPopup(auth, provider);
+    });
+  };
+
   const signOut = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      await firebaseSignOut(auth);
-      // Clear user data from all contexts if necessary
-    } catch (err) {
-        handleAuthError(err);
-    } finally {
-      setLoading(false);
-    }
+    await performAuthAction(() => firebaseSignOut(auth));
   };
 
   const value = {
