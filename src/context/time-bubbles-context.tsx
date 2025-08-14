@@ -454,7 +454,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     if(blockToDuplicate) {
       const newBlockData = {
         ...blockToDuplicate,
-        id: crypto.randomUUID(), // Assign new ID here
+        id: crypto.randomUUID(),
         title: `${blockToDuplicate.title} (copy)`,
         startTime: new Date(blockToDuplicate.startTime.getTime() + (blockToDuplicate.duration * 60000)),
       }
@@ -834,5 +834,7 @@ const defaultTemplates: BubbleTemplate[] = [
   { id: 'default-4', title: 'Workout', description: 'Go for a run, lift weights, or do yoga.', category: 'health', duration: 60, color: 'rose-gold', isDefault: true },
   { id: 'default-5', title: 'Personal Time', description: 'Read a book, work on a hobby, or relax.', category: 'personal', duration: 45, color: 'lavender', isDefault: true },
 ];
+
+    
 
     
