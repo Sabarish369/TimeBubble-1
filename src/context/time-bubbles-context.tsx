@@ -454,6 +454,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     if(blockToDuplicate) {
       const newBlockData = {
         ...blockToDuplicate,
+        id: crypto.randomUUID(), // Assign new ID here
         title: `${blockToDuplicate.title} (copy)`,
         startTime: new Date(blockToDuplicate.startTime.getTime() + (blockToDuplicate.duration * 60000)),
       }
