@@ -153,7 +153,6 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
     }
   }, []);
 
-
   const handleMouseUp = useCallback(() => {
     if (isDragging) {
       updateBlock(block.id, { startTime: liveStartTime });
@@ -165,6 +164,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
     setIsResizing(null);
     stopAutoScroll();
   }, [isResizing, isDragging, block.id, liveStartTime, liveDuration, updateBlock, stopAutoScroll]);
+
 
   const handleMouseMove = useCallback((e: globalThis.MouseEvent) => {
     if (!isDragging && !isResizing) return;
