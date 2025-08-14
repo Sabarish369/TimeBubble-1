@@ -151,6 +151,15 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const saveTimeBlocksToFirestore = useCallback(async (blocks: TimeBlock[], date: Date) => {
+    if (!user || !blocks) return;
+    const dateKey = getDayKey(date);
+    const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dateKey);
+    const blocksToSave = blocks.map(b => ({ ...b, startTime: ensureDateObject(b.startTime).toISOString() }));
+    await setDoc(dayDocRef, { blocks: blocksToSave }, { merge: true });
+    lastSavedBlocks.current = blocks;
+  }, [user]);
+
   const updateHistory = useCallback((date: Date, newBlocks: TimeBlock[]) => {
     const dateKey = getDayKey(date);
     const dateHistory = history[dateKey] ?? [];
@@ -165,26 +174,17 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   
   const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: TimeBlock[]) => TimeBlock[]), saveToDb: boolean = false) => {
     let finalBlocks: TimeBlock[];
+    
     setTimeBlocks(prevBlocks => {
-      const updatedBlocks = typeof newBlocks === 'function' ? newBlocks(prevBlocks) : newBlocks;
-      updateHistory(currentDate, updatedBlocks);
-      finalBlocks = updatedBlocks;
-      return updatedBlocks;
+      finalBlocks = typeof newBlocks === 'function' ? newBlocks(prevBlocks) : newBlocks;
+      updateHistory(currentDate, finalBlocks);
+      if (saveToDb) {
+        saveTimeBlocksToFirestore(finalBlocks, currentDate);
+      }
+      return finalBlocks;
     });
-
-    if (saveToDb) {
-      saveTimeBlocksToFirestore(finalBlocks, currentDate);
-    }
-  }, [updateHistory, currentDate]);
+  }, [updateHistory, currentDate, saveTimeBlocksToFirestore]);
   
-  const saveTimeBlocksToFirestore = useCallback(async (blocks: TimeBlock[], date: Date) => {
-    if (!user) return;
-    const dateKey = getDayKey(date);
-    const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dateKey);
-    const blocksToSave = blocks.map(b => ({ ...b, startTime: ensureDateObject(b.startTime).toISOString() }));
-    await setDoc(dayDocRef, { blocks: blocksToSave }, { merge: true });
-    lastSavedBlocks.current = blocks;
-  }, [user]);
 
   useEffect(() => {
     const dateKey = getDayKey(currentDate);
@@ -294,11 +294,21 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   // This effect will only save non-drag/resize changes to prevent lag.
   useEffect(() => {
       if (!user || !isLoaded || timeBlocks === lastSavedBlocks.current) return;
-      const debouncedSave = setTimeout(() => {
-          saveTimeBlocksToFirestore(timeBlocks, currentDate);
-      }, 1000);
+      
+      const changesToSave = timeBlocks.filter((block, i) => {
+          const lastSaved = lastSavedBlocks.current[i];
+          if (!lastSaved) return true; // new block
+          // Only save if it's not just a positional change
+          return JSON.stringify(block) !== JSON.stringify(lastSaved)
+      });
+      
+      if(changesToSave.length > 0) {
+        const debouncedSave = setTimeout(() => {
+            saveTimeBlocksToFirestore(timeBlocks, currentDate);
+        }, 1000);
+        return () => clearTimeout(debouncedSave);
+      }
 
-      return () => clearTimeout(debouncedSave);
   }, [timeBlocks, currentDate, user, isLoaded, saveTimeBlocksToFirestore]);
 
 
