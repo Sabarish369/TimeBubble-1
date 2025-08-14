@@ -33,7 +33,7 @@ interface TimeBubblesContextType {
   goToPreviousDay: () => void;
   addBlock: (block: Omit<TimeBlock, 'id' | 'completed'>) => void;
   addBlockOnDate: (block: Omit<TimeBlock, 'id' | 'completed'>, date: Date) => void;
-  updateBlock: (id: string, updates: Partial<TimeBlock>) => void;
+  updateBlock: (id: string, updates: Partial<TimeBlock>, saveToDb?: boolean) => void;
   deleteBlock: (id: string) => void;
   deleteBlockFromDate: (id: string, date: Date | string) => void;
   duplicateBlock: (id: string) => void;
@@ -164,25 +164,27 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     const dateKey = getDayKey(date);
     setHistory(prev => {
       const dateHistory = prev[dateKey] ?? [lastSavedBlocks.current];
-      const newHistoryForDate = dateHistory.slice(0, (historyIndex[dateKey] ?? dateHistory.length - 1) + 1);
+      const currentIndex = prev[dateKey] ? historyIndex[dateKey] ?? dateHistory.length - 1 : dateHistory.length - 1;
+      const newHistoryForDate = dateHistory.slice(0, currentIndex + 1);
       newHistoryForDate.push(newBlocks);
       return { ...prev, [dateKey]: newHistoryForDate };
     });
-    setHistoryIndex(prev => ({ ...prev, [dateKey]: (prev[dateKey] ?? 0) + 1 }));
-  }, [historyIndex]);
+    setHistoryIndex(prev => ({ ...prev, [dateKey]: (prev[dateKey] ?? -1) + 1 }));
+}, [historyIndex]);
   
-  const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: TimeBlock[]) => TimeBlock[]), date: Date, saveToDb: boolean = false) => {
-    let finalBlocks: TimeBlock[] = [];
-    setTimeBlocks(prevBlocks => {
-        finalBlocks = typeof newBlocks === 'function' ? newBlocks(prevBlocks) : newBlocks;
-        updateHistory(date, finalBlocks);
-        
-        if (saveToDb) {
-            saveTimeBlocksToFirestore(finalBlocks, date);
-        }
-        return finalBlocks;
-    });
-  }, [updateHistory, saveTimeBlocksToFirestore]);
+const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: TimeBlock[]) => TimeBlock[]), date: Date, saveToDb: boolean = false) => {
+  let finalBlocks: TimeBlock[] = [];
+  setTimeBlocks(prevBlocks => {
+      finalBlocks = typeof newBlocks === 'function' ? newBlocks(prevBlocks) : newBlocks;
+      return finalBlocks;
+  });
+
+  updateHistory(date, finalBlocks);
+  
+  if (saveToDb) {
+      saveTimeBlocksToFirestore(finalBlocks, date);
+  }
+}, [updateHistory, saveTimeBlocksToFirestore]);
   
   const getDailyTips = useCallback(async () => {
     setIsLoadingTips(true);
@@ -241,8 +243,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     duration: number,
     allBlocks: TimeBlock[],
     excludeId?: string
-): Date => {
-    const movingBlock = { startTime: requestedStartTime, duration };
+  ): Date => {
     const movingBlockEndTime = new Date(requestedStartTime.getTime() + duration * 60000);
     const otherBlocks = allBlocks.filter(b => b.id !== excludeId);
 
@@ -252,111 +253,77 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         return requestedStartTime < blockEndTime && movingBlockEndTime > blockStartTime;
     });
 
-    // If there's no collision, the requested time is valid.
     if (collidingBlocks.length === 0) {
         return requestedStartTime;
     }
-    
+
     // --- Context-aware placement logic ---
+    const collisionZoneStart = new Date(Math.min(...collidingBlocks.map(b => ensureDateObject(b.startTime).getTime())));
+    const collisionZoneEnd = new Date(Math.max(...collidingBlocks.map(b => new Date(ensureDateObject(b.startTime).getTime() + b.duration * 60000).getTime())));
 
-    // 1. Determine the full "conflict zone"
-    let conflictZoneStart = new Date(Math.min(...collidingBlocks.map(b => ensureDateObject(b.startTime).getTime())));
-    let conflictZoneEnd = new Date(Math.max(...collidingBlocks.map(b => new Date(ensureDateObject(b.startTime).getTime() + b.duration * 60000).getTime())));
+    const slotBelow = collisionZoneEnd;
+    const slotAboveEnd = collisionZoneStart;
+    const slotAboveStart = new Date(slotAboveEnd.getTime() - duration * 60000);
 
-    // 2. Identify the potential slots immediately adjacent to the conflict zone
-    const slotBelow = conflictZoneEnd;
-    const slotAboveStart = new Date(conflictZoneStart.getTime() - duration * 60000);
-    
-    const availableSlots: Date[] = [];
-
-    // 3. Check if 'slotBelow' is actually available
     const isBelowFree = !otherBlocks.some(b => {
         const blockStart = ensureDateObject(b.startTime);
         const blockEnd = new Date(blockStart.getTime() + b.duration * 60000);
         const slotBelowEnd = new Date(slotBelow.getTime() + duration * 60000);
         return slotBelow < blockEnd && slotBelowEnd > blockStart;
     });
-    if (isBelowFree) {
-        availableSlots.push(slotBelow);
-    }
 
-    // 4. Check if 'slotAbove' is actually available
-    const isAboveFree = !otherBlocks.some(b => {
+    const isAboveFree = slotAboveStart >= startOfDay(requestedStartTime) && !otherBlocks.some(b => {
         const blockStart = ensureDateObject(b.startTime);
         const blockEnd = new Date(blockStart.getTime() + b.duration * 60000);
-        const slotAboveEnd = new Date(slotAboveStart.getTime() + duration * 60000);
         return slotAboveStart < blockEnd && slotAboveEnd > blockStart;
     });
-    if (isAboveFree && slotAboveStart >= startOfDay(requestedStartTime)) {
-        availableSlots.push(slotAboveStart);
-    }
 
-    // 5. If adjacent slots are taken, do a general search as a fallback
-    if (availableSlots.length === 0) {
-        const sortedBlocks = [...otherBlocks, ...collidingBlocks].sort((a,b) => ensureDateObject(a.startTime).getTime() - ensureDateObject(b.startTime).getTime());
-        
-        // Check space at the very beginning of the day
-        if (sortedBlocks.length === 0 || ensureDateObject(sortedBlocks[0].startTime).getTime() >= duration * 60000) {
-           availableSlots.push(startOfDay(requestedStartTime));
-        }
-
-        // Check gaps between blocks
-        for (let i = 0; i < sortedBlocks.length; i++) {
-            const currentBlockEnd = new Date(ensureDateObject(sortedBlocks[i].startTime).getTime() + sortedBlocks[i].duration * 60000);
-            const nextBlockStart = i + 1 < sortedBlocks.length ? ensureDateObject(sortedBlocks[i+1].startTime) : new Date(currentBlockEnd.getTime() + 24 * 3600 * 1000); // end of time
-            
-            if (nextBlockStart.getTime() - currentBlockEnd.getTime() >= duration * 60000) {
-                 availableSlots.push(currentBlockEnd);
-            }
-        }
+    if (isAboveFree && isBelowFree) {
+        const diffAbove = Math.abs(slotAboveStart.getTime() - requestedStartTime.getTime());
+        const diffBelow = Math.abs(slotBelow.getTime() - requestedStartTime.getTime());
+        return diffAbove <= diffBelow ? slotAboveStart : slotBelow;
     }
     
-    // If after all checks, no slots are available, return the original time (should be rare)
-    if (availableSlots.length === 0) {
-      const lastBlock = otherBlocks.sort((a,b) => ensureDateObject(a.startTime).getTime() - ensureDateObject(b.startTime).getTime()).pop();
-      if(lastBlock) {
-        return new Date(ensureDateObject(lastBlock.startTime).getTime() + lastBlock.duration * 60000);
-      }
-      return requestedStartTime;
-    }
-
-    // 6. Find the closest among the available slots
-    let closestSlot = availableSlots[0];
-    let minDiff = Math.abs(availableSlots[0].getTime() - requestedStartTime.getTime());
-
-    for (let i = 1; i < availableSlots.length; i++) {
-        const diff = Math.abs(availableSlots[i].getTime() - requestedStartTime.getTime());
-        if (diff < minDiff) {
-            minDiff = diff;
-            closestSlot = availableSlots[i];
+    if (isBelowFree) return slotBelow;
+    if (isAboveFree) return slotAboveStart;
+    
+    // Fallback if neither adjacent slot is free
+    const sortedBlocks = [...otherBlocks].sort((a,b) => ensureDateObject(a.startTime).getTime() - ensureDateObject(b.startTime).getTime());
+    let lastEndTime = startOfDay(requestedStartTime);
+    for (const block of sortedBlocks) {
+        const currentStartTime = ensureDateObject(block.startTime);
+        if (currentStartTime.getTime() - lastEndTime.getTime() >= duration * 60000) {
+            return lastEndTime;
         }
+        lastEndTime = new Date(currentStartTime.getTime() + block.duration * 60000);
     }
 
-    return closestSlot;
+    return lastEndTime; // Place at the very end
+  }, []);
 
-}, []);
-
-  const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
+  const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>, saveToDb: boolean = false) => {
     setTimeBlocks(prev => {
         const blockIndex = prev.findIndex(b => b.id === id);
         if (blockIndex === -1) return prev;
         
-        const newBlocks = [...prev];
+        let newBlocks = [...prev];
         let updatedBlock = { ...newBlocks[blockIndex], ...updates, startTime: ensureDateObject(updates.startTime ?? newBlocks[blockIndex].startTime) };
-
-        // If position or duration changed, check for collisions
-        if (updates.startTime || updates.duration) {
-            const newStartTime = findAvailableSlot(updatedBlock.startTime, updatedBlock.duration, newBlocks, id);
-            updatedBlock.startTime = newStartTime;
-        }
 
         if (updates.completed && !newBlocks[blockIndex].completed) {
             setLastCompletedBlock(updatedBlock);
         }
+
+        if (saveToDb && (updates.startTime || updates.duration)) {
+            const newStartTime = findAvailableSlot(updatedBlock.startTime, updatedBlock.duration, newBlocks, id);
+            updatedBlock.startTime = newStartTime;
+        }
+        
         newBlocks[blockIndex] = updatedBlock;
 
-        // Final state is calculated, now save it.
-        saveTimeBlocksToFirestore(newBlocks, currentDate);
+        if (saveToDb) {
+            saveTimeBlocksToFirestore(newBlocks, currentDate);
+        }
+        
         updateHistory(currentDate, newBlocks);
         return newBlocks;
     });
@@ -365,16 +332,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const onNotify = (block: TimeBlock) => {
       playNotificationSound();
-      // Use a function for state update to avoid stale state
-      setTimeBlocks(prevBlocks => {
-          const newBlocks = prevBlocks.map(b => 
-              b.id === block.id 
-              ? { ...b, notified: true, actionable: true, notificationScheduled: false }
-              : b
-          );
-          saveTimeBlocksToFirestore(newBlocks, currentDate);
-          return newBlocks;
-      });
+      updateBlock(block.id, { notified: true, actionable: true, notificationScheduled: false }, true);
       setActionableBlock(block);
     };
 
@@ -386,14 +344,27 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       const endTime = new Date(ensureDateObject(block.startTime).getTime() + block.duration * 60000);
       if (endTime > new Date()) {
         NotificationManager.scheduleNotification(block, endTime, onNotify);
-        // This direct state update might be causing issues.
-        setTimeBlocks(prev => prev.map(b => b.id === block.id ? {...b, notificationScheduled: true} : b));
+        updateBlock(block.id, { notificationScheduled: true }, false);
       }
     });
-  // The dependency on updateBlock is removed to prevent re-renders, but this is risky.
-  // The logic inside should be self-contained or use callbacks.
-  }, [timeBlocks, currentDate, saveTimeBlocksToFirestore]);
+  }, [timeBlocks, updateBlock]);
   
+  useEffect(() => {
+    const hasUnsavedChanges = JSON.stringify(timeBlocks) !== JSON.stringify(lastSavedBlocks.current);
+    if (isLoaded && hasUnsavedChanges && timeBlocks.length > 0) {
+      const nonDragUpdates = timeBlocks.filter(block => {
+          const lastSavedVersion = lastSavedBlocks.current.find(b => b.id === block.id);
+          if (!lastSavedVersion) return true; // new block
+          // Only save if a property other than position/duration changed without a DB save flag
+          return block.completed !== lastSavedVersion.completed || block.title !== lastSavedVersion.title;
+      });
+
+      if (nonDragUpdates.length > 0) {
+          saveTimeBlocksToFirestore(timeBlocks, currentDate);
+      }
+    }
+  }, [timeBlocks, isLoaded, currentDate, saveTimeBlocksToFirestore]);
+
 
   useEffect(() => {
     if (!user || !db) {
@@ -486,6 +457,24 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [theme]);
 
+  const getBlocksForDate = async (date: Date): Promise<TimeBlock[]> => {
+    if (!user) return [];
+    const dayKey = getDayKey(date);
+    const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dayKey);
+    try {
+        const docSnap = await getDoc(dayDocRef);
+        if (docSnap.exists()) {
+            if (docSnap.data().blocks) {
+                return docSnap.data().blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
+            }
+        }
+        return [];
+    } catch (error) {
+        console.error("Error fetching blocks for date:", error);
+        return [];
+    }
+  };
+  
   const addBlockOnDate = useCallback(async (block: Omit<TimeBlock, 'id' | 'completed'>, date: Date) => {
     if (!user) {
         toast({ title: 'Not signed in', description: 'You must be signed in to add bubbles.', variant: 'destructive'});
@@ -696,23 +685,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     return JSON.stringify(timeBlocks.map(b => ({ ...b, id: undefined })));
   }, [timeBlocks]);
 
-  const getBlocksForDate = async (date: Date): Promise<TimeBlock[]> => {
-    if (!user) return [];
-    const dayKey = getDayKey(date);
-    const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dayKey);
-    try {
-        const docSnap = await getDoc(dayDocRef);
-        if (docSnap.exists()) {
-            if (docSnap.data().blocks) {
-                return docSnap.data().blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
-            }
-        }
-        return [];
-    } catch (error) {
-        console.error("Error fetching blocks for date:", error);
-        return [];
-    }
-  };
   
   const getDailyInsights = async () => {
     setIsLoadingInsights(true);
@@ -834,7 +806,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     if (dateHistoryIndex > 0) {
       const newIndex = dateHistoryIndex - 1;
       setHistoryIndex(prev => ({...prev, [dateKey]: newIndex}));
-      setTimeBlocks(dateHistory[newIndex]);
+      const newBlocks = dateHistory[newIndex];
+      setTimeBlocks(newBlocks);
+      saveTimeBlocksToFirestore(newBlocks, currentDate);
     }
   };
 
@@ -845,7 +819,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     if (dateHistoryIndex < dateHistory.length - 1) {
       const newIndex = dateHistoryIndex + 1;
       setHistoryIndex(prev => ({...prev, [dateKey]: newIndex}));
-      setTimeBlocks(dateHistory[newIndex]);
+      const newBlocks = dateHistory[newIndex];
+      setTimeBlocks(newBlocks);
+      saveTimeBlocksToFirestore(newBlocks, currentDate);
     }
   };
   
@@ -917,7 +893,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     theme,
     setTheme,
     undo,
-    redo,
+redo,
     canUndo,
     canRedo,
     getMissedTasks,
