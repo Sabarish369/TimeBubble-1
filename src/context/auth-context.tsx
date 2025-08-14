@@ -55,16 +55,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (err.code) {
         switch (err.code) {
             case 'auth/user-not-found':
-                message = 'No account found with that email.';
+            case 'auth/invalid-credential':
+                message = 'Invalid email or password. Please try again.';
                 break;
             case 'auth/wrong-password':
                 message = 'Incorrect password. Please try again.';
                 break;
             case 'auth/email-already-in-use':
-                message = 'This email is already registered.';
+                message = 'An account with this email address already exists.';
                 break;
             case 'auth/weak-password':
-                message = 'Password is too weak. It must be at least 6 characters.';
+                message = 'The password is too weak. It must be at least 6 characters long.';
                 break;
             case 'auth/invalid-email':
                 message = 'Please enter a valid email address.';
@@ -75,8 +76,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             case 'auth/configuration-not-found':
                 message = "Authentication provider is not configured. Please enable it in the Firebase console.";
                 break;
+            case 'auth/too-many-requests':
+                message = 'Too many attempts. Please try again later or reset your password.';
+                break;
             default:
-                message = err.message;
+                message = 'An unexpected error occurred. Please try again.';
+                console.error('Firebase Auth Error:', err);
+                break;
         }
     }
     setError(message);
