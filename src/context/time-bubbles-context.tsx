@@ -118,8 +118,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [history, setHistory] = useState<{ [dateKey: string]: TimeBlock[][] }>({});
   const [historyIndex, setHistoryIndex] = useState<{ [dateKey: string]: number }>({});
-  const lastSavedBlocks = useRef<TimeBlock[]>([]);
-
+  
   const [templates, setTemplates] = useState<BubbleTemplate[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentDate, setCurrentDateState] = useState(startOfDay(new Date()));
@@ -157,42 +156,38 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dateKey);
     const blocksToSave = blocks.map(b => ({ ...b, startTime: ensureDateObject(b.startTime).toISOString() }));
     await setDoc(dayDocRef, { blocks: blocksToSave }, { merge: true });
-    lastSavedBlocks.current = blocks;
   }, [user]);
 
   const updateHistory = useCallback((date: Date, newBlocks: TimeBlock[]) => {
     const dateKey = getDayKey(date);
-    const dateHistory = history[dateKey] ?? [];
-    const dateHistoryIndex = historyIndex[dateKey] ?? -1;
+    const dateHistory = history[dateKey] ?? [[...timeBlocks]]; // Start with current blocks if no history
+    const dateHistoryIndex = historyIndex[dateKey] ?? dateHistory.length - 1;
 
     const newHistoryForDate = dateHistory.slice(0, dateHistoryIndex + 1);
     newHistoryForDate.push(newBlocks);
     
     setHistory(prev => ({ ...prev, [dateKey]: newHistoryForDate }));
     setHistoryIndex(prev => ({ ...prev, [dateKey]: newHistoryForDate.length - 1 }));
-  }, [history, historyIndex]);
+  }, [history, historyIndex, timeBlocks]);
   
-  const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: TimeBlock[]) => TimeBlock[]), saveToDb: boolean = false) => {
+  const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: TimeBlock[]) => TimeBlock[]), date: Date, saveToDb: boolean = false) => {
     let finalBlocks: TimeBlock[];
     
     setTimeBlocks(prevBlocks => {
       finalBlocks = typeof newBlocks === 'function' ? newBlocks(prevBlocks) : newBlocks;
-      updateHistory(currentDate, finalBlocks);
-      if (saveToDb) {
-        saveTimeBlocksToFirestore(finalBlocks, currentDate);
-      }
+      updateHistory(date, finalBlocks);
       return finalBlocks;
     });
-  }, [updateHistory, currentDate, saveTimeBlocksToFirestore]);
-  
 
-  useEffect(() => {
-    const dateKey = getDayKey(currentDate);
-    if (!history[dateKey] && timeBlocks.length > 0) {
-        setHistory(prev => ({ ...prev, [dateKey]: [timeBlocks] }));
-        setHistoryIndex(prev => ({ ...prev, [dateKey]: 0 }));
-    }
-  }, [timeBlocks, currentDate, history]);
+    // We need to use a variable from outside the setTimeBlocks callback to save
+    // because the state update is async.
+    setTimeout(() => {
+        if (saveToDb) {
+            const blocksToSave = typeof newBlocks === 'function' ? newBlocks(timeBlocks) : newBlocks;
+            saveTimeBlocksToFirestore(blocksToSave, date);
+        }
+    }, 0);
+  }, [updateHistory, saveTimeBlocksToFirestore, timeBlocks]);
   
   const getDailyTips = useCallback(async () => {
     setIsLoadingTips(true);
@@ -247,28 +242,24 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   }, [lastCompletedBlock, getDailyTips]);
 
   const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>, saveToDb: boolean = false) => {
-    setTimeBlocksWithHistory(prev => {
-        const blockIndex = prev.findIndex(b => b.id === id);
-        if (blockIndex === -1) return prev;
-        
-        const existingBlock = prev[blockIndex];
-        const updatedBlock = { ...existingBlock, ...updates };
+      setTimeBlocks(prev => {
+          const blockIndex = prev.findIndex(b => b.id === id);
+          if (blockIndex === -1) return prev;
+          
+          const newBlocks = [...prev];
+          const updatedBlock = { ...newBlocks[blockIndex], ...updates };
+          newBlocks[blockIndex] = updatedBlock;
 
-        if (updates.startTime && !saveToDb) {
-            const resolvedStartTime = findAvailableSlot(updates.startTime, updatedBlock.duration, prev, id);
-            updatedBlock.startTime = resolvedStartTime;
-        }
+          if (updates.completed && !newBlocks[blockIndex].completed) {
+              setLastCompletedBlock(updatedBlock);
+          }
 
-        const newBlocks = [...prev];
-        newBlocks[blockIndex] = updatedBlock;
-
-        if (updates.completed && !existingBlock.completed) {
-            setLastCompletedBlock(updatedBlock);
-        }
-
-        return newBlocks;
-    }, saveToDb);
-  }, [setTimeBlocksWithHistory]);
+          if (saveToDb) {
+              saveTimeBlocksToFirestore(newBlocks, currentDate);
+          }
+          return newBlocks;
+      });
+  }, [currentDate, saveTimeBlocksToFirestore]);
   
   useEffect(() => {
     const onNotify = (block: TimeBlock) => {
@@ -291,21 +282,19 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
   }, [timeBlocks, updateBlock]);
   
-  // This effect will only save non-drag/resize changes to prevent lag.
   useEffect(() => {
-      if (!user || !isLoaded || timeBlocks === lastSavedBlocks.current) return;
+      if (!user || !isLoaded) return;
       
-      const changesToSave = timeBlocks.filter((block, i) => {
-          const lastSaved = lastSavedBlocks.current[i];
-          if (!lastSaved) return true; // new block
-          // Only save if it's not just a positional change
-          return JSON.stringify(block) !== JSON.stringify(lastSaved)
+      const unsavedChanges = timeBlocks.some((block, i) => {
+          const lastSaved = timeBlocks[i];
+          if (!lastSaved) return true; // New block
+          return JSON.stringify(block) !== JSON.stringify(lastSaved);
       });
       
-      if(changesToSave.length > 0) {
+      if(unsavedChanges) {
         const debouncedSave = setTimeout(() => {
             saveTimeBlocksToFirestore(timeBlocks, currentDate);
-        }, 1000);
+        }, 1500); // Increased debounce time
         return () => clearTimeout(debouncedSave);
       }
 
@@ -322,15 +311,15 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dateKey);
 
     const unsubscribe = onSnapshot(dayDocRef, (docSnap) => {
+        let blocksFromDb: TimeBlock[] = [];
         if (docSnap.exists()) {
             const data = docSnap.data();
-            const blocksFromDb = data.blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
-            setTimeBlocks(blocksFromDb);
-            lastSavedBlocks.current = blocksFromDb;
-        } else {
-            setTimeBlocks([]);
-            lastSavedBlocks.current = [];
+            blocksFromDb = data.blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
         }
+        setTimeBlocks(blocksFromDb);
+        // Initialize history for the new date
+        setHistory(prev => ({ ...prev, [dateKey]: [blocksFromDb] }));
+        setHistoryIndex(prev => ({ ...prev, [dateKey]: 0 }));
         setIsLoaded(true);
     }, (error) => {
         console.error("Error listening to day data:", error);
@@ -442,14 +431,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         const newStartTime = findAvailableSlot(block.startTime, block.duration, blocksForDate);
         const newBlock: TimeBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false, notified: false, actionable: false };
         
-        // Final check to prevent duplicates before writing to Firestore
-        if (blocksForDate.some(b => b.id === newBlock.id)) {
-            console.error("Attempted to add a block with a duplicate ID.");
-            return;
-        }
-
         const newBlocks = [...blocksForDate, newBlock];
-        setTimeBlocksWithHistory(newBlocks, true);
+        setTimeBlocksWithHistory(newBlocks, date, true);
         
         toast({
           title: 'Bubble Added',
@@ -460,7 +443,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         console.error("Error adding block:", error);
         toast({ title: "Error", description: "Could not add the time bubble.", variant: "destructive"});
     }
-  }, [user, findAvailableSlot, setTimeBlocksWithHistory, currentDate, toast]);
+  }, [user, findAvailableSlot, setTimeBlocksWithHistory, toast]);
 
   const addBlock = useCallback((block: Omit<TimeBlock, 'id' | 'completed'>) => {
     addBlockOnDate(block, block.startTime);
@@ -469,8 +452,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteBlock = useCallback((id: string) => {
     NotificationManager.clearNotification(id);
-    setTimeBlocksWithHistory(prev => prev.filter(b => b.id !== id), true);
-  }, [setTimeBlocksWithHistory]);
+    setTimeBlocksWithHistory(prev => prev.filter(b => b.id !== id), currentDate, true);
+  }, [setTimeBlocksWithHistory, currentDate]);
   
   const deleteBlockFromDate = async (id: string, date: Date | string) => {
     if (!user) return;
@@ -492,8 +475,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
 
   const clearAllBlocks = useCallback(() => {
-    setTimeBlocksWithHistory([], true);
-  }, [setTimeBlocksWithHistory]);
+    setTimeBlocksWithHistory([], currentDate, true);
+  }, [setTimeBlocksWithHistory, currentDate]);
 
   const duplicateBlock = useCallback((id: string) => {
     const blockToDuplicate = timeBlocks.find(b => b.id === id);
@@ -612,9 +595,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         const sourceBlocks = sourceDocSnap.exists() ? sourceDocSnap.data().blocks.filter((b: any) => b.id !== id) : [];
         
         const batch = writeBatch(db);
-        batch.set(targetDayDocRef, { blocks: [...blocksForNewDate.map(b => ({...b, startTime: ensureDateObject(b.startTime)})), rescheduledBlockData] }, { merge: true });
+        batch.set(targetDayDocRef, { blocks: [...blocksForNewDate.map(b => ({...b, startTime: ensureDateObject(b.startTime).toISOString()})), {...rescheduledBlockData, startTime: rescheduledBlockData.startTime.toISOString()}] }, { merge: true });
         if (sourceBlocks.length > 0) {
-            batch.set(sourceDayDocRef, { blocks: sourceBlocks });
+            batch.set(sourceDayDocRef, { blocks: sourceBlocks.map(b => ({...b, startTime: ensureDateObject(b.startTime).toISOString()})) });
         } else {
             batch.delete(sourceDayDocRef);
         }
@@ -790,7 +773,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const setCurrentDate = (date: Date) => {
-    if(isLoaded && JSON.stringify(timeBlocks) !== JSON.stringify(lastSavedBlocks.current)) {
+    if(isLoaded && JSON.stringify(timeBlocks) !== JSON.stringify([])) {
       saveTimeBlocksToFirestore(timeBlocks, currentDate);
     }
     setCurrentDateState(startOfDay(date));
