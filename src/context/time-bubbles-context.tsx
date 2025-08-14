@@ -337,14 +337,14 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
       const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
       if (storedTheme) {
-          if (theme !== storedTheme) setThemeState(storedTheme);
-      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-          if (theme !== 'dark') setThemeState('dark');
+        setThemeState(storedTheme);
+      } else {
+        setThemeState('dark');
       }
 
       setIsLoaded(true);
     }
-  }, [isLoaded, loadDataForDate, currentDate, user, zoomLevel, theme]);
+  }, [isLoaded, loadDataForDate, currentDate, user, zoomLevel]);
   
   const saveData = useCallback(() => {
     if (!isLoaded || typeof window === 'undefined') return;
