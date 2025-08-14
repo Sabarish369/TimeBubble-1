@@ -346,7 +346,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
       if (storedTheme) {
         setThemeState(storedTheme);
-      } else if (!storedTheme) {
+      } else {
         setThemeState('dark');
       }
     }
@@ -411,10 +411,16 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         const newStartTime = findAvailableSlot(block.startTime, block.duration, blocksForDate);
         const newBlock: TimeBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false, notified: false, actionable: false };
         
-        await setDoc(dayDocRef, { blocks: [...blocksForDate.map(b => ({...b, startTime: ensureDateObject(b.startTime)})), newBlock] });
+        // Final check to prevent duplicates before writing to Firestore
+        if (blocksForDate.some(b => b.id === newBlock.id)) {
+            console.error("Attempted to add a block with a duplicate ID.");
+            return;
+        }
+
+        await setDoc(dayDocRef, { blocks: [...blocksForDate, newBlock] });
 
         if (dateKey === getDayKey(currentDate)) {
-            setTimeBlocksWithHistory(prev => [...prev, newBlock]);
+            setTimeBlocksWithHistory(prev => [...prev.filter(b => b.id !== newBlock.id), newBlock]);
         }
         
         toast({
@@ -463,13 +469,15 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
   const duplicateBlock = useCallback((id: string) => {
     const blockToDuplicate = timeBlocks.find(b => b.id === id);
-    if(blockToDuplicate) {
+    if (blockToDuplicate) {
       const newBlockData = {
-        ...blockToDuplicate,
-        id: crypto.randomUUID(),
         title: `${blockToDuplicate.title} (copy)`,
+        description: blockToDuplicate.description,
+        duration: blockToDuplicate.duration,
+        color: blockToDuplicate.color,
+        category: blockToDuplicate.category,
         startTime: new Date(ensureDateObject(blockToDuplicate.startTime).getTime() + (blockToDuplicate.duration * 60000)),
-      }
+      };
       addBlock(newBlockData);
     }
   }, [timeBlocks, addBlock]);
@@ -850,3 +858,4 @@ const defaultTemplates: BubbleTemplate[] = [
     
 
     
+
