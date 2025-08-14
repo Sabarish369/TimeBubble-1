@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react';
-import type { TimeBlock, BubbleTemplate, DailyInsights, DailyTips, DailySidebarTip, DailySidebarTipInput } from '@/types';
+import type { TimeBlock, BubbleTemplate, DailyInsights, DailyTips, DailySidebarTip, DailySidebarTipInput, UserPreferences } from '@/types';
 import { getDailyInsights as fetchDailyInsights } from '@/ai/flows/daily-insights';
 import { getDailyTips as fetchDailyTips } from '@/ai/flows/daily-tips';
 import { getDailySidebarTip } from '@/ai/flows/daily-sidebar-tip';
@@ -81,7 +81,6 @@ const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(und
 const getDayKey = (date: Date | string) => format(new Date(date), 'yyyy-MM-dd');
 
 const ZOOM_STORAGE_KEY = 'timebubble_zoom';
-const THEME_STORAGE_KEY = 'timebubble_theme';
 
 const ensureDateObject = (date: any): Date => {
     if (date instanceof Date) {
@@ -343,22 +342,33 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
           const newZoom = parseFloat(storedZoom);
           if(zoomLevel !== newZoom) setZoomLevelState(newZoom);
       }
-      const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
-      if (storedTheme) {
-        setThemeState(storedTheme);
-      } else {
-        setThemeState('dark');
-      }
     }
   }, [isLoaded, zoomLevel]);
+
+  // Load user preferences from Firestore
+  useEffect(() => {
+    if (!user || !db) return;
+    const prefsDocRef = doc(db, 'users', user.uid, 'settings', 'preferences');
+    const unsubscribe = onSnapshot(prefsDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const prefs = docSnap.data() as UserPreferences;
+        if (prefs.theme) {
+          setThemeState(prefs.theme);
+        }
+      } else {
+        // If no prefs, set default and save
+        saveUserPreferences({ theme: 'dark' });
+      }
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   
   useEffect(() => {
     if(isLoaded && typeof window !== 'undefined') {
       localStorage.setItem(ZOOM_STORAGE_KEY, String(zoomLevel));
-      localStorage.setItem(THEME_STORAGE_KEY, theme);
     }
-  }, [zoomLevel, theme, isLoaded]);
+  }, [zoomLevel, isLoaded]);
 
   
   useEffect(() => {
@@ -478,9 +488,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         category: blockToDuplicate.category,
         startTime: new Date(ensureDateObject(blockToDuplicate.startTime).getTime() + (blockToDuplicate.duration * 60000)),
       };
-      addBlock(newBlockData);
+      addBlockOnDate(newBlockData, newBlockData.startTime);
     }
-  }, [timeBlocks, addBlock]);
+  }, [timeBlocks, addBlockOnDate]);
 
   const saveTemplatesToFirestore = async (newTemplates: BubbleTemplate[]) => {
       if (!user) return;
@@ -725,10 +735,17 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       setZoomLevelState(newLevel);
     }
   };
+
+  const saveUserPreferences = useCallback(async (prefs: Partial<UserPreferences>) => {
+    if (!user) return;
+    const prefsDocRef = doc(db, 'users', user.uid, 'settings', 'preferences');
+    await setDoc(prefsDocRef, prefs, { merge: true });
+  }, [user]);
   
   const setTheme = (newTheme: Theme) => {
     if(theme !== newTheme) {
       setThemeState(newTheme);
+      saveUserPreferences({ theme: newTheme });
     }
   };
 
@@ -854,8 +871,3 @@ const defaultTemplates: BubbleTemplate[] = [
   { id: 'default-4', title: 'Workout', description: 'Go for a run, lift weights, or do yoga.', category: 'health', duration: 60, color: 'rose-gold', isDefault: true },
   { id: 'default-5', title: 'Personal Time', description: 'Read a book, work on a hobby, or relax.', category: 'personal', duration: 45, color: 'lavender', isDefault: true },
 ];
-
-    
-
-    
-

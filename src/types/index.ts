@@ -1,3 +1,4 @@
+
 import { BUBBLE_COLORS } from "@/lib/constants";
 import { DailyInsightsOutputSchema, DailySidebarTipOutputSchema, DailyTipsOutputSchema, DailySidebarTipInputSchema } from "./ai-types";
 import { z } from "zod";
@@ -39,6 +40,12 @@ export interface BubbleTemplate {
   color: BubbleColor;
   category: BubbleCategory;
   isDefault?: boolean;
+}
+
+export type Theme = 'light' | 'dark';
+
+export interface UserPreferences {
+  theme: Theme;
 }
 
 export type DailyInsights = z.infer<typeof DailyInsightsOutputSchema>;
