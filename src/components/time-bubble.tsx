@@ -158,8 +158,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
 
   const handleMouseUp = useCallback(() => {
     if (isDragging || isResizing) {
-      // For both dragging and resizing, the live state is what we want to save.
-      updateBlock(block.id, { startTime: liveStartTime, duration: liveDuration }, true);
+      updateBlock(block.id, { startTime: liveStartTime, duration: liveDuration });
     }
     setIsDragging(false);
     setIsResizing(null);
@@ -208,9 +207,6 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
           const newStartTime = new Date(liveStartTime);
           newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
 
-          const originalEndTime = new Date(dragStartRef.current.initialTop * 1000 / pixelsPerMinute * 60 + dragStartRef.current.initialHeight * 1000 / pixelsPerMinute * 60);
-          const originalStartTime = new Date(dragStartRef.current.initialTop * 1000 / pixelsPerMinute * 60);
-
           const endOfOriginalBlock = new Date(ensureDateObject(block.startTime).getTime() + block.duration * 60000);
           
           const durationDifference = (endOfOriginalBlock.getTime() - newStartTime.getTime()) / (1000 * 60);
@@ -243,7 +239,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
     }
 
 
-  }, [isDragging, isResizing, block.startTime, block.duration, timelineRef, pixelsPerMinute, scrollContainerRef, stopAutoScroll, liveStartTime]);
+  }, [isDragging, isResizing, pixelsPerMinute, scrollContainerRef, stopAutoScroll, liveStartTime, block]);
 
 
   useEffect(() => {
@@ -284,7 +280,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
   };
   
   const handleUndoComplete = () => {
-    updateBlock(block.id, { completed: false, reflection: undefined, notified: false }, true);
+    updateBlock(block.id, { completed: false, reflection: undefined, notified: false });
     setShowCelebration(false);
   };
   
@@ -362,7 +358,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
                   key={colorName}
                   className={cn("w-6 h-6 rounded-full border", block.color === colorName && "ring-2 ring-ring")}
                   style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
-                  onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBBLE_COLORS }, true)}
+                  onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBBLE_COLORS })}
                 />
               ))}
             </div>
