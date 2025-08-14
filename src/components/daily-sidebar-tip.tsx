@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import type { DailySidebarTip as DailySidebarTipType } from '@/types';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/auth-context';
 
 export function DailySidebarTip() {
   const [tip, setTip] = useState<DailySidebarTipType | null>(null);
@@ -16,23 +17,37 @@ export function DailySidebarTip() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { getBlocksForDate, currentDate, getNewDailySidebarTip } = useTimeBubbles();
+  const { user } = useAuth();
+
+
+  const getStorageKey = useCallback(() => {
+    if (!user) return null;
+    return `daily_tip_${user.uid}_${format(currentDate, 'yyyy-MM-dd')}`;
+  }, [user, currentDate]);
+
 
   const fetchTip = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     
-    const dayKey = format(currentDate, 'yyyy-MM-dd');
-    const storageKey = `daily_tip_${dayKey}`;
+    const storageKey = getStorageKey();
 
     try {
-      const cachedTip = localStorage.getItem(storageKey);
-      if (cachedTip) {
-        setTip(JSON.parse(cachedTip));
-      } else {
-        const scheduleForDay = getBlocksForDate(currentDate);
-        const scheduleString = JSON.stringify(scheduleForDay.map(b => ({ title: b.title, category: b.category, duration: b.duration })));
-        const result = await getNewDailySidebarTip({ scheduleData: scheduleString });
-        setTip(result);
+      if (storageKey) {
+        const cachedTip = localStorage.getItem(storageKey);
+        if (cachedTip) {
+          setTip(JSON.parse(cachedTip));
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      const scheduleForDay = await getBlocksForDate(currentDate);
+      const scheduleString = JSON.stringify(scheduleForDay.map(b => ({ title: b.title, category: b.category, duration: b.duration })));
+      const result = await getNewDailySidebarTip({ scheduleData: scheduleString });
+      setTip(result);
+
+      if (storageKey) {
         localStorage.setItem(storageKey, JSON.stringify(result));
       }
     } catch (err) {
@@ -41,7 +56,7 @@ export function DailySidebarTip() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentDate, getBlocksForDate, getNewDailySidebarTip]);
+  }, [currentDate, getBlocksForDate, getNewDailySidebarTip, getStorageKey]);
 
   useEffect(() => {
     fetchTip();
@@ -52,13 +67,14 @@ export function DailySidebarTip() {
     setIsRefreshing(true);
     setError(null);
     try {
-        const scheduleForDay = getBlocksForDate(currentDate);
+        const scheduleForDay = await getBlocksForDate(currentDate);
         const scheduleString = JSON.stringify(scheduleForDay.map(b => ({ title: b.title, category: b.category, duration: b.duration })));
         const newTip = await getNewDailySidebarTip({ scheduleData: scheduleString });
         setTip(newTip);
-        // Overwrite the cache with the new tip
-        const dayKey = format(currentDate, 'yyyy-MM-dd');
-        localStorage.setItem(`daily_tip_${dayKey}`, JSON.stringify(newTip));
+        const storageKey = getStorageKey();
+        if (storageKey) {
+            localStorage.setItem(storageKey, JSON.stringify(newTip));
+        }
     } catch (err) {
         console.error('Failed to refresh tip:', err);
         setError('Could not get a new tip.');

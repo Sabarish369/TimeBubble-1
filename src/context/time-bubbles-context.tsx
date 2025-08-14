@@ -12,6 +12,8 @@ import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
 import { addDays, format, startOfDay, isToday, isPast } from 'date-fns';
 import * as NotificationManager from '@/lib/notification-manager';
 import { useAuth } from './auth-context';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
 
 type Theme = 'light' | 'dark';
 
@@ -39,9 +41,9 @@ interface TimeBubblesContextType {
   addTemplate: (template: Omit<BubbleTemplate, 'id' | 'isDefault'>) => void;
   updateTemplate: (id: string, updates: Partial<Omit<BubbleTemplate, 'id' | 'isDefault'>>) => void;
   deleteTemplate: (id: string) => void;
-  rescheduleBlock: (id: string, newStartTime: Date) => void;
+  rescheduleBlock: (id: string, newStartTime: Date) => Promise<void>;
   getBlocksForSuggestions: () => string;
-  getBlocksForDate: (date: Date) => TimeBlock[];
+  getBlocksForDate: (date: Date) => Promise<TimeBlock[]>;
   getDailyInsights: () => Promise<void>;
   dailyInsights: DailyInsights | null;
   isLoadingInsights: boolean;
@@ -67,8 +69,8 @@ interface TimeBubblesContextType {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
-  getMissedTasks: () => MissedTaskGroup[];
-  clearAllMissedTasks: () => void;
+  getMissedTasks: () => Promise<MissedTaskGroup[]>;
+  clearAllMissedTasks: () => Promise<void>;
   getDailyTips: () => Promise<void>;
   dailyTips: DailyTips | null;
   isLoadingTips: boolean;
@@ -77,8 +79,6 @@ interface TimeBubblesContextType {
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
 
 const getDayKey = (date: Date | string) => format(new Date(date), 'yyyy-MM-dd');
-
-const getStorageKey = (userId: string | null) => userId ? `timebubble_data_${userId}` : 'timebubble_data_guest';
 
 const ZOOM_STORAGE_KEY = 'timebubble_zoom';
 const THEME_STORAGE_KEY = 'timebubble_theme';
@@ -105,8 +105,8 @@ const playNotificationSound = () => {
 export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
-  const [history, setHistory] = useState<TimeBlock[][]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [history, setHistory] = useState<{ [dateKey: string]: TimeBlock[][] }>({});
+  const [historyIndex, setHistoryIndex] = useState<{ [dateKey: string]: number }>({});
 
   const [templates, setTemplates] = useState<BubbleTemplate[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -139,21 +139,42 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const updateHistory = useCallback((newBlocks: TimeBlock[]) => {
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(newBlocks);
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
+  const updateHistory = useCallback((date: Date, newBlocks: TimeBlock[]) => {
+    const dateKey = getDayKey(date);
+    const dateHistory = history[dateKey] ?? [];
+    const dateHistoryIndex = historyIndex[dateKey] ?? -1;
+
+    const newHistoryForDate = dateHistory.slice(0, dateHistoryIndex + 1);
+    newHistoryForDate.push(newBlocks);
+    
+    setHistory(prev => ({ ...prev, [dateKey]: newHistoryForDate }));
+    setHistoryIndex(prev => ({ ...prev, [dateKey]: newHistoryForDate.length - 1 }));
   }, [history, historyIndex]);
   
   const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: TimeBlock[]) => TimeBlock[])) => {
     setTimeBlocks(prevBlocks => {
       const updatedBlocks = typeof newBlocks === 'function' ? newBlocks(prevBlocks) : newBlocks;
-      updateHistory(updatedBlocks);
+      updateHistory(currentDate, updatedBlocks);
       return updatedBlocks;
     });
-  }, [updateHistory]);
+  }, [updateHistory, currentDate]);
+  
+  const saveTimeBlocksToFirestore = useCallback(async (blocks: TimeBlock[], date: Date) => {
+    if (!user) return;
+    const dateKey = getDayKey(date);
+    const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dateKey);
+    const blocksToSave = blocks.map(b => ({ ...b, startTime: b.startTime.toISOString() }));
+    await setDoc(dayDocRef, { blocks: blocksToSave }, { merge: true });
+  }, [user]);
 
+  useEffect(() => {
+    const dateKey = getDayKey(currentDate);
+    if (!history[dateKey] && timeBlocks.length > 0) {
+        setHistory(prev => ({ ...prev, [dateKey]: [timeBlocks] }));
+        setHistoryIndex(prev => ({ ...prev, [dateKey]: 0 }));
+    }
+  }, [timeBlocks, currentDate, history]);
+  
   const getDailyTips = useCallback(async () => {
     setIsLoadingTips(true);
     try {
@@ -250,133 +271,83 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     });
 
   }, [timeBlocks, updateBlock]);
+  
+  useEffect(() => {
+      if (!user || !isLoaded) return;
+      const debouncedSave = setTimeout(() => {
+          saveTimeBlocksToFirestore(timeBlocks, currentDate);
+      }, 1000);
 
-  const loadDataForDate = useCallback((date: Date, userId: string | null) => {
-    if (typeof window !== 'undefined') {
-      try {
-        const STORAGE_KEY = getStorageKey(userId);
-        const storedData = localStorage.getItem(STORAGE_KEY);
-        if (storedData) {
-          const parsedData = JSON.parse(storedData);
-          const dayKey = getDayKey(date);
-          
-          const todaysBlocks = parsedData.daily_data?.[dayKey] ?? [];
-          const blocksWithDates = todaysBlocks.map((block: any) => ({
-            ...block,
-            startTime: new Date(block.startTime),
-            reflection: block.reflection ? { ...block.reflection, timestamp: new Date(block.reflection.timestamp) } : undefined,
-          }));
-          setTimeBlocks(blocksWithDates);
-          setHistory([blocksWithDates]);
-          setHistoryIndex(0);
+      return () => clearTimeout(debouncedSave);
+  }, [timeBlocks, currentDate, user, isLoaded, saveTimeBlocksToFirestore]);
 
-          const customTemplates = parsedData.custom_templates ?? [];
-          setTemplates(customTemplates);
-        } else {
-            setTimeBlocks([]);
-            setTemplates([]);
-            setHistory([[]]);
-            setHistoryIndex(0);
-        }
-      } catch (error) {
-        console.error('Failed to load from localStorage', error);
-        toast({
-          title: 'Error',
-          description: 'Could not load your saved data.',
-          variant: 'destructive',
-        });
-      }
-    }
-  }, [toast]);
-
-  const previousDateRef = useRef(currentDate);
-  const previousUserRef = useRef(user);
 
   useEffect(() => {
-    const saveDataForPreviousState = () => {
-        if (!isLoaded || typeof window === 'undefined') return;
-        try {
-          const STORAGE_KEY = getStorageKey(previousUserRef.current?.uid || null);
-          const storedData = localStorage.getItem(STORAGE_KEY);
-          const allData = storedData ? JSON.parse(storedData) : { user_preferences: {}, daily_data: {}, custom_templates: [] };
-          const dayKey = getDayKey(previousDateRef.current);
-          
-          allData.daily_data[dayKey] = timeBlocks;
-          allData.custom_templates = templates;
+    if (!user || !db) {
+        setIsLoaded(true);
+        return;
+    }
 
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
-        } catch (error) {
-          console.error('Failed to save to localStorage', error);
-          toast({
-            title: 'Error',
-            description: 'Could not save your changes.',
-            variant: 'destructive',
-          });
+    const dateKey = getDayKey(currentDate);
+    const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dateKey);
+
+    const unsubscribe = onSnapshot(dayDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const blocksFromDb = data.blocks.map((b: any) => ({...b, startTime: new Date(b.startTime)}));
+            setTimeBlocks(blocksFromDb);
+        } else {
+            setTimeBlocks([]);
         }
-    }
+        setIsLoaded(true);
+    }, (error) => {
+        console.error("Error listening to day data:", error);
+        toast({ title: 'Connection Error', description: 'Could not sync your data.', variant: 'destructive' });
+        setIsLoaded(true);
+    });
 
-    if (isLoaded) {
-      if (getDayKey(previousDateRef.current) !== getDayKey(currentDate) || previousUserRef.current?.uid !== user?.uid) {
-        saveDataForPreviousState();
-        loadDataForDate(currentDate, user?.uid || null);
-        previousDateRef.current = currentDate;
-        previousUserRef.current = user;
-      }
-    }
-  }, [currentDate, user, isLoaded, loadDataForDate, timeBlocks, templates, toast]);
+    return () => unsubscribe();
+  }, [user, currentDate, toast]);
+
+  useEffect(() => {
+    if (!user || !db) return;
+    const templatesDocRef = doc(db, 'users', user.uid, 'settings', 'templates');
+    const unsubscribe = onSnapshot(templatesDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setTemplates(docSnap.data().templates ?? []);
+        } else {
+            setTemplates([]);
+        }
+    }, (error) => {
+        console.error("Error listening to templates:", error);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && !isLoaded) {
-      loadDataForDate(currentDate, user?.uid || null);
-
       const storedZoom = localStorage.getItem(ZOOM_STORAGE_KEY);
       if (storedZoom) {
           const newZoom = parseFloat(storedZoom);
           if(zoomLevel !== newZoom) setZoomLevelState(newZoom);
       }
-
       const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
       if (storedTheme) {
         setThemeState(storedTheme);
       } else {
         setThemeState('dark');
       }
-
-      setIsLoaded(true);
     }
-  }, [isLoaded, loadDataForDate, currentDate, user, zoomLevel]);
-  
-  const saveData = useCallback(() => {
-    if (!isLoaded || typeof window === 'undefined') return;
-    try {
-      const STORAGE_KEY = getStorageKey(user?.uid || null);
-      const storedData = localStorage.getItem(STORAGE_KEY);
-      const allData = storedData ? JSON.parse(storedData) : { user_preferences: {}, daily_data: {}, custom_templates: [] };
-      const dayKey = getDayKey(currentDate);
-      
-      allData.daily_data[dayKey] = timeBlocks;
-      allData.custom_templates = templates;
+  }, [isLoaded, zoomLevel]);
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
-      localStorage.setItem(ZOOM_STORAGE_KEY, String(zoomLevel));
-      localStorage.setItem(THEME_STORAGE_KEY, theme);
-    } catch (error) {
-      console.error('Failed to save to localStorage', error);
-      toast({
-        title: 'Error',
-        description: 'Could not save your changes.',
-        variant: 'destructive',
-      });
-    }
-  }, [timeBlocks, templates, isLoaded, toast, zoomLevel, theme, currentDate, user]);
   
   useEffect(() => {
-    const debounceSave = setTimeout(() => {
-        saveData();
-    }, 500);
-  
-    return () => clearTimeout(debounceSave);
-  }, [saveData]);
+    if(isLoaded && typeof window !== 'undefined') {
+      localStorage.setItem(ZOOM_STORAGE_KEY, String(zoomLevel));
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    }
+  }, [zoomLevel, theme, isLoaded]);
+
   
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -400,63 +371,50 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         });
 
         if (!collidingBlock) {
-            break; // No collision, the slot is valid
+            break;
         }
 
-        // Collision detected, find the closest available slot
         const collidingEndTime = getEndTime(new Date(collidingBlock.startTime), collidingBlock.duration);
-        const slotAfter = new Date(collidingEndTime);
-        const slotBefore = new Date(new Date(collidingBlock.startTime).getTime() - duration * 60000);
-        
-        const diffAfter = Math.abs(slotAfter.getTime() - requestedStartTime.getTime());
-        const diffBefore = Math.abs(slotBefore.getTime() - requestedStartTime.getTime());
-
-        // Check if the "before" slot is valid and doesn't create new collisions
-        const isBeforeValid = !blocksToCheck.some(block => {
-            if (block.id === excludeId || block.id === collidingBlock.id) return false;
-            const blockStartTime = new Date(block.startTime);
-            const blockEndTime = getEndTime(blockStartTime, block.duration);
-            const slotBeforeEndTime = getEndTime(slotBefore, duration);
-            return slotBefore < blockEndTime && slotBeforeEndTime > blockStartTime;
-        });
-        
-        if (isBeforeValid && diffBefore <= diffAfter) {
-            resolvedStartTime = slotBefore;
-        } else {
-            resolvedStartTime = slotAfter;
-        }
+        resolvedStartTime = new Date(collidingEndTime);
     }
   
     return resolvedStartTime;
   }, []);
 
   
-  const addBlockOnDate = useCallback((block: Omit<TimeBlock, 'id' | 'completed'>, date: Date) => {
-    const STORAGE_KEY = getStorageKey(user?.uid || null);
-    const dayKey = getDayKey(date);
-    const storedData = localStorage.getItem(STORAGE_KEY);
-    const allData = storedData ? JSON.parse(storedData) : { daily_data: {} };
-    const blocksForDate: TimeBlock[] = (allData.daily_data?.[dayKey] ?? []).map((b: any) => ({
-      ...b,
-      startTime: new Date(b.startTime)
-    }));
-
-    const newStartTime = findAvailableSlot(block.startTime, block.duration, blocksForDate);
-    const newBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false, notified: false, actionable: false };
-    
-    allData.daily_data[dayKey] = [...blocksForDate, newBlock];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
-
-    if (dayKey === getDayKey(currentDate)) {
-      setTimeBlocksWithHistory(prev => [...prev, newBlock]);
+  const addBlockOnDate = useCallback(async (block: Omit<TimeBlock, 'id' | 'completed'>, date: Date) => {
+    if (!user) {
+        toast({ title: 'Not signed in', description: 'You must be signed in to add bubbles.', variant: 'destructive'});
+        return;
     }
+    const dateKey = getDayKey(date);
+    const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dateKey);
+    
+    try {
+        const docSnap = await getDoc(dayDocRef);
+        const blocksForDate: TimeBlock[] = docSnap.exists()
+            ? docSnap.data().blocks.map((b: any) => ({ ...b, startTime: new Date(b.startTime) }))
+            : [];
+            
+        const newStartTime = findAvailableSlot(block.startTime, block.duration, blocksForDate);
+        const newBlock: TimeBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false, notified: false, actionable: false };
+        
+        await setDoc(dayDocRef, { blocks: [...blocksForDate, newBlock] });
 
-    toast({
-      title: 'Bubble Added',
-      description: `"${block.title}" added to ${format(date, 'MMMM do')}.`
-    });
+        if (dateKey === getDayKey(currentDate)) {
+            setTimeBlocksWithHistory(prev => [...prev, newBlock]);
+        }
+        
+        toast({
+          title: 'Bubble Added',
+          description: `"${block.title}" added to ${format(date, 'MMMM do')}.`
+        });
 
-  }, [findAvailableSlot, setTimeBlocksWithHistory, currentDate, toast, user]);
+    } catch (error) {
+        console.error("Error adding block:", error);
+        toast({ title: "Error", description: "Could not add the time bubble.", variant: "destructive"});
+    }
+  }, [user, findAvailableSlot, setTimeBlocksWithHistory, currentDate, toast]);
 
   const addBlock = useCallback((block: Omit<TimeBlock, 'id' | 'completed'>) => {
     addBlockOnDate(block, block.startTime);
@@ -468,20 +426,17 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     setTimeBlocksWithHistory(prev => prev.filter(b => b.id !== id));
   }, [setTimeBlocksWithHistory]);
   
-  const deleteBlockFromDate = (id: string, date: Date | string) => {
+  const deleteBlockFromDate = async (id: string, date: Date | string) => {
+    if (!user) return;
     const dayKey = getDayKey(date);
-    if (dayKey === getDayKey(currentDate)) {
-        deleteBlock(id);
-        return;
-    }
-
+    const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dayKey);
+    
     try {
-        const STORAGE_KEY = getStorageKey(user?.uid || null);
-        const storedData = localStorage.getItem(STORAGE_KEY);
-        const allData = storedData ? JSON.parse(storedData) : { daily_data: {} };
-        if (allData.daily_data[dayKey]) {
-            allData.daily_data[dayKey] = allData.daily_data[dayKey].filter((b: TimeBlock) => b.id !== id);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
+        const docSnap = await getDoc(dayDocRef);
+        if (docSnap.exists()) {
+            const existingBlocks = docSnap.data().blocks;
+            const updatedBlocks = existingBlocks.filter((b: TimeBlock) => b.id !== id);
+            await setDoc(dayDocRef, { blocks: updatedBlocks });
         }
     } catch (e) {
         console.error("Failed to delete block from other date", e);
@@ -506,101 +461,115 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [timeBlocks, addBlock]);
 
+  const saveTemplatesToFirestore = async (newTemplates: BubbleTemplate[]) => {
+      if (!user) return;
+      const templatesDocRef = doc(db, 'users', user.uid, 'settings', 'templates');
+      await setDoc(templatesDocRef, { templates: newTemplates });
+  };
+
   const addTemplate = useCallback((template: Omit<BubbleTemplate, 'id' | 'isDefault'>) => {
-    setTemplates(prev => [...prev, { ...template, id: crypto.randomUUID(), isDefault: false }]);
+    const newTemplate = { ...template, id: crypto.randomUUID(), isDefault: false };
+    const newTemplates = [...templates, newTemplate];
+    setTemplates(newTemplates);
+    saveTemplatesToFirestore(newTemplates);
     toast({
         title: 'Template Created',
         description: `"${template.title}" has been added to your templates.`,
     });
-  }, [toast]);
+  }, [templates, toast]);
 
   const updateTemplate = useCallback((id: string, updates: Partial<Omit<BubbleTemplate, 'id' | 'isDefault'>>) => {
-    setTemplates(prev => {
-        const isDefaultTemplate = defaultTemplates.some(t => t.id === id);
-        const customTemplateExists = prev.some(t => t.id === id);
-
-        if (customTemplateExists) {
-             return prev.map(t => (t.id === id ? { ...t, ...updates } : t));
-        } else if (isDefaultTemplate) {
-            const defaultTemplate = defaultTemplates.find(t => t.id === id)!;
-            const newCustomTemplate = { ...defaultTemplate, ...updates, id };
-            return [...prev, newCustomTemplate];
-        }
-        return prev;
-    });
+    const isDefaultTemplate = defaultTemplates.some(t => t.id === id);
+    let newTemplates;
+    
+    if (templates.some(t => t.id === id)) {
+        newTemplates = templates.map(t => t.id === id ? { ...t, ...updates } : t);
+    } else if (isDefaultTemplate) {
+        const defaultTemplate = defaultTemplates.find(t => t.id === id)!;
+        newTemplates = [...templates, { ...defaultTemplate, ...updates, id }];
+    } else {
+        return; 
+    }
+    
+    setTemplates(newTemplates);
+    saveTemplatesToFirestore(newTemplates);
     toast({
         title: 'Template Updated',
         description: `Your template has been updated.`,
     });
-  }, [toast]);
+  }, [templates, toast]);
 
   const deleteTemplate = useCallback((id: string) => {
-    setTemplates(prev => prev.filter(t => t.id !== id));
+    const newTemplates = templates.filter(t => t.id !== id);
+    setTemplates(newTemplates);
+    saveTemplatesToFirestore(newTemplates);
     toast({
         title: 'Template Deleted',
         description: 'The template has been removed.',
     });
-  }, [toast]);
+  }, [templates, toast]);
 
-  const rescheduleBlock = (id: string, newStartTime: Date) => {
-    const dayKeyOfBlock = getDayKey(newStartTime);
-    const dayKeyOfCurrentDate = getDayKey(currentDate);
+  const rescheduleBlock = async (id: string, newStartTime: Date) => {
+    if (!user) {
+        toast({ title: 'Error', description: 'You must be signed in to reschedule.', variant: 'destructive' });
+        return;
+    }
 
-    let blockToReschedule: TimeBlock | null = null;
-    let sourceDayKey: string | null = null;
-    
-    const STORAGE_KEY = getStorageKey(user?.uid || null);
-    const storedData = localStorage.getItem(STORAGE_KEY);
-    const allData = storedData ? JSON.parse(storedData) : { daily_data: {} };
-
-    blockToReschedule = timeBlocks.find(b => b.id === id) || null;
-    if (blockToReschedule) {
-      sourceDayKey = dayKeyOfCurrentDate;
-    } else {
-        for (const dateKey in allData.daily_data) {
-            const found = allData.daily_data[dateKey].find((b: TimeBlock) => b.id === id);
+    try {
+        const allDaysCollection = collection(db, 'users', user.uid, 'daily_data');
+        const querySnapshot = await getDocs(allDaysCollection);
+        
+        let blockToReschedule: TimeBlock | null = null;
+        let sourceDayKey: string | null = null;
+        
+        for (const docSnap of querySnapshot.docs) {
+            const data = docSnap.data();
+            const found = data.blocks.find((b: any) => b.id === id);
             if (found) {
                 blockToReschedule = { ...found, startTime: new Date(found.startTime) };
-                sourceDayKey = dateKey;
+                sourceDayKey = docSnap.id;
                 break;
             }
         }
-    }
-    
-    if (!blockToReschedule || !sourceDayKey) {
-        toast({ title: 'Error', description: 'Could not find the task to reschedule.', variant: 'destructive' });
-        return;
-    }
-    
-    NotificationManager.clearNotification(id);
 
-    const rescheduledBlockData: TimeBlock = {
-      ...blockToReschedule,
-      startTime: newStartTime,
-      notified: false,
-      actionable: false,
-      completed: false,
-      notificationScheduled: false,
-    };
-    
-    try {
+        if (!blockToReschedule || !sourceDayKey) {
+            toast({ title: 'Error', description: 'Could not find the task to reschedule.', variant: 'destructive' });
+            return;
+        }
+        
+        NotificationManager.clearNotification(id);
+
+        const rescheduledBlockData: TimeBlock = {
+          ...blockToReschedule,
+          startTime: newStartTime,
+          notified: false,
+          actionable: false,
+          completed: false,
+          notificationScheduled: false,
+        };
+
         const newDayKey = getDayKey(newStartTime);
-        const blocksForNewDate = (allData.daily_data[newDayKey] || []).map((b: any) => ({...b, startTime: new Date(b.startTime)}));
+        const targetDayDocRef = doc(db, 'users', user.uid, 'daily_data', newDayKey);
+        const targetDocSnap = await getDoc(targetDayDocRef);
+        const blocksForNewDate = targetDocSnap.exists()
+            ? targetDocSnap.data().blocks.map((b: any) => ({ ...b, startTime: new Date(b.startTime) }))
+            : [];
+        
         const resolvedStartTime = findAvailableSlot(newStartTime, rescheduledBlockData.duration, blocksForNewDate);
         rescheduledBlockData.startTime = resolvedStartTime;
 
-        if (!allData.daily_data[newDayKey]) {
-            allData.daily_data[newDayKey] = [];
-        }
-        allData.daily_data[newDayKey].push(rescheduledBlockData);
+        const sourceDayDocRef = doc(db, 'users', user.uid, 'daily_data', sourceDayKey);
+        const sourceDocSnap = await getDoc(sourceDayDocRef);
+        const sourceBlocks = sourceDocSnap.exists() ? sourceDocSnap.data().blocks.filter((b: any) => b.id !== id) : [];
         
-        allData.daily_data[sourceDayKey] = allData.daily_data[sourceDayKey].filter((b: TimeBlock) => b.id !== id);
-        
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
-
-        if (sourceDayKey === dayKeyOfCurrentDate) {
-            setTimeBlocksWithHistory(prev => prev.filter(b => b.id !== id));
+        const batch = writeBatch(db);
+        batch.set(targetDayDocRef, { blocks: [...blocksForNewDate, rescheduledBlockData] }, { merge: true });
+        if (sourceBlocks.length > 0) {
+            batch.set(sourceDayDocRef, { blocks: sourceBlocks });
+        } else {
+            batch.delete(sourceDayDocRef);
         }
+        await batch.commit();
 
         toast({
             title: 'Bubble Rescheduled',
@@ -622,32 +591,21 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     return JSON.stringify(timeBlocks.map(b => ({ ...b, id: undefined })));
   }, [timeBlocks]);
 
-  const getBlocksForDate = useCallback((date: Date): TimeBlock[] => {
+  const getBlocksForDate = async (date: Date): Promise<TimeBlock[]> => {
+    if (!user) return [];
     const dayKey = getDayKey(date);
-    const dayKeyOfCurrentDate = getDayKey(currentDate);
-
-    if (dayKey === dayKeyOfCurrentDate) {
-      return timeBlocks;
-    }
-
-    if (typeof window !== 'undefined') {
-      try {
-        const STORAGE_KEY = getStorageKey(user?.uid || null);
-        const storedData = localStorage.getItem(STORAGE_KEY);
-        if (storedData) {
-          const parsedData = JSON.parse(storedData);
-          const blocksForDate = parsedData.daily_data?.[dayKey] ?? [];
-          return blocksForDate.map((block: any) => ({
-            ...block,
-            startTime: new Date(block.startTime),
-          }));
+    const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dayKey);
+    try {
+        const docSnap = await getDoc(dayDocRef);
+        if (docSnap.exists()) {
+            return docSnap.data().blocks.map((b: any) => ({...b, startTime: new Date(b.startTime)}));
         }
-      } catch (error) {
-        console.error('Failed to load blocks for date from localStorage', error);
-      }
+        return [];
+    } catch (error) {
+        console.error("Error fetching blocks for date:", error);
+        return [];
     }
-    return [];
-  }, [timeBlocks, currentDate, user]);
+  };
   
   const getDailyInsights = async () => {
     setIsLoadingInsights(true);
@@ -674,28 +632,24 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     return result;
   }, []);
   
-  const getMissedTasks = (): MissedTaskGroup[] => {
-    if (typeof window === 'undefined') return [];
+  const getMissedTasks = async (): Promise<MissedTaskGroup[]> => {
+    if (!user) return [];
 
-    const STORAGE_KEY = getStorageKey(user?.uid || null);
-    const storedData = localStorage.getItem(STORAGE_KEY);
-    if (!storedData) return [];
-
-    const allData = JSON.parse(storedData);
-    if (!allData.daily_data) return [];
+    const allDaysCollection = collection(db, 'users', user.uid, 'daily_data');
+    const querySnapshot = await getDocs(allDaysCollection);
     
     const now = new Date();
     const missedTasksByDate: Record<string, TimeBlock[]> = {};
 
-    Object.keys(allData.daily_data).forEach(dateKey => {
-        const blocks = allData.daily_data[dateKey] as TimeBlock[];
+    querySnapshot.forEach(docSnap => {
+        const blocks = docSnap.data().blocks as any[];
         const missed = blocks.filter(block => {
             const endTime = new Date(new Date(block.startTime).getTime() + block.duration * 60000);
             return endTime < now && !block.completed;
         });
 
         if (missed.length > 0) {
-            missedTasksByDate[dateKey] = missed.map(m => ({...m, startTime: new Date(m.startTime)}));
+            missedTasksByDate[docSnap.id] = missed.map(m => ({...m, startTime: new Date(m.startTime)}));
         }
     });
 
@@ -704,33 +658,40 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
 
-  const clearAllMissedTasks = () => {
-    if (typeof window === 'undefined') return;
-    try {
-        const STORAGE_KEY = getStorageKey(user?.uid || null);
-        const storedData = localStorage.getItem(STORAGE_KEY);
-        if (!storedData) return;
-        
-        const allData = JSON.parse(storedData);
-        if (!allData.daily_data) return;
+  const clearAllMissedTasks = async () => {
+      if (!user) return;
+      try {
+          const missedTaskGroups = await getMissedTasks();
+          if (missedTaskGroups.length === 0) {
+              toast({ title: "No missed tasks to clear."});
+              return;
+          }
+          const batch = writeBatch(db);
+          
+          for (const group of missedTaskGroups) {
+              const dayDocRef = doc(db, 'users', user.uid, 'daily_data', group.date);
+              const docSnap = await getDoc(dayDocRef);
 
-        const now = new Date();
-        Object.keys(allData.daily_data).forEach(dateKey => {
-            const blocks = allData.daily_data[dateKey] as TimeBlock[];
-            allData.daily_data[dateKey] = blocks.filter(block => {
-                const endTime = new Date(new Date(block.startTime).getTime() + block.duration * 60000);
-                return endTime >= now || block.completed;
-            });
-        });
+              if (docSnap.exists()) {
+                  const allBlocks = docSnap.data().blocks as any[];
+                  const remainingBlocks = allBlocks.filter(b => {
+                      const missedIds = group.tasks.map(mt => mt.id);
+                      return !missedIds.includes(b.id);
+                  });
 
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(allData));
-        loadDataForDate(currentDate, user?.uid || null);
-
-        toast({ title: "All missed tasks have been cleared." });
-    } catch (e) {
-        console.error("Failed to clear all missed tasks", e);
-        toast({ title: "Error clearing tasks", variant: "destructive" });
-    }
+                  if (remainingBlocks.length > 0) {
+                      batch.set(dayDocRef, { blocks: remainingBlocks });
+                  } else {
+                      batch.delete(dayDocRef);
+                  }
+              }
+          }
+          await batch.commit();
+          toast({ title: "All missed tasks have been cleared." });
+      } catch (e) {
+          console.error("Failed to clear all missed tasks", e);
+          toast({ title: "Error clearing tasks", variant: "destructive" });
+      }
   };
 
   const clearDailyInsights = () => {
@@ -751,23 +712,33 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const undo = () => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      setTimeBlocks(history[newIndex]);
+    const dateKey = getDayKey(currentDate);
+    const dateHistory = history[dateKey] ?? [];
+    const dateHistoryIndex = historyIndex[dateKey] ?? -1;
+    if (dateHistoryIndex > 0) {
+      const newIndex = dateHistoryIndex - 1;
+      setHistoryIndex(prev => ({...prev, [dateKey]: newIndex}));
+      setTimeBlocks(dateHistory[newIndex]);
     }
   };
 
   const redo = () => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      setTimeBlocks(history[newIndex]);
+    const dateKey = getDayKey(currentDate);
+    const dateHistory = history[dateKey] ?? [];
+    const dateHistoryIndex = historyIndex[dateKey] ?? -1;
+    if (dateHistoryIndex < dateHistory.length - 1) {
+      const newIndex = dateHistoryIndex + 1;
+      setHistoryIndex(prev => ({...prev, [dateKey]: newIndex}));
+      setTimeBlocks(dateHistory[newIndex]);
     }
   };
   
   const setCurrentDate = (date: Date) => {
+    if(isLoaded) {
+      saveTimeBlocksToFirestore(timeBlocks, currentDate);
+    }
     setCurrentDateState(startOfDay(date));
+    setIsLoaded(false); // Trigger loading state for new date
   };
   
   const goToToday = () => {
@@ -782,8 +753,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     setCurrentDate(addDays(currentDate, -1));
   };
 
-  const canUndo = historyIndex > 0;
-  const canRedo = historyIndex < history.length - 1;
+  const dateKey = getDayKey(currentDate);
+  const canUndo = (historyIndex[dateKey] ?? 0) > 0;
+  const canRedo = (historyIndex[dateKey] ?? -1) < (history[dateKey]?.length - 1);
 
   const value = {
     timeBlocks,

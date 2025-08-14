@@ -27,6 +27,7 @@ import {
   AlertDialogTrigger,
 } from './ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { Skeleton } from './ui/skeleton';
 
 interface MissedTasksDrawerProps {
   isOpen: boolean;
@@ -39,25 +40,34 @@ export function MissedTasksDrawer({ isOpen, onClose }: MissedTasksDrawerProps) {
     clearAllMissedTasks, 
     setReflectingBlock, 
     setReschedulingBlock,
-    deleteBlockFromDate
+    deleteBlockFromDate,
+    rescheduleBlock,
   } = useTimeBubbles();
 
   const [missedTasks, setMissedTasks] = useState<MissedTaskGroup[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const refreshMissedTasks = async () => {
+      setIsLoading(true);
+      const tasks = await getMissedTasks();
+      setMissedTasks(tasks);
+      setIsLoading(false);
+  }
 
   useEffect(() => {
     if (isOpen) {
-      setMissedTasks(getMissedTasks());
+      refreshMissedTasks();
     }
-  }, [isOpen, getMissedTasks]);
+  }, [isOpen]);
   
-  const handleClearAll = () => {
-    clearAllMissedTasks();
-    setMissedTasks([]); // Immediately clear from view
+  const handleClearAll = async () => {
+    await clearAllMissedTasks();
+    setMissedTasks([]);
   };
 
-  const handleDismiss = (taskId: string, date: string) => {
-    deleteBlockFromDate(taskId, date);
-    setMissedTasks(getMissedTasks()); // Refresh the list
+  const handleDismiss = async (taskId: string, date: string) => {
+    await deleteBlockFromDate(taskId, date);
+    refreshMissedTasks();
   }
   
   const handleReflect = (task: any) => {
@@ -66,7 +76,7 @@ export function MissedTasksDrawer({ isOpen, onClose }: MissedTasksDrawerProps) {
   };
   
   const handleReschedule = (task: any) => {
-    setReschedulingBlock(task);
+    rescheduleBlock(task.id, new Date());
     onClose();
   };
 
@@ -81,7 +91,13 @@ export function MissedTasksDrawer({ isOpen, onClose }: MissedTasksDrawerProps) {
           </SheetDescription>
         </SheetHeader>
         
-        {missedTasks.length === 0 ? (
+        {isLoading ? (
+            <div className='space-y-4 py-4'>
+                <Skeleton className='h-20 w-full' />
+                <Skeleton className='h-20 w-full' />
+                <Skeleton className='h-20 w-full' />
+            </div>
+        ) : missedTasks.length === 0 ? (
             <div className="flex-1 flex items-center justify-center">
                 <Alert>
                     <AlertTitle>All caught up!</AlertTitle>
@@ -122,7 +138,7 @@ export function MissedTasksDrawer({ isOpen, onClose }: MissedTasksDrawerProps) {
         <SheetFooter>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" disabled={missedTasks.length === 0}>
+                <Button variant="destructive" disabled={missedTasks.length === 0 || isLoading}>
                   <Trash2 className="mr-2 h-4 w-4" /> Clear All Missed
                 </Button>
               </AlertDialogTrigger>

@@ -23,14 +23,14 @@ export function RescheduleModal() {
 
   useEffect(() => {
     if (reschedulingBlock) {
-        const startTime = reschedulingBlock.startTime;
+        const startTime = new Date(reschedulingBlock.startTime);
         setSelectedDate(startTime);
         setSelectedHour(getHours(startTime).toString().padStart(2, '0'));
         setSelectedMinute(getMinutes(startTime).toString().padStart(2, '0'));
     }
   }, [reschedulingBlock]);
 
-  const handleReschedule = () => {
+  const handleReschedule = async () => {
     if (!reschedulingBlock || !selectedDate) return;
     
     let newStartTime = setMinutes(setHours(startOfDay(selectedDate), parseInt(selectedHour)), parseInt(selectedMinute));
@@ -44,11 +44,7 @@ export function RescheduleModal() {
         return;
     }
     
-    rescheduleBlock(reschedulingBlock.id, newStartTime);
-    toast({
-        title: 'Bubble Rescheduled',
-        description: `"${reschedulingBlock.title}" has been moved to the new date and time.`,
-    });
+    await rescheduleBlock(reschedulingBlock.id, newStartTime);
     setReschedulingBlock(null);
   };
 
