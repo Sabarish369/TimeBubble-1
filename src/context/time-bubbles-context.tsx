@@ -83,6 +83,18 @@ const getDayKey = (date: Date | string) => format(new Date(date), 'yyyy-MM-dd');
 const ZOOM_STORAGE_KEY = 'timebubble_zoom';
 const THEME_STORAGE_KEY = 'timebubble_theme';
 
+const ensureDateObject = (date: any): Date => {
+    if (date instanceof Date) {
+        return date;
+    }
+    // Firestore Timestamps have toDate(), strings and numbers can be passed to new Date()
+    if (date && typeof date.toDate === 'function') {
+        return date.toDate();
+    }
+    return new Date(date);
+};
+
+
 const playNotificationSound = () => {
     if (typeof window !== 'undefined' && window.AudioContext) {
         const audioContext = new window.AudioContext();
@@ -163,7 +175,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
     const dateKey = getDayKey(date);
     const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dateKey);
-    const blocksToSave = blocks.map(b => ({ ...b, startTime: new Date(b.startTime).toISOString() }));
+    const blocksToSave = blocks.map(b => ({ ...b, startTime: ensureDateObject(b.startTime).toISOString() }));
     await setDoc(dayDocRef, { blocks: blocksToSave }, { merge: true });
   }, [user]);
 
@@ -179,7 +191,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     setIsLoadingTips(true);
     try {
         const sortedBlocks = timeBlocks
-            .map(b => ({ ...b, startTime: new Date(b.startTime) }))
+            .map(b => ({ ...b, startTime: ensureDateObject(b.startTime) }))
             .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
         
         const now = new Date();
@@ -263,7 +275,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     timeBlocks.forEach(block => {
       if (block.completed || block.notificationScheduled) return;
       
-      const endTime = new Date(block.startTime.getTime() + block.duration * 60000);
+      const endTime = new Date(ensureDateObject(block.startTime).getTime() + block.duration * 60000);
       if (endTime > new Date()) {
         NotificationManager.scheduleNotification(block, endTime, onNotify);
         updateBlock(block.id, { notificationScheduled: true });
@@ -294,7 +306,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onSnapshot(dayDocRef, (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
-            const blocksFromDb = data.blocks.map((b: any) => ({...b, startTime: new Date(b.startTime)}));
+            const blocksFromDb = data.blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
             setTimeBlocks(blocksFromDb);
         } else {
             setTimeBlocks([]);
@@ -334,7 +346,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
       const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
       if (storedTheme) {
         setThemeState(storedTheme);
-      } else {
+      } else if (!storedTheme) {
         setThemeState('dark');
       }
     }
@@ -359,13 +371,13 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   
   const findAvailableSlot = useCallback((requestedStartTime: Date, duration: number, blocksToCheck: TimeBlock[], excludeId?: string): Date => {
     const getEndTime = (start: Date, dur: number) => new Date(start.getTime() + dur * 60000);
-    let resolvedStartTime = new Date(requestedStartTime);
+    let resolvedStartTime = ensureDateObject(requestedStartTime);
   
     while (true) {
         const resolvedEndTime = getEndTime(resolvedStartTime, duration);
         const collidingBlock = blocksToCheck.find(block => {
             if (block.id === excludeId) return false;
-            const blockStartTime = new Date(block.startTime);
+            const blockStartTime = ensureDateObject(block.startTime);
             const blockEndTime = getEndTime(blockStartTime, block.duration);
             return resolvedStartTime < blockEndTime && resolvedEndTime > blockStartTime;
         });
@@ -374,7 +386,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
             break;
         }
 
-        const collidingEndTime = getEndTime(new Date(collidingBlock.startTime), collidingBlock.duration);
+        const collidingEndTime = getEndTime(ensureDateObject(collidingBlock.startTime), collidingBlock.duration);
         resolvedStartTime = new Date(collidingEndTime);
     }
   
@@ -393,13 +405,13 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     try {
         const docSnap = await getDoc(dayDocRef);
         const blocksForDate: TimeBlock[] = docSnap.exists()
-            ? docSnap.data().blocks.map((b: any) => ({ ...b, startTime: new Date(b.startTime) }))
+            ? docSnap.data().blocks.map((b: any) => ({ ...b, startTime: ensureDateObject(b.startTime) }))
             : [];
             
         const newStartTime = findAvailableSlot(block.startTime, block.duration, blocksForDate);
         const newBlock: TimeBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false, notified: false, actionable: false };
         
-        await setDoc(dayDocRef, { blocks: [...blocksForDate, newBlock] });
+        await setDoc(dayDocRef, { blocks: [...blocksForDate.map(b => ({...b, startTime: ensureDateObject(b.startTime)})), newBlock] });
 
         if (dateKey === getDayKey(currentDate)) {
             setTimeBlocksWithHistory(prev => [...prev, newBlock]);
@@ -456,7 +468,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         ...blockToDuplicate,
         id: crypto.randomUUID(),
         title: `${blockToDuplicate.title} (copy)`,
-        startTime: new Date(blockToDuplicate.startTime.getTime() + (blockToDuplicate.duration * 60000)),
+        startTime: new Date(ensureDateObject(blockToDuplicate.startTime).getTime() + (blockToDuplicate.duration * 60000)),
       }
       addBlock(newBlockData);
     }
@@ -527,7 +539,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
             const data = docSnap.data();
             const found = data.blocks.find((b: any) => b.id === id);
             if (found) {
-                blockToReschedule = { ...found, startTime: new Date(found.startTime) };
+                blockToReschedule = { ...found, startTime: ensureDateObject(found.startTime) };
                 sourceDayKey = docSnap.id;
                 break;
             }
@@ -553,7 +565,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         const targetDayDocRef = doc(db, 'users', user.uid, 'daily_data', newDayKey);
         const targetDocSnap = await getDoc(targetDayDocRef);
         const blocksForNewDate = targetDocSnap.exists()
-            ? targetDocSnap.data().blocks.map((b: any) => ({ ...b, startTime: new Date(b.startTime) }))
+            ? targetDocSnap.data().blocks.map((b: any) => ({ ...b, startTime: ensureDateObject(b.startTime) }))
             : [];
         
         const resolvedStartTime = findAvailableSlot(newStartTime, rescheduledBlockData.duration, blocksForNewDate);
@@ -564,7 +576,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         const sourceBlocks = sourceDocSnap.exists() ? sourceDocSnap.data().blocks.filter((b: any) => b.id !== id) : [];
         
         const batch = writeBatch(db);
-        batch.set(targetDayDocRef, { blocks: [...blocksForNewDate, rescheduledBlockData] }, { merge: true });
+        batch.set(targetDayDocRef, { blocks: [...blocksForNewDate.map(b => ({...b, startTime: ensureDateObject(b.startTime)})), rescheduledBlockData] }, { merge: true });
         if (sourceBlocks.length > 0) {
             batch.set(sourceDayDocRef, { blocks: sourceBlocks });
         } else {
@@ -599,7 +611,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     try {
         const docSnap = await getDoc(dayDocRef);
         if (docSnap.exists()) {
-            return docSnap.data().blocks.map((b: any) => ({...b, startTime: new Date(b.startTime)}));
+            return docSnap.data().blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
         }
         return [];
     } catch (error) {
@@ -645,12 +657,12 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     querySnapshot.forEach(docSnap => {
         const blocks = docSnap.data().blocks as any[];
         const missed = blocks.filter(block => {
-            const endTime = new Date(new Date(block.startTime).getTime() + block.duration * 60000);
+            const endTime = new Date(ensureDateObject(block.startTime).getTime() + block.duration * 60000);
             return endTime < now && !block.completed;
         });
 
         if (missed.length > 0) {
-            missedTasksByDate[docSnap.id] = missed.map(m => ({...m, startTime: new Date(m.startTime)}));
+            missedTasksByDate[docSnap.id] = missed.map(m => ({...m, startTime: ensureDateObject(m.startTime)}));
         }
     });
 

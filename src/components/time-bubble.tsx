@@ -40,13 +40,23 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   health: Heart,
 };
 
+const ensureDateObject = (date: any): Date => {
+    if (date instanceof Date) {
+        return date;
+    }
+    if (date && typeof date.toDate === 'function') {
+        return date.toDate();
+    }
+    return new Date(date);
+};
+
 export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbleProps) {
   const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setSelectedBlock, setReschedulingBlock, zoomLevel, currentDate } = useTimeBubbles();
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'top' | 'bottom' | null>(null);
   const [didMove, setDidMove] = useState(false);
   
-  const [liveStartTime, setLiveStartTime] = useState(block.startTime);
+  const [liveStartTime, setLiveStartTime] = useState(ensureDateObject(block.startTime));
   const [liveDuration, setLiveDuration] = useState(block.duration);
   const [showCelebration, setShowCelebration] = useState(false);
   const [isCurrent, setIsCurrent] = useState(false);
@@ -60,7 +70,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
   // Keep live state in sync with block prop, but only if not actively being manipulated
   useEffect(() => {
     if (!isDragging && !isResizing) {
-      setLiveStartTime(block.startTime);
+      setLiveStartTime(ensureDateObject(block.startTime));
       setLiveDuration(block.duration);
     }
   }, [block.startTime, block.duration, isDragging, isResizing]);
@@ -78,7 +88,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
   useEffect(() => {
     const checkState = () => {
       const now = new Date();
-      const startTime = block.startTime;
+      const startTime = ensureDateObject(block.startTime);
       const endTime = new Date(startTime.getTime() + block.duration * 60000);
 
       const isForToday = isToday(currentDate);
@@ -175,7 +185,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
       const newTop = dragStartRef.current.initialTop + deltaY;
       const newMinutesRaw = newTop / pixelsPerMinute;
       const newMinutes = Math.max(0, newMinutesRaw);
-      const newStartTime = new Date(block.startTime);
+      const newStartTime = ensureDateObject(block.startTime);
       newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
       setLiveStartTime(newStartTime);
     }
@@ -193,10 +203,10 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
         if (newHeight >= 15 * pixelsPerMinute) {
           const newMinutesRaw = newTop / pixelsPerMinute;
           const newMinutes = Math.max(0, newMinutesRaw);
-          const newStartTime = new Date(block.startTime);
+          const newStartTime = ensureDateObject(block.startTime);
           newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
 
-          const originalEndTime = new Date(block.startTime);
+          const originalEndTime = ensureDateObject(block.startTime);
           originalEndTime.setMinutes(originalEndTime.getMinutes() + block.duration);
 
           const durationDifference = (originalEndTime.getTime() - newStartTime.getTime()) / (1000 * 60);
@@ -244,7 +254,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
     };
   }, [isDragging, isResizing, handleMouseMove, handleMouseUp, stopAutoScroll]);
 
-  const startTimeToDisplay = isResizing || isDragging ? liveStartTime : block.startTime;
+  const startTimeToDisplay = isResizing || isDragging ? liveStartTime : ensureDateObject(block.startTime);
   const durationToDisplay = isResizing || isDragging ? liveDuration : block.duration;
   
   const minutesFromMidnight = startTimeToDisplay.getHours() * 60 + startTimeToDisplay.getMinutes();
