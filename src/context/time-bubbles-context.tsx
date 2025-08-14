@@ -127,7 +127,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [isBubbleCreateModalOpen, setIsBubbleCreateModalOpen] = useState(false);
   const [newBubbleStartTime, setNewBubbleStartTime] = useState<Date | null>(null);
   const [zoomLevel, setZoomLevelState] = useState(1);
-  const [theme, setThemeState] = useState<Theme>('light');
+  const [theme, setThemeState] = useState<Theme>('dark');
 
   const { toast } = useToast();
 
