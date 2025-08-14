@@ -236,89 +236,131 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [lastCompletedBlock, getDailyTips]);
 
-  const findAvailableSlot = useCallback((requestedStartTime: Date, duration: number, blocksToCheck: TimeBlock[], excludeId?: string): Date => {
-    const getEndTime = (start: Date, dur: number) => new Date(start.getTime() + dur * 60000);
-    const requestedEndTime = getEndTime(requestedStartTime, duration);
-  
-    const otherBlocks = blocksToCheck.filter(b => b.id !== excludeId);
-  
-    const collision = otherBlocks.some(block => {
-      const blockStartTime = ensureDateObject(block.startTime);
-      const blockEndTime = getEndTime(blockStartTime, block.duration);
-      return requestedStartTime < blockEndTime && requestedEndTime > blockStartTime;
+  const findAvailableSlot = useCallback((
+    requestedStartTime: Date,
+    duration: number,
+    allBlocks: TimeBlock[],
+    excludeId?: string
+): Date => {
+    const movingBlock = { startTime: requestedStartTime, duration };
+    const movingBlockEndTime = new Date(requestedStartTime.getTime() + duration * 60000);
+    const otherBlocks = allBlocks.filter(b => b.id !== excludeId);
+
+    const collidingBlocks = otherBlocks.filter(b => {
+        const blockStartTime = ensureDateObject(b.startTime);
+        const blockEndTime = new Date(blockStartTime.getTime() + b.duration * 60000);
+        return requestedStartTime < blockEndTime && movingBlockEndTime > blockStartTime;
     });
-  
-    if (!collision) {
+
+    // If there's no collision, the requested time is valid.
+    if (collidingBlocks.length === 0) {
+        return requestedStartTime;
+    }
+    
+    // --- Context-aware placement logic ---
+
+    // 1. Determine the full "conflict zone"
+    let conflictZoneStart = new Date(Math.min(...collidingBlocks.map(b => ensureDateObject(b.startTime).getTime())));
+    let conflictZoneEnd = new Date(Math.max(...collidingBlocks.map(b => new Date(ensureDateObject(b.startTime).getTime() + b.duration * 60000).getTime())));
+
+    // 2. Identify the potential slots immediately adjacent to the conflict zone
+    const slotBelow = conflictZoneEnd;
+    const slotAboveStart = new Date(conflictZoneStart.getTime() - duration * 60000);
+    
+    const availableSlots: Date[] = [];
+
+    // 3. Check if 'slotBelow' is actually available
+    const isBelowFree = !otherBlocks.some(b => {
+        const blockStart = ensureDateObject(b.startTime);
+        const blockEnd = new Date(blockStart.getTime() + b.duration * 60000);
+        const slotBelowEnd = new Date(slotBelow.getTime() + duration * 60000);
+        return slotBelow < blockEnd && slotBelowEnd > blockStart;
+    });
+    if (isBelowFree) {
+        availableSlots.push(slotBelow);
+    }
+
+    // 4. Check if 'slotAbove' is actually available
+    const isAboveFree = !otherBlocks.some(b => {
+        const blockStart = ensureDateObject(b.startTime);
+        const blockEnd = new Date(blockStart.getTime() + b.duration * 60000);
+        const slotAboveEnd = new Date(slotAboveStart.getTime() + duration * 60000);
+        return slotAboveStart < blockEnd && slotAboveEnd > blockStart;
+    });
+    if (isAboveFree && slotAboveStart >= startOfDay(requestedStartTime)) {
+        availableSlots.push(slotAboveStart);
+    }
+
+    // 5. If adjacent slots are taken, do a general search as a fallback
+    if (availableSlots.length === 0) {
+        const sortedBlocks = [...otherBlocks, ...collidingBlocks].sort((a,b) => ensureDateObject(a.startTime).getTime() - ensureDateObject(b.startTime).getTime());
+        
+        // Check space at the very beginning of the day
+        if (sortedBlocks.length === 0 || ensureDateObject(sortedBlocks[0].startTime).getTime() >= duration * 60000) {
+           availableSlots.push(startOfDay(requestedStartTime));
+        }
+
+        // Check gaps between blocks
+        for (let i = 0; i < sortedBlocks.length; i++) {
+            const currentBlockEnd = new Date(ensureDateObject(sortedBlocks[i].startTime).getTime() + sortedBlocks[i].duration * 60000);
+            const nextBlockStart = i + 1 < sortedBlocks.length ? ensureDateObject(sortedBlocks[i+1].startTime) : new Date(currentBlockEnd.getTime() + 24 * 3600 * 1000); // end of time
+            
+            if (nextBlockStart.getTime() - currentBlockEnd.getTime() >= duration * 60000) {
+                 availableSlots.push(currentBlockEnd);
+            }
+        }
+    }
+    
+    // If after all checks, no slots are available, return the original time (should be rare)
+    if (availableSlots.length === 0) {
+      const lastBlock = otherBlocks.sort((a,b) => ensureDateObject(a.startTime).getTime() - ensureDateObject(b.startTime).getTime()).pop();
+      if(lastBlock) {
+        return new Date(ensureDateObject(lastBlock.startTime).getTime() + lastBlock.duration * 60000);
+      }
       return requestedStartTime;
     }
-  
-    const sortedBlocks = [...otherBlocks].sort((a, b) => ensureDateObject(a.startTime).getTime() - ensureDateObject(b.startTime).getTime());
-  
-    const potentialSlots: Date[] = [];
-  
-    // Check gap from start of the day
-    const dayStart = startOfDay(requestedStartTime);
-    if (sortedBlocks.length === 0 || ensureDateObject(sortedBlocks[0].startTime) > dayStart) {
-      const gapEnd = sortedBlocks.length > 0 ? ensureDateObject(sortedBlocks[0].startTime) : getEndTime(dayStart, 24 * 60);
-      if (getEndTime(dayStart, duration) <= gapEnd) {
-        potentialSlots.push(dayStart);
-      }
+
+    // 6. Find the closest among the available slots
+    let closestSlot = availableSlots[0];
+    let minDiff = Math.abs(availableSlots[0].getTime() - requestedStartTime.getTime());
+
+    for (let i = 1; i < availableSlots.length; i++) {
+        const diff = Math.abs(availableSlots[i].getTime() - requestedStartTime.getTime());
+        if (diff < minDiff) {
+            minDiff = diff;
+            closestSlot = availableSlots[i];
+        }
     }
-  
-    // Check gaps between blocks
-    for (let i = 0; i < sortedBlocks.length; i++) {
-      const currentBlockEnd = getEndTime(ensureDateObject(sortedBlocks[i].startTime), sortedBlocks[i].duration);
-      const nextBlockStart = i + 1 < sortedBlocks.length ? ensureDateObject(sortedBlocks[i + 1].startTime) : getEndTime(dayStart, 24 * 60);
-      
-      if (getEndTime(currentBlockEnd, duration) <= nextBlockStart) {
-        potentialSlots.push(currentBlockEnd);
-      }
-    }
-  
-    if (potentialSlots.length === 0) {
-      // If no gaps found, place it at the very end
-      const lastBlock = sortedBlocks[sortedBlocks.length - 1];
-      return getEndTime(ensureDateObject(lastBlock.startTime), lastBlock.duration);
-    }
-  
-    // Find the closest potential slot
-    let closestSlot = potentialSlots[0];
-    let minDiff = Math.abs(potentialSlots[0].getTime() - requestedStartTime.getTime());
-  
-    for (let i = 1; i < potentialSlots.length; i++) {
-      const diff = Math.abs(potentialSlots[i].getTime() - requestedStartTime.getTime());
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestSlot = potentialSlots[i];
-      }
-    }
-  
+
     return closestSlot;
-  }, []);
+
+}, []);
 
   const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>) => {
-      setTimeBlocksWithHistory(prev => {
-          const blockIndex = prev.findIndex(b => b.id === id);
-          if (blockIndex === -1) return prev;
-          
-          const newBlocks = [...prev];
-          let updatedBlock = { ...newBlocks[blockIndex], ...updates, startTime: ensureDateObject(updates.startTime ?? newBlocks[blockIndex].startTime) };
+    setTimeBlocks(prev => {
+        const blockIndex = prev.findIndex(b => b.id === id);
+        if (blockIndex === -1) return prev;
+        
+        const newBlocks = [...prev];
+        let updatedBlock = { ...newBlocks[blockIndex], ...updates, startTime: ensureDateObject(updates.startTime ?? newBlocks[blockIndex].startTime) };
 
-          // If position or duration changed, check for collisions
-          if (updates.startTime || updates.duration) {
-              const newStartTime = findAvailableSlot(updatedBlock.startTime, updatedBlock.duration, newBlocks, id);
-              updatedBlock.startTime = newStartTime;
-          }
+        // If position or duration changed, check for collisions
+        if (updates.startTime || updates.duration) {
+            const newStartTime = findAvailableSlot(updatedBlock.startTime, updatedBlock.duration, newBlocks, id);
+            updatedBlock.startTime = newStartTime;
+        }
 
-          if (updates.completed && !newBlocks[blockIndex].completed) {
-              setLastCompletedBlock(updatedBlock);
-          }
-          newBlocks[blockIndex] = updatedBlock;
+        if (updates.completed && !newBlocks[blockIndex].completed) {
+            setLastCompletedBlock(updatedBlock);
+        }
+        newBlocks[blockIndex] = updatedBlock;
 
-          saveTimeBlocksToFirestore(newBlocks, currentDate);
-          return newBlocks;
-      }, currentDate);
-  }, [currentDate, saveTimeBlocksToFirestore, setTimeBlocksWithHistory, findAvailableSlot]);
+        // Final state is calculated, now save it.
+        saveTimeBlocksToFirestore(newBlocks, currentDate);
+        updateHistory(currentDate, newBlocks);
+        return newBlocks;
+    });
+  }, [currentDate, saveTimeBlocksToFirestore, findAvailableSlot, updateHistory]);
   
   useEffect(() => {
     const onNotify = (block: TimeBlock) => {
@@ -366,7 +408,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         let blocksFromDb: TimeBlock[] = [];
         if (docSnap.exists()) {
             const data = docSnap.data();
-            blocksFromDb = data.blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
+            if (data.blocks) {
+                blocksFromDb = data.blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
+            }
         }
         setTimeBlocks(blocksFromDb);
         lastSavedBlocks.current = blocksFromDb;
@@ -659,7 +703,9 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     try {
         const docSnap = await getDoc(dayDocRef);
         if (docSnap.exists()) {
-            return docSnap.data().blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
+            if (docSnap.data().blocks) {
+                return docSnap.data().blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
+            }
         }
         return [];
     } catch (error) {
@@ -703,14 +749,16 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     const missedTasksByDate: Record<string, TimeBlock[]> = {};
 
     querySnapshot.forEach(docSnap => {
-        const blocks = docSnap.data().blocks as any[];
-        const missed = blocks.filter(block => {
-            const endTime = new Date(ensureDateObject(block.startTime).getTime() + block.duration * 60000);
-            return endTime < now && !block.completed;
-        });
+        if(docSnap.data().blocks) {
+            const blocks = docSnap.data().blocks as any[];
+            const missed = blocks.filter(block => {
+                const endTime = new Date(ensureDateObject(block.startTime).getTime() + block.duration * 60000);
+                return endTime < now && !block.completed;
+            });
 
-        if (missed.length > 0) {
-            missedTasksByDate[docSnap.id] = missed.map(m => ({...m, startTime: ensureDateObject(m.startTime)}));
+            if (missed.length > 0) {
+                missedTasksByDate[docSnap.id] = missed.map(m => ({...m, startTime: ensureDateObject(m.startTime)}));
+            }
         }
     });
 
