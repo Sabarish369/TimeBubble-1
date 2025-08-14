@@ -10,6 +10,7 @@ import {
   GoogleAuthProvider,
   signOut as firebaseSignOut,
   updateProfile,
+  sendPasswordResetEmail,
   type User,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -23,6 +24,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,6 +71,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 break;
             case 'auth/invalid-api-key':
                 message = 'Invalid API Key. Please check your Firebase configuration in the .env file.';
+                break;
+            case 'auth/configuration-not-found':
+                message = "Authentication provider is not configured. Please enable it in the Firebase console.";
                 break;
             default:
                 message = err.message;
@@ -119,6 +124,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => {
     await performAuthAction(() => firebaseSignOut(auth));
   };
+  
+  const sendPasswordReset = async (email: string) => {
+    await performAuthAction(async () => {
+      await sendPasswordResetEmail(auth, email);
+      toast({
+        title: 'Password Reset Email Sent',
+        description: 'Please check your inbox for instructions to reset your password.',
+      });
+    });
+  };
+
 
   const value = {
     user,
@@ -128,6 +144,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signUp,
     signInWithGoogle,
     signOut,
+    sendPasswordReset,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

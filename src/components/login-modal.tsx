@@ -51,7 +51,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [view, setView] = useState<"signIn" | "signUp" | "forgotPassword">(
     "signIn"
   );
-  const { signIn, signUp, signInWithGoogle, error, loading } = useAuth();
+  const { signIn, signUp, signInWithGoogle, sendPasswordReset, error, loading } = useAuth();
 
   const signInForm = useForm<SignInValues>({ resolver: zodResolver(signInSchema) });
   const signUpForm = useForm<SignUpValues>({ resolver: zodResolver(signUpSchema) });
@@ -67,8 +67,8 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   };
   
   const onForgotPassword: SubmitHandler<ForgotPasswordValues> = async (data) => {
-    // We will wire this up later
-    console.log("Password reset requested for:", data.email);
+    await sendPasswordReset(data.email);
+    setView('signIn');
   }
 
   // Don't close the modal on outside click
