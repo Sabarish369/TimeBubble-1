@@ -73,11 +73,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             case 'auth/invalid-api-key':
                 message = 'Invalid API Key. Please check your Firebase configuration in the .env file.';
                 break;
-            case 'auth/configuration-not-found':
-                message = "Authentication provider is not configured. Please enable it in the Firebase console.";
-                break;
             case 'auth/too-many-requests':
                 message = 'Too many attempts. Please try again later or reset your password.';
+                break;
+            case 'auth/popup-closed-by-user':
+                message = 'Sign-in window closed. Please try again.';
                 break;
             default:
                 message = 'An unexpected error occurred. Please try again.';
