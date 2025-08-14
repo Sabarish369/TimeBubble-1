@@ -163,7 +163,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
     const dateKey = getDayKey(date);
     const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dateKey);
-    const blocksToSave = blocks.map(b => ({ ...b, startTime: b.startTime.toISOString() }));
+    const blocksToSave = blocks.map(b => ({ ...b, startTime: new Date(b.startTime).toISOString() }));
     await setDoc(dayDocRef, { blocks: blocksToSave }, { merge: true });
   }, [user]);
 
@@ -834,3 +834,5 @@ const defaultTemplates: BubbleTemplate[] = [
   { id: 'default-4', title: 'Workout', description: 'Go for a run, lift weights, or do yoga.', category: 'health', duration: 60, color: 'rose-gold', isDefault: true },
   { id: 'default-5', title: 'Personal Time', description: 'Read a book, work on a hobby, or relax.', category: 'personal', duration: 45, color: 'lavender', isDefault: true },
 ];
+
+    
