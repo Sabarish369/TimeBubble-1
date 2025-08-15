@@ -323,46 +323,42 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   useEffect(() => {
     const onEndTimeNotify = (block: TimeBlock) => {
       playNotificationSound();
-      // Find the latest version of the block from state
       setTimeBlocks(currentBlocks => {
         const latestBlock = currentBlocks.find(b => b.id === block.id);
-        if (latestBlock) {
-          updateBlock(latestBlock.id, { notified: true, actionable: true, notificationScheduled: false }, true);
+        if (latestBlock && !latestBlock.actionable) {
+          updateBlock(latestBlock.id, { notified: true, actionable: true }, true);
           setActionableBlock(latestBlock);
         }
         return currentBlocks;
-      })
+      });
     };
-    
+
     const onPreNotify = (block: TimeBlock) => {
-        toast({
-            title: `Get Ready: ${block.title}`,
-            description: `Starts in 5 minutes.`
-        });
+      toast({
+        title: `Get Ready: ${block.title}`,
+        description: `Starts in 5 minutes.`,
+      });
     };
 
     NotificationManager.clearAllNotifications();
 
     timeBlocks.forEach(block => {
-      if (block.completed || block.notificationScheduled) return;
-      
-      const startTime = ensureDateObject(block.startTime);
-      if (startTime > new Date()) {
-        NotificationManager.scheduleNotification(block, onEndTimeNotify, onPreNotify);
-        // We need to update the block in state without causing a re-render loop
-        // So we update a new copy and then set it.
-        setTimeBlocks(currentBlocks => {
+      if (!block.completed && !block.notificationScheduled) {
+        const startTime = ensureDateObject(block.startTime);
+        if (startTime > new Date()) {
+          NotificationManager.scheduleNotification(block, onEndTimeNotify, onPreNotify);
+          setTimeBlocks(currentBlocks => {
             const index = currentBlocks.findIndex(b => b.id === block.id);
             if (index !== -1 && !currentBlocks[index].notificationScheduled) {
-                const newBlocks = [...currentBlocks];
-                newBlocks[index] = { ...newBlocks[index], notificationScheduled: true };
-                return newBlocks;
+              const newBlocks = [...currentBlocks];
+              newBlocks[index] = { ...newBlocks[index], notificationScheduled: true };
+              return newBlocks;
             }
             return currentBlocks;
-        });
+          });
+        }
       }
     });
-    // This effect should run when blocks change.
   }, [timeBlocks, updateBlock, toast]);
   
   // Effect to check for missed tasks periodically
@@ -380,7 +376,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         const intervalId = setInterval(checkMissedTasks, 30 * 60 * 1000); // Check every 30 minutes
 
         return () => clearInterval(intervalId);
-    }, [isMissedTasksDrawerOpen, toast]);
+    }, [isMissedTasksDrawerOpen, toast, getMissedTasks]);
   
   useEffect(() => {
     const hasUnsavedChanges = JSON.stringify(timeBlocks) !== JSON.stringify(lastSavedBlocks.current);
@@ -523,7 +519,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     }
             
     const newStartTime = findAvailableSlot(block.startTime, block.duration, blocksForDate);
-    const newBlock: TimeBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false, notified: false, actionable: false };
+    const newBlock: TimeBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false, notified: false, actionable: false, notificationScheduled: false };
     
     const newBlocks = [...blocksForDate, newBlock];
     
@@ -744,7 +740,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     return result;
   }, []);
   
-  const getMissedTasks = async (): Promise<MissedTaskGroup[]> => {
+  const getMissedTasks = useCallback(async (): Promise<MissedTaskGroup[]> => {
     if (!user) return [];
 
     const allDaysCollection = collection(db, 'users', user.uid, 'daily_data');
@@ -770,7 +766,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     return Object.entries(missedTasksByDate)
         .map(([date, tasks]) => ({ date, tasks }))
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  };
+  }, [user]);
 
   const clearAllMissedTasks = async () => {
       if (!user) return;
