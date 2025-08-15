@@ -124,9 +124,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
-    await performAuthAction(() => {
+    await performAuthAction(async () => {
         const provider = new GoogleAuthProvider();
-        return signInWithPopup(auth, provider);
+        const result = await signInWithPopup(auth, provider);
+        // This line is crucial - it sets the user in the app state
+        setUser(result.user);
     });
   };
 
