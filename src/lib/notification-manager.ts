@@ -2,8 +2,7 @@
  * @fileoverview Manages scheduling and displaying browser notifications.
  * This is a self-contained module to be used on the client-side.
  * It does not use Service Workers, so notifications only work while the
- * browser tab is open. It's designed to be replaced by a more robust
- * system using FCM or similar.
+ * browser tab is open and may be delayed if the tab is inactive.
  */
 
 import type { TimeBlock } from "@/types";
@@ -46,16 +45,11 @@ export function scheduleNotification(
   const timeouts: number[] = [];
 
   const startTime = ensureDateObject(block.startTime);
-  const endTime = new Date(startTime.getTime() + block.duration * 60000);
 
-  // --- Schedule Final Notification ---
-  const finalTimeoutMs = endTime.getTime() - now.getTime();
-  if (finalTimeoutMs > 0) {
-    const finalTimeoutId = window.setTimeout(() => {
-      showNotification(`Time's up for "${block.title}"!`, 'Time to reflect on your task.');
-      onNotify(block);
-    }, finalTimeoutMs);
-    timeouts.push(finalTimeoutId);
+  // --- Validate Date Object ---
+  if (isNaN(startTime.getTime())) {
+    console.error(`[NotificationManager] Invalid startTime for block "${block.title}" (ID: ${block.id}). Notification not scheduled.`);
+    return;
   }
 
   // --- Schedule Pre-Start Notification ---
@@ -70,10 +64,27 @@ export function scheduleNotification(
       );
     }, preAlertTimeoutMs);
     timeouts.push(preAlertTimeoutId);
+    console.log(`[NotificationManager] "Get Ready" alert for "${block.title}" scheduled for ${preAlertTime.toLocaleTimeString()}`);
   }
 
-  notificationTimeouts.set(block.id, timeouts);
+  // --- Schedule Final Notification ---
+  const endTime = new Date(startTime.getTime() + block.duration * 60000);
+  const finalTimeoutMs = endTime.getTime() - now.getTime();
+
+  if (finalTimeoutMs > 0) {
+    const finalTimeoutId = window.setTimeout(() => {
+      showNotification(`Time's up for "${block.title}"!`, 'Time to reflect on your task.');
+      onNotify(block);
+    }, finalTimeoutMs);
+    timeouts.push(finalTimeoutId);
+    console.log(`[NotificationManager] "Time's Up" alert for "${block.title}" scheduled for ${endTime.toLocaleTimeString()}`);
+  }
+
+  if (timeouts.length > 0) {
+    notificationTimeouts.set(block.id, timeouts);
+  }
 }
+
 
 /**
  * Displays a browser notification.
