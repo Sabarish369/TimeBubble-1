@@ -23,6 +23,9 @@ import {
 import { MissedTasksDrawer } from './missed-tasks-drawer';
 import { DailySidebarTip } from './daily-sidebar-tip';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/auth-context';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { ProModal } from './pro-modal';
 
 const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   work: Briefcase,
@@ -42,14 +45,19 @@ const defaultTemplates: BubbleTemplate[] = [
 
 export function Sidebar() {
   const { templates, updateTemplate, deleteTemplate, setIsBubbleCreateModalOpen } = useTimeBubbles();
+  const { isPro } = useAuth();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isMissedTasksDrawerOpen, setIsMissedTasksDrawerOpen] = useState(false);
+  const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<BubbleTemplate | undefined>(undefined);
 
   const allTemplates = [...defaultTemplates.map(t => {
     const userOverride = templates.find(ut => ut.id === t.id);
     return userOverride ? { ...t, ...userOverride, isDefault: true } : t;
   }), ...templates.filter(t => !defaultTemplates.some(dt => dt.id === t.id))];
+
+  const userCreatedTemplatesCount = templates.filter(t => !t.isDefault).length;
+  const templateLimitReached = !isPro && userCreatedTemplatesCount >= 3;
 
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, template: BubbleTemplate) => {
@@ -87,6 +95,10 @@ export function Sidebar() {
   };
 
   const handleOpenCreateTemplateModal = () => {
+    if (templateLimitReached) {
+      setIsProModalOpen(true);
+      return;
+    }
     setEditingTemplate(undefined);
     setIsTemplateModalOpen(true);
   }
@@ -126,10 +138,23 @@ export function Sidebar() {
 
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-center">Templates</h2>
-        <Button variant="ghost" size="icon" onClick={handleOpenCreateTemplateModal}>
-          <Plus className="h-5 w-5" />
-          <span className="sr-only">Create New Template</span>
-        </Button>
+        <TooltipProvider>
+            <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                    <div className={cn(templateLimitReached && 'cursor-not-allowed')}>
+                        <Button variant="ghost" size="icon" onClick={handleOpenCreateTemplateModal} disabled={templateLimitReached}>
+                            <Plus className="h-5 w-5" />
+                            <span className="sr-only">Create New Template</span>
+                        </Button>
+                    </div>
+                </TooltipTrigger>
+                {templateLimitReached && (
+                    <TooltipContent side="bottom">
+                        <p>Upgrade to Pro for unlimited templates.</p>
+                    </TooltipContent>
+                )}
+            </Tooltip>
+        </TooltipProvider>
       </div>
       
       <div className={cn("space-y-3 overflow-y-auto flex-1 no-scrollbar")}>
@@ -199,6 +224,7 @@ export function Sidebar() {
         isOpen={isMissedTasksDrawerOpen}
         onClose={() => setIsMissedTasksDrawerOpen(false)}
       />
+      <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
     </aside>
   );
 }
