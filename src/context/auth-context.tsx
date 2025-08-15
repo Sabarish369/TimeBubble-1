@@ -138,7 +138,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await signInWithPopup(auth, provider);
     } catch (err) {
         handleAuthError(err);
-        // Explicitly set loading to false on error, especially for popup-closed-by-user
+    } finally {
+        // Explicitly set loading to false to handle all cases, including popup closure.
         setLoading(false);
     }
   };
