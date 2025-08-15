@@ -361,6 +361,34 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     });
   }, [timeBlocks, updateBlock, toast]);
   
+  const getMissedTasks = useCallback(async (): Promise<MissedTaskGroup[]> => {
+    if (!user) return [];
+
+    const allDaysCollection = collection(db, 'users', user.uid, 'daily_data');
+    const querySnapshot = await getDocs(allDaysCollection);
+    
+    const now = new Date();
+    const missedTasksByDate: Record<string, TimeBlock[]> = {};
+
+    querySnapshot.forEach(docSnap => {
+        if(docSnap.data().blocks) {
+            const blocks = docSnap.data().blocks as any[];
+            const missed = blocks.filter(block => {
+                const endTime = new Date(ensureDateObject(block.startTime).getTime() + block.duration * 60000);
+                return endTime < now && !block.completed;
+            });
+
+            if (missed.length > 0) {
+                missedTasksByDate[docSnap.id] = missed.map(m => ({...m, startTime: ensureDateObject(m.startTime)}));
+            }
+        }
+    });
+
+    return Object.entries(missedTasksByDate)
+        .map(([date, tasks]) => ({ date, tasks }))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [user]);
+
   // Effect to check for missed tasks periodically
     useEffect(() => {
         const checkMissedTasks = async () => {
@@ -740,33 +768,6 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     return result;
   }, []);
   
-  const getMissedTasks = useCallback(async (): Promise<MissedTaskGroup[]> => {
-    if (!user) return [];
-
-    const allDaysCollection = collection(db, 'users', user.uid, 'daily_data');
-    const querySnapshot = await getDocs(allDaysCollection);
-    
-    const now = new Date();
-    const missedTasksByDate: Record<string, TimeBlock[]> = {};
-
-    querySnapshot.forEach(docSnap => {
-        if(docSnap.data().blocks) {
-            const blocks = docSnap.data().blocks as any[];
-            const missed = blocks.filter(block => {
-                const endTime = new Date(ensureDateObject(block.startTime).getTime() + block.duration * 60000);
-                return endTime < now && !block.completed;
-            });
-
-            if (missed.length > 0) {
-                missedTasksByDate[docSnap.id] = missed.map(m => ({...m, startTime: ensureDateObject(m.startTime)}));
-            }
-        }
-    });
-
-    return Object.entries(missedTasksByDate)
-        .map(([date, tasks]) => ({ date, tasks }))
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [user]);
 
   const clearAllMissedTasks = async () => {
       if (!user) return;
