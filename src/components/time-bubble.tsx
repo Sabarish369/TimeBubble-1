@@ -5,7 +5,7 @@ import type { TimeBlock as TimeBlockType } from '@/types';
 import type { MouseEvent, RefObject } from 'react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
-import { BUBBLE_COLORS, HOUR_HEIGHT } from '@/lib/constants';
+import { BUBBLE_COLORS, HOUR_HEIGHT, TOTAL_HOURS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon, History, Undo } from 'lucide-react';
 import { Button } from './ui/button';
@@ -171,11 +171,13 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
     if (!timeline) return;
     
     const timelineRect = timeline.getBoundingClientRect();
+    const timelineEndMinutes = TOTAL_HOURS * 60;
 
     if (isDragging) {
+      const maxMinutes = timelineEndMinutes - liveDuration;
       const newTop = dragStartRef.current.initialTop + deltaY;
       const newMinutesRaw = newTop / pixelsPerMinute;
-      const newMinutes = Math.max(0, newMinutesRaw);
+      const newMinutes = Math.max(0, Math.min(newMinutesRaw, maxMinutes));
       const newStartTime = new Date(liveStartTime);
       newStartTime.setHours(Math.floor(newMinutes / 60), newMinutes % 60, 0, 0);
       
@@ -185,7 +187,9 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
     if (isResizing) {
       if (isResizing === 'bottom') {
         const newHeight = dragStartRef.current.initialHeight + deltaY;
-        const newDuration = Math.max(15, newHeight / pixelsPerMinute);
+        const currentStartMinutes = liveStartTime.getHours() * 60 + liveStartTime.getMinutes();
+        const maxDuration = timelineEndMinutes - currentStartMinutes;
+        const newDuration = Math.min(maxDuration, Math.max(15, newHeight / pixelsPerMinute));
         setLiveDuration(newDuration);
       }
       if (isResizing === 'top') {
@@ -230,7 +234,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
     }
 
 
-  }, [isDragging, isResizing, pixelsPerMinute, scrollContainerRef, stopAutoScroll, liveStartTime, block]);
+  }, [isDragging, isResizing, pixelsPerMinute, scrollContainerRef, stopAutoScroll, liveStartTime, block, liveDuration]);
 
 
   useEffect(() => {
