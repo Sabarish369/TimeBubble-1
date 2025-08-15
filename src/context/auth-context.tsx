@@ -52,6 +52,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const handleAuthError = (err: any) => {
     let message = 'An unknown error occurred.';
+    
+    // Do not show an error if the user intentionally closes the sign-in popup.
+    if (err.code === 'auth/popup-closed-by-user') {
+        return;
+    }
+
     if (err.code) {
         switch (err.code) {
             case 'auth/user-not-found':
@@ -75,9 +81,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 break;
             case 'auth/too-many-requests':
                 message = 'Too many attempts. Please try again later or reset your password.';
-                break;
-            case 'auth/popup-closed-by-user':
-                message = 'Sign-in window closed. Please try again.';
                 break;
             default:
                 message = 'An unexpected error occurred. Please try again.';
