@@ -129,6 +129,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [newBubbleStartTime, setNewBubbleStartTime] = useState<Date | null>(null);
   const [zoomLevel, setZoomLevelState] = useState(1);
   const [theme, setThemeState] = useState<Theme>('dark');
+  const [isMissedTasksDrawerOpen, setIsMissedTasksDrawerOpen] = useState(false);
+
 
   const { toast } = useToast();
 
@@ -319,7 +321,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   }, [currentDate, saveTimeBlocksToFirestore, findAvailableSlot, updateHistory]);
   
   useEffect(() => {
-    const onNotify = (block: TimeBlock) => {
+    const onEndTimeNotify = (block: TimeBlock) => {
       playNotificationSound();
       // Find the latest version of the block from state
       setTimeBlocks(currentBlocks => {
@@ -331,6 +333,13 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         return currentBlocks;
       })
     };
+    
+    const onPreNotify = (block: TimeBlock) => {
+        toast({
+            title: `Get Ready: ${block.title}`,
+            description: `Starts in 5 minutes.`
+        });
+    };
 
     NotificationManager.clearAllNotifications();
 
@@ -339,7 +348,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
       
       const startTime = ensureDateObject(block.startTime);
       if (startTime > new Date()) {
-        NotificationManager.scheduleNotification(block, onNotify);
+        NotificationManager.scheduleNotification(block, onEndTimeNotify, onPreNotify);
         // We need to update the block in state without causing a re-render loop
         // So we update a new copy and then set it.
         setTimeBlocks(currentBlocks => {
@@ -354,7 +363,24 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
       }
     });
     // This effect should run when blocks change.
-  }, [timeBlocks, updateBlock]);
+  }, [timeBlocks, updateBlock, toast]);
+  
+  // Effect to check for missed tasks periodically
+    useEffect(() => {
+        const checkMissedTasks = async () => {
+            const missedTasks = await getMissedTasks();
+            if (missedTasks.length > 0 && !isMissedTasksDrawerOpen) {
+                toast({
+                    title: "You have overdue tasks",
+                    description: "Open the missed tasks panel to reschedule or review them.",
+                });
+            }
+        };
+
+        const intervalId = setInterval(checkMissedTasks, 30 * 60 * 1000); // Check every 30 minutes
+
+        return () => clearInterval(intervalId);
+    }, [isMissedTasksDrawerOpen, toast]);
   
   useEffect(() => {
     const hasUnsavedChanges = JSON.stringify(timeBlocks) !== JSON.stringify(lastSavedBlocks.current);

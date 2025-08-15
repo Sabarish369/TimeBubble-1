@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Manages scheduling and displaying browser notifications.
  * This is a self-contained module to be used on the client-side.
@@ -30,10 +31,12 @@ export function requestPermission() {
  * Schedules a notification for a given time block.
  * @param block The time block to schedule a notification for.
  * @param onNotify Callback function when the notification fires.
+ * @param onPreNotify Callback function for the pre-start notification.
  */
 export function scheduleNotification(
   block: TimeBlock,
-  onNotify: (block: TimeBlock) => void
+  onNotify: (block: TimeBlock) => void,
+  onPreNotify: (block: TimeBlock) => void
 ) {
   if (typeof window === 'undefined' || Notification.permission !== 'granted') {
     return;
@@ -51,17 +54,21 @@ export function scheduleNotification(
     console.error(`[NotificationManager] Invalid startTime for block "${block.title}" (ID: ${block.id}). Notification not scheduled.`);
     return;
   }
-
+  
   // --- Schedule Pre-Start Notification ---
   const preAlertTime = new Date(startTime.getTime() - PRE_START_ALERT_MINUTES * 60000);
   const preAlertTimeoutMs = preAlertTime.getTime() - now.getTime();
 
   if (preAlertTimeoutMs > 0) {
     const preAlertTimeoutId = window.setTimeout(() => {
+      const notificationMessage = `Get ready, "${block.title}" starts in ${PRE_START_ALERT_MINUTES} minutes.`;
       showNotification(
-        `Get ready, "${block.title}" starts in ${PRE_START_ALERT_MINUTES} minutes.`,
+        notificationMessage,
         'Prepare for your next focused session.'
       );
+      if (onPreNotify) {
+        onPreNotify(block);
+      }
     }, preAlertTimeoutMs);
     timeouts.push(preAlertTimeoutId);
     console.log(`[NotificationManager] "Get Ready" alert for "${block.title}" scheduled for ${preAlertTime.toLocaleTimeString()}`);
