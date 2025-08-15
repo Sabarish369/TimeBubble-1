@@ -51,8 +51,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const handleAuthError = (err: any) => {
-    // Do not show an error if the user intentionally closes the sign-in popup.
+    // This specific error code occurs when the user closes the sign-in popup.
+    // We don't want to show an error message for this intentional action.
     if (err.code === 'auth/popup-closed-by-user') {
+        setError(null);
         return;
     }
     
@@ -103,9 +105,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       handleAuthError(err);
     } finally {
-      // Let onAuthStateChanged handle setting loading to false for sign-in/up
-      // For other actions that don't trigger onAuthStateChanged, we might need to set it here.
-      // But for login/logout, onAuthStateChanged is the source of truth for loading state.
+      // For email/password, we can set loading false here.
+      // For popup flows, onAuthStateChanged is a better source of truth.
+      if (action !== signInWithGoogle) {
+        setLoading(false);
+      }
     }
   };
 
@@ -134,12 +138,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
     try {
         const provider = new GoogleAuthProvider();
-        // The onAuthStateChanged listener will handle the user state update and set loading to false.
         await signInWithPopup(auth, provider);
-    } catch (err) {
-        handleAuthError(err);
+        // onAuthStateChanged will handle the user state update and set loading to false.
+    } catch (err: any) {
+        // Specifically handle the popup closed by user case without showing a generic error.
+        if (err.code !== 'auth/popup-closed-by-user') {
+            handleAuthError(err);
+        }
     } finally {
-        // Explicitly set loading to false to handle all cases, including popup closure.
+        // Ensure loading is always turned off, even if the user closes the popup.
         setLoading(false);
     }
   };
