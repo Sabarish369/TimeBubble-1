@@ -14,6 +14,7 @@ import * as NotificationManager from '@/lib/notification-manager';
 import { useAuth } from './auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
+import { ensureDateObject } from '@/lib/time-bubbles-utils';
 
 type Theme = 'light' | 'dark';
 
@@ -81,18 +82,6 @@ const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(und
 const getDayKey = (date: Date | string) => format(new Date(date), 'yyyy-MM-dd');
 
 const ZOOM_STORAGE_KEY = 'timebubble_zoom';
-
-const ensureDateObject = (date: any): Date => {
-    if (date instanceof Date) {
-        return date;
-    }
-    // Firestore Timestamps have toDate(), strings and numbers can be passed to new Date()
-    if (date && typeof date.toDate === 'function') {
-        return date.toDate();
-    }
-    return new Date(date);
-};
-
 
 const playNotificationSound = () => {
     if (typeof window !== 'undefined' && window.AudioContext) {
@@ -341,9 +330,8 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     timeBlocks.forEach(block => {
       if (block.completed || block.notificationScheduled) return;
       
-      const endTime = new Date(ensureDateObject(block.startTime).getTime() + block.duration * 60000);
-      if (endTime > new Date()) {
-        NotificationManager.scheduleNotification(block, endTime, onNotify);
+      if (ensureDateObject(block.startTime) > new Date()) {
+        NotificationManager.scheduleNotification(block, onNotify);
         updateBlock(block.id, { notificationScheduled: true }, false);
       }
     });

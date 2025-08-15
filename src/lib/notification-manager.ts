@@ -7,11 +7,12 @@
  */
 
 import type { TimeBlock } from "@/types";
+import { ensureDateObject } from "./time-bubbles-utils";
 
 // Store timeout IDs in a map for easy cancellation
 const notificationTimeouts = new Map<string, number[]>();
 
-const PRE_ALERT_MINUTES = 15;
+const PRE_START_ALERT_MINUTES = 5;
 
 /**
  * Request notification permission from the user.
@@ -33,7 +34,6 @@ export function requestPermission() {
  */
 export function scheduleNotification(
   block: TimeBlock,
-  endTime: Date,
   onNotify: (block: TimeBlock) => void
 ) {
   if (typeof window === 'undefined' || Notification.permission !== 'granted') {
@@ -45,6 +45,9 @@ export function scheduleNotification(
   const now = new Date();
   const timeouts: number[] = [];
 
+  const startTime = ensureDateObject(block.startTime);
+  const endTime = new Date(startTime.getTime() + block.duration * 60000);
+
   // --- Schedule Final Notification ---
   const finalTimeoutMs = endTime.getTime() - now.getTime();
   if (finalTimeoutMs > 0) {
@@ -55,15 +58,15 @@ export function scheduleNotification(
     timeouts.push(finalTimeoutId);
   }
 
-  // --- Schedule Pre-Alert Notification ---
-  const preAlertTime = new Date(endTime.getTime() - PRE_ALERT_MINUTES * 60000);
+  // --- Schedule Pre-Start Notification ---
+  const preAlertTime = new Date(startTime.getTime() - PRE_START_ALERT_MINUTES * 60000);
   const preAlertTimeoutMs = preAlertTime.getTime() - now.getTime();
 
   if (preAlertTimeoutMs > 0) {
     const preAlertTimeoutId = window.setTimeout(() => {
       showNotification(
-        `${block.title} ends in ${PRE_ALERT_MINUTES} minutes`,
-        'Get ready to wrap up your task.'
+        `Get ready, "${block.title}" starts in ${PRE_START_ALERT_MINUTES} minutes.`,
+        'Prepare for your next focused session.'
       );
     }, preAlertTimeoutMs);
     timeouts.push(preAlertTimeoutId);

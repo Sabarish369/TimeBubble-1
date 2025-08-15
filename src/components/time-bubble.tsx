@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { CelebrationPopper } from './celebration-popper';
 import { ActiveBubbleAnimation } from './active-bubble-animation';
+import { ensureDateObject } from '@/lib/time-bubbles-utils';
 
 interface TimeBubbleProps {
   block: TimeBlockType;
@@ -38,16 +39,6 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   break: Coffee,
   personal: User,
   health: Heart,
-};
-
-const ensureDateObject = (date: any): Date => {
-    if (date instanceof Date) {
-        return date;
-    }
-    if (date && typeof date.toDate === 'function') {
-        return date.toDate();
-    }
-    return new Date(date);
 };
 
 export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbleProps) {
@@ -158,7 +149,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
 
   const handleMouseUp = useCallback(() => {
     if (isDragging || isResizing) {
-      updateBlock(block.id, { startTime: liveStartTime, duration: liveDuration });
+      updateBlock(block.id, { startTime: liveStartTime, duration: liveDuration }, true);
     }
     setIsDragging(false);
     setIsResizing(null);
