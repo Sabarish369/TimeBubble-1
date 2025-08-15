@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
-import { CheckCircle, Zap, BarChart, Cloud, Palette, FileDown, Star } from 'lucide-react';
+import { Zap, BarChart, BrainCircuit, Star } from 'lucide-react';
 
 interface ProModalProps {
   isOpen: boolean;
@@ -19,29 +19,19 @@ interface ProModalProps {
 
 const proFeatures = [
   {
-    icon: Cloud,
-    title: 'Cloud Sync & Backup',
-    description: 'Sync your bubbles across all devices securely.',
-  },
-  {
     icon: Zap,
     title: 'Advanced AI Insights',
     description: 'Get weekly/monthly reports and predictive planning.',
   },
   {
+    icon: BrainCircuit,
+    title: 'Proactive AI-Powered Tips',
+    description: 'Receive real-time, contextual advice to optimize your day as it happens.',
+  },
+  {
     icon: BarChart,
-    title: 'Unlimited Templates',
-    description: 'Create as many custom bubble templates as you need.',
-  },
-  {
-    icon: Palette,
-    title: 'Enhanced Customization',
-    description: 'Unlock exclusive color palettes and app themes.',
-  },
-  {
-    icon: FileDown,
-    title: 'Export Data',
-    description: 'Export your data to CSV or PDF for your records.',
+    title: 'Long-Term Trend Analysis',
+    description: 'Understand your habits with personalized weekly and monthly reports.',
   },
 ];
 
@@ -55,7 +45,7 @@ export function ProModal({ isOpen, onClose }: ProModalProps) {
             </div>
           <DialogTitle className="text-2xl">Upgrade to TimeBubble Pro</DialogTitle>
           <DialogDescription>
-            Unlock powerful features to supercharge your productivity and gain deeper insights.
+            Unlock powerful AI features to supercharge your productivity and gain deeper insights.
           </DialogDescription>
         </DialogHeader>
 

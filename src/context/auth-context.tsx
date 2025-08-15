@@ -21,6 +21,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
+  isPro: boolean; // Add isPro flag
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -34,6 +35,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPro, setIsPro] = useState(false); // Default to false
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -43,11 +46,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    setLoading(true);
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      // In a real app, you'd check for Pro status from your database here.
+      // For now, we'll leave it as the default `false`.
+      // Example: if (user) { checkProStatus(user.uid).then(setIsPro); }
       setLoading(false);
     });
-
+    
     // Check for redirect result on initial load
     getRedirectResult(auth)
       .then((result) => {
@@ -64,22 +71,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         handleAuthError(err);
       })
       .finally(() => {
-        setLoading(false);
+        setLoading(false); // Ensure loading is false after redirect check
       });
 
     return () => unsubscribe();
   }, [toast]);
 
   const handleAuthError = (err: any) => {
-    if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
-        setError(null);
-        return;
-    }
-    
     let message = 'An unknown error occurred.';
-
     if (err.code) {
         switch (err.code) {
+            case 'auth/popup-closed-by-user':
+            case 'auth/cancelled-popup-request':
+                // This is a common case when the user closes the popup. We don't need to show an error.
+                return; 
             case 'auth/user-not-found':
             case 'auth/invalid-credential':
                 message = 'Invalid email or password. Please try again.';
@@ -116,14 +121,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setError("Firebase is not configured. Cannot perform authentication.");
       return;
     }
-    setLoading(true);
+    setIsAuthLoading(true);
     setError(null);
     try {
       await action();
     } catch (err) {
       handleAuthError(err);
     } finally {
-      setLoading(false);
+      setIsAuthLoading(false);
     }
   };
 
@@ -148,7 +153,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setError("Firebase is not configured. Cannot perform authentication.");
       return;
     }
-    setLoading(true);
+    setIsAuthLoading(true);
     setError(null);
     const provider = new GoogleAuthProvider();
     try {
@@ -156,7 +161,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // After the redirect, the getRedirectResult in useEffect will handle the result.
     } catch (err) {
       handleAuthError(err);
-      setLoading(false); // Ensure loading is stopped on immediate error
+      setIsAuthLoading(false); // Ensure loading is stopped on immediate error
     }
   };
 
@@ -177,8 +182,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const value = {
     user,
-    loading,
+    loading: loading || isAuthLoading,
     error,
+    isPro,
     signIn,
     signUp,
     signInWithGoogle,

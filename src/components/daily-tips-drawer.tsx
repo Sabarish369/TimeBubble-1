@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from './ui/button';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
-import { ChevronLeft, Lightbulb, Zap, HeartPulse, BrainCircuit, Rocket } from 'lucide-react';
+import { ChevronLeft, Lightbulb, Zap, HeartPulse, BrainCircuit, Rocket, Star } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils';
 import type { DailyTips } from '@/types';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from './ui/carousel';
 import { Card, CardContent } from './ui/card';
+import { useAuth } from '@/context/auth-context';
+import { ProModal } from './pro-modal';
 
 const tipIcons: Record<string, LucideIcon> = {
   Productivity: Zap,
@@ -31,13 +33,24 @@ const tipIcons: Record<string, LucideIcon> = {
 export function DailyTipsDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   const { getDailyTips, dailyTips, isLoadingTips } = useTimeBubbles();
+  const { isPro } = useAuth();
+  const [isProModalOpen, setIsProModalOpen] = useState(false);
+
+
+  const handleOpen = () => {
+    if (isPro) {
+      setIsOpen(true);
+    } else {
+      setIsProModalOpen(true);
+    }
+  };
 
   useEffect(() => {
     // Fetch tips when the drawer is opened for the first time
-    if (isOpen && !dailyTips && !isLoadingTips) {
+    if (isPro && isOpen && !dailyTips && !isLoadingTips) {
       getDailyTips();
     }
-  }, [isOpen, dailyTips, isLoadingTips, getDailyTips]);
+  }, [isOpen, dailyTips, isLoadingTips, getDailyTips, isPro]);
   
   const TipIcon = ({ type }: { type: string }) => {
     const Icon = tipIcons[type] || Lightbulb;
@@ -51,7 +64,7 @@ export function DailyTipsDrawer() {
             variant="outline" 
             size="icon" 
             className="rounded-r-none rounded-l-full h-16 w-10 border-r-0 pulse-glow"
-            onClick={() => setIsOpen(true)}
+            onClick={handleOpen}
           >
               <Lightbulb className="h-5 w-5 text-amber-400" />
           </Button>
@@ -118,6 +131,7 @@ export function DailyTipsDrawer() {
           </div>
         </SheetContent>
       </Sheet>
+      <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
     </>
   );
 }

@@ -4,12 +4,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Lightbulb, RefreshCw } from 'lucide-react';
+import { Lightbulb, RefreshCw, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import type { DailySidebarTip as DailySidebarTipType } from '@/types';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
+import { ProModal } from './pro-modal';
 
 export function DailySidebarTip() {
   const [tip, setTip] = useState<DailySidebarTipType | null>(null);
@@ -17,7 +18,8 @@ export function DailySidebarTip() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { getBlocksForDate, currentDate, getNewDailySidebarTip } = useTimeBubbles();
-  const { user } = useAuth();
+  const { user, isPro } = useAuth();
+  const [isProModalOpen, setIsProModalOpen] = useState(false);
 
 
   const getStorageKey = useCallback(() => {
@@ -27,6 +29,10 @@ export function DailySidebarTip() {
 
 
   const fetchTip = useCallback(async () => {
+    if (!isPro) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setError(null);
     
@@ -56,13 +62,17 @@ export function DailySidebarTip() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentDate, getBlocksForDate, getNewDailySidebarTip, getStorageKey]);
+  }, [currentDate, getBlocksForDate, getNewDailySidebarTip, getStorageKey, isPro]);
 
   useEffect(() => {
     fetchTip();
   }, [fetchTip]);
   
   const handleRefresh = async () => {
+    if (!isPro) {
+        setIsProModalOpen(true);
+        return;
+    }
     if (isRefreshing) return;
     setIsRefreshing(true);
     setError(null);
@@ -85,17 +95,18 @@ export function DailySidebarTip() {
 
 
   return (
+    <>
     <Card 
         className="bg-primary/5 border-primary/20 shadow-sm cursor-pointer hover:bg-primary/10 transition-colors group"
         onClick={handleRefresh}
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <Lightbulb className="h-5 w-5 mt-0.5 text-amber-500 shrink-0" />
+          { isPro ? <Lightbulb className="h-5 w-5 mt-0.5 text-amber-500 shrink-0" /> : <Star className="h-5 w-5 mt-0.5 text-amber-500 shrink-0" /> }
           <div className="flex-1">
             <div className="flex justify-between items-center">
-                 <p className="font-semibold text-sm text-primary/90 mb-1">Tip of the Day</p>
-                 <RefreshCw className={cn("h-4 w-4 text-primary/60 transition-transform group-hover:rotate-180", isRefreshing && "animate-spin")} />
+                 <p className="font-semibold text-sm text-primary/90 mb-1">{isPro ? "Tip of the Day" : "Pro Tip"}</p>
+                 {isPro && <RefreshCw className={cn("h-4 w-4 text-primary/60 transition-transform group-hover:rotate-180", isRefreshing && "animate-spin")} />}
             </div>
             {isLoading ? (
               <div className="space-y-1.5">
@@ -104,14 +115,18 @@ export function DailySidebarTip() {
               </div>
             ) : error ? (
               <p className="text-xs text-destructive">{error}</p>
-            ) : (
+            ) : isPro ? (
               <p className="text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">
                 {tip?.tip}
               </p>
+            ) : (
+                <p className='text-sm font-semibold'>Upgrade to Pro to unlock daily personalized tips.</p>
             )}
           </div>
         </div>
       </CardContent>
     </Card>
+    <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
+    </>
   );
 }
