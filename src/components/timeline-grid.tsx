@@ -41,6 +41,11 @@ export function TimelineGrid() {
             style={{ height: `${hourHeight}px` }}
           ></div>
         ))}
+        {/* Add a specific border for 12 PM */}
+        <div
+          className="absolute w-full border-t border-dashed border-primary/40"
+          style={{ top: `${12 * hourHeight}px` }}
+        ></div>
       </div>
     </div>
   );
