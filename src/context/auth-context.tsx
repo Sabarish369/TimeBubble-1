@@ -51,12 +51,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const handleAuthError = (err: any) => {
-    let message = 'An unknown error occurred.';
-    
     // Do not show an error if the user intentionally closes the sign-in popup.
     if (err.code === 'auth/popup-closed-by-user') {
         return;
     }
+    
+    let message = 'An unknown error occurred.';
 
     if (err.code) {
         switch (err.code) {
