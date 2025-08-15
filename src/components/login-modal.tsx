@@ -20,7 +20,7 @@ import { TimeBubbleLogo } from "@/components/timebubble-logo";
 import { GoogleIcon } from "@/components/icons/google-icon";
 import { useAuth } from "@/context/auth-context";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -51,6 +51,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [view, setView] = useState<"signIn" | "signUp" | "forgotPassword">(
     "signIn"
   );
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { signIn, signUp, signInWithGoogle, sendPasswordReset, error, loading } = useAuth();
 
   const signInForm = useForm<SignInValues>({ resolver: zodResolver(signInSchema) });
@@ -71,12 +72,20 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setView('signIn');
   }
 
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    await signInWithGoogle();
+    // Don't set isGoogleLoading to false here, as the page will redirect.
+    // If it fails, the loading state in useAuth will handle it.
+  };
+
   // Don't close the modal on outside click
   const handleInteractOutside = (e: Event) => {
     e.preventDefault();
   };
   
   const activeTabValue = view === 'forgotPassword' ? 'signIn' : view;
+  const anyLoading = loading || isGoogleLoading;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -100,7 +109,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                         <Input id="email-forgot" type="email" placeholder="m@example.com" {...forgotPasswordForm.register('email')} />
                         {forgotPasswordForm.formState.errors.email && <p className="text-sm text-destructive">{forgotPasswordForm.formState.errors.email.message}</p>}
                     </div>
-                    <Button type="submit" className="w-full" disabled={loading}>
+                    <Button type="submit" className="w-full" disabled={anyLoading}>
                         {loading ? 'Sending...' : 'Send Reset Link'}
                     </Button>
                      <div className="mt-4 text-center text-sm">
@@ -143,8 +152,9 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                     <Input id="password-signin" type="password" {...signInForm.register('password')} />
                     {signInForm.formState.errors.password && <p className="text-sm text-destructive">{signInForm.formState.errors.password.message}</p>}
                     </div>
-                    <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'Signing In...' : 'Sign In'}
+                    <Button type="submit" className="w-full" disabled={anyLoading}>
+                      {loading && !isGoogleLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {loading && !isGoogleLoading ? 'Signing In...' : 'Sign In'}
                     </Button>
                     <div className="relative my-4">
                     <div className="absolute inset-0 flex items-center">
@@ -156,9 +166,9 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                         </span>
                     </div>
                     </div>
-                    <Button variant="outline" className="w-full" onClick={signInWithGoogle} disabled={loading}>
-                    <GoogleIcon className="mr-2 h-4 w-4" />
-                    Sign in with Google
+                    <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={anyLoading}>
+                      {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
+                      {isGoogleLoading ? 'Redirecting...' : 'Sign in with Google'}
                     </Button>
                     <div className="mt-4 text-center text-sm">
                     Don&apos;t have an account?{" "}
@@ -196,8 +206,9 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                     <Input id="password-signup" type="password" {...signUpForm.register('password')} />
                     {signUpForm.formState.errors.password && <p className="text-sm text-destructive">{signUpForm.formState.errors.password.message}</p>}
                     </div>
-                    <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? 'Creating Account...' : 'Create Account'}
+                    <Button type="submit" className="w-full" disabled={anyLoading}>
+                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {loading ? 'Creating Account...' : 'Create Account'}
                     </Button>
                     <div className="mt-4 text-center text-sm">
                     Already have an account?{" "}

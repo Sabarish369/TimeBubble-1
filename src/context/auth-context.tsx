@@ -6,7 +6,8 @@ import {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
   updateProfile,
@@ -36,7 +37,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if auth object is valid before trying to use it
     if (!auth || !Object.keys(auth).length) {
       setError("Firebase is not configured. Please add your NEXT_PUBLIC_FIREBASE_ keys to the .env file.");
       setLoading(false);
@@ -47,13 +47,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(user);
       setLoading(false);
     });
+
+    // Check for redirect result on initial load
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          // This is the successfully signed-in user.
+          // The onAuthStateChanged observer will handle setting the user.
+          toast({
+            title: 'Signed In',
+            description: `Welcome back, ${result.user.displayName}!`,
+          });
+        }
+      })
+      .catch((err) => {
+        handleAuthError(err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   const handleAuthError = (err: any) => {
-    // This specific error code occurs when the user closes the sign-in popup.
-    // We don't want to show an error message for this intentional action.
-    if (err.code === 'auth/popup-closed-by-user') {
+    if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
         setError(null);
         return;
     }
@@ -105,11 +123,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       handleAuthError(err);
     } finally {
-      // For email/password, we can set loading false here.
-      // For popup flows, onAuthStateChanged is a better source of truth.
-      if (action !== signInWithGoogle) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 
@@ -136,18 +150,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     setLoading(true);
     setError(null);
+    const provider = new GoogleAuthProvider();
     try {
-        const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
-        // onAuthStateChanged will handle the user state update and set loading to false.
-    } catch (err: any) {
-        // Specifically handle the popup closed by user case without showing a generic error.
-        if (err.code !== 'auth/popup-closed-by-user') {
-            handleAuthError(err);
-        }
-    } finally {
-        // Ensure loading is always turned off, even if the user closes the popup.
-        setLoading(false);
+      await signInWithRedirect(auth, provider);
+      // After the redirect, the getRedirectResult in useEffect will handle the result.
+    } catch (err) {
+      handleAuthError(err);
+      setLoading(false); // Ensure loading is stopped on immediate error
     }
   };
 
