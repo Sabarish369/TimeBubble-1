@@ -58,6 +58,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                 variant={'ghost'}
                 className={cn(
                   'w-[150px] md:w-[200px] justify-center text-center font-semibold text-base md:text-lg px-1',
+                   isMobile && 'w-auto text-sm'
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4 md:h-5 md:w-5" />

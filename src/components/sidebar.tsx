@@ -67,10 +67,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const templateLimitReached = !isPro && userCreatedTemplatesCount >= 3;
 
   useEffect(() => {
-    if (isMobile) {
-      onClose();
+    if (isMobile && isOpen) {
+      // No automatic closing on mobile based on screen size change, only user action.
+    } else if (!isMobile) {
+      // Logic for desktop if needed
     }
-  }, [isMobile, onClose]);
+  }, [isMobile, isOpen, onClose]);
 
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, template: BubbleTemplate) => {
@@ -84,6 +86,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     };
     e.dataTransfer.setData('application/json', JSON.stringify(templateData));
     
+    // Close sidebar on mobile when drag starts
+    if (isMobile) {
+      onClose();
+    }
+
     const target = e.currentTarget;
     // Create a custom drag image
     const dragImage = target.cloneNode(true) as HTMLElement;
