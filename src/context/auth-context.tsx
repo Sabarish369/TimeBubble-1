@@ -103,7 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       handleAuthError(err);
     } finally {
-      setLoading(false);
+      // Let onAuthStateChanged handle setting loading to false
     }
   };
 
@@ -126,9 +126,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signInWithGoogle = async () => {
     await performAuthAction(async () => {
         const provider = new GoogleAuthProvider();
-        const result = await signInWithPopup(auth, provider);
-        // This line is crucial - it sets the user in the app state
-        setUser(result.user);
+        // The onAuthStateChanged listener will handle the user state update.
+        await signInWithPopup(auth, provider);
     });
   };
 
