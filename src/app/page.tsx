@@ -17,6 +17,7 @@ import { FloatingToolbar } from "@/components/floating-toolbar";
 import { LoginModal } from "@/components/login-modal";
 import { AuthGuard } from "@/components/auth-guard";
 import { useAuth } from "@/context/auth-context";
+import { ProModal } from "@/components/pro-modal";
 
 function AppContent() {
   const mainRef = useRef<HTMLElement>(null);
