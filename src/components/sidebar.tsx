@@ -8,7 +8,7 @@ import type { BubbleCategory, BubbleTemplate } from '@/types';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { Button } from './ui/button';
 import { TemplateModal } from './template-modal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { ProModal } from './pro-modal';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   work: Briefcase,
@@ -43,13 +44,19 @@ const defaultTemplates: BubbleTemplate[] = [
   { id: 'default-5', title: 'Personal Time', description: 'Read a book, work on a hobby, or relax.', category: 'personal', duration: 45, color: 'lavender', isDefault: true },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { templates, updateTemplate, deleteTemplate, setIsBubbleCreateModalOpen } = useTimeBubbles();
   const { isPro } = useAuth();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isMissedTasksDrawerOpen, setIsMissedTasksDrawerOpen] = useState(false);
   const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<BubbleTemplate | undefined>(undefined);
+  const isMobile = useIsMobile();
 
   const allTemplates = [...defaultTemplates.map(t => {
     const userOverride = templates.find(ut => ut.id === t.id);
@@ -58,6 +65,12 @@ export function Sidebar() {
 
   const userCreatedTemplatesCount = templates.filter(t => !t.isDefault).length;
   const templateLimitReached = !isPro && userCreatedTemplatesCount >= 3;
+
+  useEffect(() => {
+    if (isMobile) {
+      onClose();
+    }
+  }, [isMobile, onClose]);
 
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, template: BubbleTemplate) => {
@@ -115,12 +128,19 @@ export function Sidebar() {
   
   const handleOpenCreateBubbleModal = () => {
     setIsBubbleCreateModalOpen(true);
+    if(isMobile) onClose();
   }
 
 
   return (
+    <>
     <aside
-      className="p-4 border-r bg-gradient-to-br from-primary/10 via-background to-accent/10 shrink-0 flex flex-col space-y-4"
+      className={cn(
+        "p-4 border-r bg-gradient-to-br from-primary/10 via-background to-accent/10 shrink-0 flex flex-col space-y-4 transition-transform duration-300 ease-in-out z-50",
+        isMobile ? "absolute top-0 left-0 h-full bg-background" : "relative",
+        isOpen ? "translate-x-0" : "-translate-x-full",
+        !isMobile && "translate-x-0" // Always show on desktop
+      )}
       style={{ width: `${SIDEBAR_WIDTH}px` }}
     >
       <DailySidebarTip />
@@ -215,16 +235,23 @@ export function Sidebar() {
           );
         })}
       </div>
-      <TemplateModal 
-        isOpen={isTemplateModalOpen} 
-        onClose={handleCloseTemplateModal}
-        template={editingTemplate}
-      />
-      <MissedTasksDrawer
-        isOpen={isMissedTasksDrawerOpen}
-        onClose={() => setIsMissedTasksDrawerOpen(false)}
-      />
-      <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
     </aside>
+    {isMobile && isOpen && (
+      <div 
+        className="fixed inset-0 bg-black/30 z-40"
+        onClick={onClose}
+      />
+    )}
+    <TemplateModal 
+      isOpen={isTemplateModalOpen} 
+      onClose={handleCloseTemplateModal}
+      template={editingTemplate}
+    />
+    <MissedTasksDrawer
+      isOpen={isMissedTasksDrawerOpen}
+      onClose={() => setIsMissedTasksDrawerOpen(false)}
+    />
+    <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
+  </>
   );
 }

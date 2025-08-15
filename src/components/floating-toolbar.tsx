@@ -17,6 +17,8 @@ import { Button } from '@/components/ui/button';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { ZoomControls } from './zoom-controls';
 import { SIDEBAR_WIDTH } from '@/lib/constants';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 export function FloatingToolbar() {
   const {
@@ -26,14 +28,18 @@ export function FloatingToolbar() {
     canUndo,
     canRedo,
   } = useTimeBubbles();
+  const isMobile = useIsMobile();
 
   return (
     <div 
-      className="absolute bottom-6 z-40"
-      style={{ 
+      className={cn(
+        "absolute bottom-6 z-40",
+        isMobile ? "left-1/2 -translate-x-1/2" : ""
+      )}
+      style={!isMobile ? { 
         left: `calc(${SIDEBAR_WIDTH}px + (100% - ${SIDEBAR_WIDTH}px) / 2)`,
         transform: 'translateX(-50%)',
-      }}
+      } : {}}
     >
       <div className="flex items-center gap-1 p-1.5 rounded-full border bg-background/60 backdrop-blur-lg shadow-lg">
         <Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo}>

@@ -2,7 +2,7 @@
 'use client';
 
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -16,8 +16,13 @@ import { SmartSuggestions } from '@/components/smart-suggestions';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { cn } from '@/lib/utils';
 import { UserProfile } from './user-profile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-export function Header() {
+interface HeaderProps {
+  onToggleSidebar: () => void;
+}
+
+export function Header({ onToggleSidebar }: HeaderProps) {
   const {
     currentDate,
     setCurrentDate,
@@ -25,14 +30,21 @@ export function Header() {
     goToNextDay,
     goToPreviousDay,
   } = useTimeBubbles();
+  const isMobile = useIsMobile();
 
   return (
-    <header className="flex items-center justify-between p-4 border-b shrink-0 bg-gradient-to-r from-primary/10 via-background to-accent/10">
-      <div className="flex items-center gap-4">
+    <header className="flex items-center justify-between p-2 md:p-4 border-b shrink-0 bg-gradient-to-r from-primary/10 via-background to-accent/10">
+      <div className="flex items-center gap-2 md:gap-4">
+        {isMobile && (
+          <Button variant="ghost" size="icon" onClick={onToggleSidebar}>
+            <Menu className="h-6 w-6" />
+            <span className="sr-only">Toggle Sidebar</span>
+          </Button>
+        )}
         <TimeBubbleLogo className="h-6 w-auto" />
       </div>
-      <div className="flex-1 flex justify-center items-center gap-2">
-        <Button variant="outline" size="sm" onClick={goToToday}>
+      <div className="flex-1 flex justify-center items-center gap-1 md:gap-2">
+        <Button variant="outline" size={isMobile ? 'sm' : 'default'} onClick={goToToday}>
           Today
         </Button>
         <div className="flex items-center gap-1 rounded-md border p-1">
@@ -45,11 +57,11 @@ export function Header() {
               <Button
                 variant={'ghost'}
                 className={cn(
-                  'w-[200px] justify-center text-center font-semibold text-lg',
+                  'w-[150px] md:w-[200px] justify-center text-center font-semibold text-base md:text-lg px-1',
                 )}
               >
-                <CalendarIcon className="mr-2 h-5 w-5" />
-                {format(currentDate, 'MMMM do, yyyy')}
+                <CalendarIcon className="mr-2 h-4 w-4 md:h-5 md:w-5" />
+                {format(currentDate, isMobile ? 'MMM d, yy' : 'MMMM do, yyyy')}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
@@ -67,7 +79,7 @@ export function Header() {
           </Button>
         </div>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         <SmartSuggestions />
         <ThemeToggle />
         <UserProfile />

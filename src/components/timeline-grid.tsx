@@ -16,7 +16,7 @@ export function TimelineGrid() {
   }
 
   return (
-    <div className="absolute inset-0 pointer-events-none grid grid-cols-[80px_1fr]">
+    <div className="absolute inset-0 pointer-events-none grid grid-cols-[50px_1fr] md:grid-cols-[80px_1fr]">
       {/* Time Gutter */}
       <div className="relative border-r">
         {hours.map(hour => (
@@ -25,7 +25,7 @@ export function TimelineGrid() {
             className="text-right pr-2"
             style={{ height: `${hourHeight}px` }}
           >
-            <span className="relative -top-3 text-sm font-medium text-muted-foreground">
+            <span className="relative -top-3 text-xs md:text-sm font-medium text-muted-foreground">
               {formatHour(hour)}
             </span>
           </div>

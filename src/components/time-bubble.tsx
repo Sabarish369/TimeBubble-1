@@ -282,7 +282,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
   return (
     <div
       className={cn(
-        'absolute left-[80px] right-4 rounded-lg p-3 flex flex-col items-start shadow-md transition-all duration-200',
+        'absolute left-[50px] md:left-[80px] right-2 md:right-4 rounded-lg p-2 md:p-3 flex flex-col items-start shadow-md transition-all duration-200',
         'select-none', 
         'outline outline-1 outline-slate-300/50 dark:outline-slate-700/50',
         isDragging && 'shadow-lg scale-105 z-30 cursor-grabbing',
@@ -363,23 +363,23 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
 
       <div className={cn("w-full h-full pointer-events-none relative z-10 flex-1")}>
         {showFullContent ? (
-          <div className={cn("flex-grow overflow-hidden flex items-center gap-3 h-full")}>
-            <Icon className="h-6 w-6 text-slate-700 dark:text-white shrink-0" />
+          <div className={cn("flex-grow overflow-hidden flex items-center gap-2 md:gap-3 h-full")}>
+            <Icon className="h-5 w-5 md:h-6 md:w-6 text-slate-700 dark:text-white shrink-0" />
             <div className="flex-1 overflow-hidden">
-              <p className="text-base font-semibold text-slate-800 dark:text-white pointer-events-none truncate">{block.title}</p>
-              <p className="text-sm text-slate-700 dark:text-white/80 pointer-events-none">
+              <p className="text-sm md:text-base font-semibold text-slate-800 dark:text-white pointer-events-none truncate">{block.title}</p>
+              <p className="text-xs md:text-sm text-slate-700 dark:text-white/80 pointer-events-none">
                 {format(startTimeToDisplay, 'p')} - {format(endTimeToDisplay, 'p')}
               </p>
             </div>
           </div>
         ) : showCompactContent ? (
-           <div className={cn("flex-grow overflow-hidden flex items-center gap-3 h-full")}>
+           <div className={cn("flex-grow overflow-hidden flex items-center gap-2 md:gap-3 h-full")}>
             <Icon className="h-5 w-5 text-slate-700 dark:text-white shrink-0" />
             <p className="text-sm font-semibold text-slate-800 dark:text-white pointer-events-none truncate">{block.title}</p>
           </div>
         ) : (
           <div className='w-full h-full flex items-center justify-center pointer-events-none'>
-            <p className="text-xs font-semibold text-slate-800 dark:text-white truncate px-4">{block.title}</p>
+            <p className="text-xs font-semibold text-slate-800 dark:text-white truncate px-2">{block.title}</p>
           </div>
         )}
       </div>

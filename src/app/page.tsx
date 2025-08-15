@@ -18,6 +18,7 @@ import { LoginModal } from "@/components/login-modal";
 import { AuthGuard } from "@/components/auth-guard";
 import { useAuth } from "@/context/auth-context";
 import { ProModal } from "@/components/pro-modal";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 function AppContent() {
   const mainRef = useRef<HTMLElement>(null);
@@ -36,6 +37,8 @@ function AppContent() {
   
   const { user } = useAuth();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     // Show login modal if user is not authenticated
@@ -81,10 +84,16 @@ function AppContent() {
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground font-body overflow-hidden">
-      <Header />
+      <Header onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
       <div className="flex flex-1 overflow-hidden relative">
-        <Sidebar />
-        <main ref={mainRef} className={cn("flex-1 overflow-y-auto bg-gradient-to-b from-primary/5 via-background to-accent/5 no-scrollbar")}>
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        <main 
+          ref={mainRef} 
+          className={cn(
+            "flex-1 overflow-y-auto bg-gradient-to-b from-primary/5 via-background to-accent/5 no-scrollbar transition-all duration-300",
+            isSidebarOpen && isMobile && "opacity-50 pointer-events-none"
+          )}
+        >
           <Timeline scrollContainerRef={mainRef} />
         </main>
         <FloatingToolbar />
