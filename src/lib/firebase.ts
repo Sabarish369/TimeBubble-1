@@ -16,18 +16,18 @@ let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 
-// Initialize Firebase for client-side only if the config is valid
-if (firebaseConfig.apiKey) {
-    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    auth = getAuth(app);
-    db = getFirestore(app);
-} else {
-    console.error("Firebase config is missing or invalid. Please check your .env file.");
-    // Provide dummy objects to prevent app crash
+// Check if Firebase config is valid. This is a crucial check.
+if (!firebaseConfig.apiKey) {
+    console.error("Firebase config is missing or invalid. Please ensure your NEXT_PUBLIC_FIREBASE environment variables are set correctly in your .env file.");
+    // Provide dummy objects to prevent the app from crashing on the server or during build.
     app = {} as FirebaseApp;
     auth = {} as Auth;
     db = {} as Firestore;
+} else {
+    // Initialize Firebase only if it hasn't been initialized yet.
+    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
 }
-
 
 export { app, auth, db };
