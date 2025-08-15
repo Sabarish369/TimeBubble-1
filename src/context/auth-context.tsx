@@ -103,7 +103,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       handleAuthError(err);
     } finally {
-      // Let onAuthStateChanged handle setting loading to false
+      // Let onAuthStateChanged handle setting loading to false for sign-in/up
+      // For other actions that don't trigger onAuthStateChanged, we might need to set it here.
+      // But for login/logout, onAuthStateChanged is the source of truth for loading state.
     }
   };
 
@@ -124,11 +126,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
-    await performAuthAction(async () => {
+    if (!auth || !Object.keys(auth).length) {
+      setError("Firebase is not configured. Cannot perform authentication.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
         const provider = new GoogleAuthProvider();
-        // The onAuthStateChanged listener will handle the user state update.
+        // The onAuthStateChanged listener will handle the user state update and set loading to false.
         await signInWithPopup(auth, provider);
-    });
+    } catch (err) {
+        handleAuthError(err);
+        // Explicitly set loading to false on error, especially for popup-closed-by-user
+        setLoading(false);
+    }
   };
 
   const signOut = async () => {
