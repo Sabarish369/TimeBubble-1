@@ -321,8 +321,15 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   useEffect(() => {
     const onNotify = (block: TimeBlock) => {
       playNotificationSound();
-      updateBlock(block.id, { notified: true, actionable: true, notificationScheduled: false }, true);
-      setActionableBlock(block);
+      // Find the latest version of the block from state
+      setTimeBlocks(currentBlocks => {
+        const latestBlock = currentBlocks.find(b => b.id === block.id);
+        if (latestBlock) {
+          updateBlock(latestBlock.id, { notified: true, actionable: true, notificationScheduled: false }, true);
+          setActionableBlock(latestBlock);
+        }
+        return currentBlocks;
+      })
     };
 
     NotificationManager.clearAllNotifications();
@@ -330,11 +337,23 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     timeBlocks.forEach(block => {
       if (block.completed || block.notificationScheduled) return;
       
-      if (ensureDateObject(block.startTime) > new Date()) {
+      const startTime = ensureDateObject(block.startTime);
+      if (startTime > new Date()) {
         NotificationManager.scheduleNotification(block, onNotify);
-        updateBlock(block.id, { notificationScheduled: true }, false);
+        // We need to update the block in state without causing a re-render loop
+        // So we update a new copy and then set it.
+        setTimeBlocks(currentBlocks => {
+            const index = currentBlocks.findIndex(b => b.id === block.id);
+            if (index !== -1 && !currentBlocks[index].notificationScheduled) {
+                const newBlocks = [...currentBlocks];
+                newBlocks[index] = { ...newBlocks[index], notificationScheduled: true };
+                return newBlocks;
+            }
+            return currentBlocks;
+        });
       }
     });
+    // This effect should run when blocks change.
   }, [timeBlocks, updateBlock]);
   
   useEffect(() => {
@@ -445,7 +464,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     }
   }, [theme]);
 
-  const getBlocksForDate = async (date: Date): Promise<TimeBlock[]> => {
+  const getBlocksForDate = useCallback(async (date: Date): Promise<TimeBlock[]> => {
     if (!user) return [];
     const dayKey = getDayKey(date);
     const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dayKey);
@@ -461,7 +480,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         console.error("Error fetching blocks for date:", error);
         return [];
     }
-  };
+  }, [user]);
   
   const addBlockOnDate = useCallback(async (block: Omit<TimeBlock, 'id' | 'completed'>, date: Date) => {
     if (!user) {
