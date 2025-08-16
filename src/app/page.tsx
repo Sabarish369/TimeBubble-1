@@ -82,7 +82,7 @@ export default function LandingPage() {
           <section className="container mx-auto px-4 -mt-16">
              <div className="relative mx-auto border-slate-800 dark:border-slate-800 bg-slate-800 border-[8px] rounded-t-xl w-full h-[auto] max-w-4xl shadow-2xl">
                 <div className="rounded-xl overflow-hidden bg-white">
-                  <Image src="https://placehold.co/1200x750.png" data-ai-hint="app screenshot" alt="TimeBubble App Preview" width={1200} height={750} className="w-full h-auto" />
+                  <Image src="/timebubble-screenshot.png" alt="TimeBubble App Preview" width={1200} height={750} className="w-full h-auto" />
                 </div>
             </div>
           </section>
