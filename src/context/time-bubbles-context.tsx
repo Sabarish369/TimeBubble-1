@@ -23,6 +23,13 @@ export interface MissedTaskGroup {
     tasks: TimeBlock[];
 }
 
+interface HistoryState {
+  [dateKey: string]: {
+    snapshots: TimeBlock[][];
+    index: number;
+  };
+}
+
 interface TimeBubblesContextType {
   timeBlocks: TimeBlock[];
   templates: BubbleTemplate[];
@@ -105,8 +112,7 @@ const playNotificationSound = () => {
 export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
-  const [history, setHistory] = useState<{ [dateKey: string]: TimeBlock[][] }>({});
-  const [historyIndex, setHistoryIndex] = useState<{ [dateKey: string]: number }>({});
+  const [history, setHistory] = useState<HistoryState>({});
   const lastSavedBlocks = useRef<TimeBlock[]>([]);
   
   const [templates, setTemplates] = useState<BubbleTemplate[]>([]);
@@ -154,27 +160,30 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const updateHistory = useCallback((date: Date, newBlocks: TimeBlock[]) => {
     const dateKey = getDayKey(date);
     setHistory(prev => {
-      const dateHistory = prev[dateKey] ?? [lastSavedBlocks.current];
-      const currentIndex = prev[dateKey] ? historyIndex[dateKey] ?? dateHistory.length - 1 : dateHistory.length - 1;
-      const newHistoryForDate = dateHistory.slice(0, currentIndex + 1);
-      newHistoryForDate.push(newBlocks);
-      return { ...prev, [dateKey]: newHistoryForDate };
+        const currentHistory = prev[dateKey] ?? { snapshots: [[]], index: 0 };
+        const newSnapshots = currentHistory.snapshots.slice(0, currentHistory.index + 1);
+        newSnapshots.push(newBlocks);
+        
+        return {
+            ...prev,
+            [dateKey]: {
+                snapshots: newSnapshots,
+                index: newSnapshots.length - 1,
+            },
+        };
     });
-    setHistoryIndex(prev => ({ ...prev, [dateKey]: (prev[dateKey] ?? -1) + 1 }));
-}, [historyIndex]);
+  }, []);
   
 const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: TimeBlock[]) => TimeBlock[]), date: Date, saveToDb: boolean = false) => {
   let finalBlocks: TimeBlock[] = [];
   setTimeBlocks(prevBlocks => {
       finalBlocks = typeof newBlocks === 'function' ? newBlocks(prevBlocks) : newBlocks;
+      updateHistory(date, finalBlocks);
+      if (saveToDb) {
+          saveTimeBlocksToFirestore(finalBlocks, date);
+      }
       return finalBlocks;
   });
-
-  updateHistory(date, finalBlocks);
-  
-  if (saveToDb) {
-      saveTimeBlocksToFirestore(finalBlocks, date);
-  }
 }, [updateHistory, saveTimeBlocksToFirestore]);
   
   const getDailyTips = useCallback(async () => {
@@ -293,6 +302,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   }, []);
 
   const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>, saveToDb: boolean = false) => {
+    let finalBlocks: TimeBlock[] = [];
     setTimeBlocks(prev => {
         const blockIndex = prev.findIndex(b => b.id === id);
         if (blockIndex === -1) return prev;
@@ -310,14 +320,14 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         }
         
         newBlocks[blockIndex] = updatedBlock;
-
-        if (saveToDb) {
-            saveTimeBlocksToFirestore(newBlocks, currentDate);
-        }
-        
-        updateHistory(currentDate, newBlocks);
+        finalBlocks = newBlocks;
         return newBlocks;
     });
+
+    if (saveToDb) {
+        saveTimeBlocksToFirestore(finalBlocks, currentDate);
+    }
+    updateHistory(currentDate, finalBlocks);
   }, [currentDate, saveTimeBlocksToFirestore, findAvailableSlot, updateHistory]);
   
   useEffect(() => {
@@ -443,8 +453,10 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         setTimeBlocks(blocksFromDb);
         lastSavedBlocks.current = blocksFromDb;
 
-        setHistory(prev => ({ ...prev, [dateKey]: [blocksFromDb] }));
-        setHistoryIndex(prev => ({ ...prev, [dateKey]: 0 }));
+        setHistory(prev => ({ 
+            ...prev, 
+            [dateKey]: { snapshots: [blocksFromDb], index: 0 }
+        }));
         setIsLoaded(true);
     }, (error) => {
         console.error("Error listening to day data:", error);
@@ -831,27 +843,31 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
   const undo = () => {
     const dateKey = getDayKey(currentDate);
-    const dateHistory = history[dateKey] ?? [];
-    const dateHistoryIndex = historyIndex[dateKey] ?? -1;
-    if (dateHistoryIndex > 0) {
-      const newIndex = dateHistoryIndex - 1;
-      setHistoryIndex(prev => ({...prev, [dateKey]: newIndex}));
-      const newBlocks = dateHistory[newIndex];
+    const dayHistory = history[dateKey];
+    if (dayHistory && dayHistory.index > 0) {
+      const newIndex = dayHistory.index - 1;
+      const newBlocks = dayHistory.snapshots[newIndex];
       setTimeBlocks(newBlocks);
       saveTimeBlocksToFirestore(newBlocks, currentDate);
+      setHistory(prev => ({
+        ...prev,
+        [dateKey]: { ...dayHistory, index: newIndex },
+      }));
     }
   };
 
   const redo = () => {
     const dateKey = getDayKey(currentDate);
-    const dateHistory = history[dateKey] ?? [];
-    const dateHistoryIndex = historyIndex[dateKey] ?? -1;
-    if (dateHistoryIndex < dateHistory.length - 1) {
-      const newIndex = dateHistoryIndex + 1;
-      setHistoryIndex(prev => ({...prev, [dateKey]: newIndex}));
-      const newBlocks = dateHistory[newIndex];
+    const dayHistory = history[dateKey];
+    if (dayHistory && dayHistory.index < dayHistory.snapshots.length - 1) {
+      const newIndex = dayHistory.index + 1;
+      const newBlocks = dayHistory.snapshots[newIndex];
       setTimeBlocks(newBlocks);
       saveTimeBlocksToFirestore(newBlocks, currentDate);
+      setHistory(prev => ({
+        ...prev,
+        [dateKey]: { ...dayHistory, index: newIndex },
+      }));
     }
   };
   
@@ -876,8 +892,9 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   };
 
   const dateKey = getDayKey(currentDate);
-  const canUndo = (historyIndex[dateKey] ?? 0) > 0;
-  const canRedo = (historyIndex[dateKey] ?? -1) < (history[dateKey]?.length - 1);
+  const dayHistory = history[dateKey];
+  const canUndo = dayHistory ? dayHistory.index > 0 : false;
+  const canRedo = dayHistory ? dayHistory.index < dayHistory.snapshots.length - 1 : false;
 
   const value = {
     timeBlocks,
@@ -923,7 +940,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     theme,
     setTheme,
     undo,
-redo,
+    redo,
     canUndo,
     canRedo,
     getMissedTasks,
