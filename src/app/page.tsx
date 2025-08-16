@@ -52,7 +52,7 @@ export default function LandingPage() {
     <>
       <div className="flex flex-col min-h-screen bg-background text-foreground font-body antialiased">
         {/* Header */}
-        <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg">
+        <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
           <div className="container mx-auto flex items-center justify-between p-4">
             <TimeBubbleLogo className="h-6 w-auto" />
             <div className="flex items-center gap-4">
@@ -81,7 +81,7 @@ export default function LandingPage() {
           {/* App Preview Image */}
           <section className="container mx-auto px-4 -mt-16">
              <div className="relative mx-auto border-slate-800 dark:border-slate-800 bg-slate-800 border-[8px] rounded-t-xl w-full h-[auto] max-w-4xl shadow-2xl">
-                <div className="rounded-xl overflow-hidden bg-white">
+                <div className="rounded-xl overflow-hidden bg-white dark:bg-slate-900">
                   <Image src="/timebubble-screenshot.png" alt="TimeBubble App Preview" width={1200} height={750} className="w-full h-auto" />
                 </div>
             </div>
@@ -147,7 +147,7 @@ export default function LandingPage() {
         </main>
 
         {/* Footer */}
-        <footer className="border-t">
+        <footer className="border-t border-border/50">
           <div className="container mx-auto px-4 py-6 flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center gap-2">
               <TimeBubbleLogo className="h-5 w-auto" />
