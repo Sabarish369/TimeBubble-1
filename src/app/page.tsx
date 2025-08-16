@@ -78,21 +78,6 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* App Preview Image */}
-          <section className="container mx-auto px-4 -mt-16">
-             <div className="relative mx-auto w-full max-w-4xl">
-                  <Image
-                    src="https://placehold.co/1200x750.png"
-                    alt="TimeBubble App Preview"
-                    width={1200}
-                    height={750}
-                    className="rounded-xl shadow-2xl ring-1 ring-white/10"
-                    data-ai-hint="app screenshot"
-                  />
-            </div>
-          </section>
-          
-
           {/* Features Section */}
           <section id="features" className="py-20 md:py-28 bg-primary/5">
             <div className="container mx-auto px-4">
