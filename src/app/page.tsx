@@ -80,17 +80,15 @@ export default function LandingPage() {
 
           {/* App Preview Image */}
           <section className="container mx-auto px-4 -mt-16">
-             <div className="relative mx-auto border-slate-800 dark:border-slate-800 bg-slate-800 border-[8px] rounded-t-xl w-full h-[auto] max-w-4xl shadow-2xl">
-                <div className="rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+             <div className="relative mx-auto w-full max-w-4xl">
                   <Image
-                    src="/timebubbleshot.png"
+                    src="https://placehold.co/1200x750.png"
                     alt="TimeBubble App Preview"
                     width={1200}
                     height={750}
-                    className="w-full h-auto"
+                    className="rounded-xl shadow-2xl ring-1 ring-white/10"
                     data-ai-hint="app screenshot"
                   />
-                </div>
             </div>
           </section>
           
