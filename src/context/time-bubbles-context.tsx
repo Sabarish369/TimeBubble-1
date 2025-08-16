@@ -419,21 +419,22 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dateKey);
 
     const unsubscribe = onSnapshot(dayDocRef, (docSnap) => {
+        // This check prevents Firestore from overwriting local state during an undo/redo action.
+        if (docSnap.metadata.hasPendingWrites) {
+            return;
+        }
+
         let blocksFromDb: TimeBlock[] = [];
         if (docSnap.exists() && docSnap.data().blocks) {
             blocksFromDb = docSnap.data().blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
         }
         
-        // This is a critical check to prevent local state from being overwritten during an action
-        // We only update if the remote data is different from the current state.
-        if (JSON.stringify(blocksFromDb) !== JSON.stringify(timeBlocks)) {
-          setTimeBlocks(blocksFromDb);
-          // Reset history for the day with the new data from DB
-          setHistory(prev => ({
-              ...prev,
-              [dateKey]: { snapshots: [blocksFromDb], index: 0 }
-          }));
-        }
+        setTimeBlocks(blocksFromDb);
+        // Reset history for the day with the new data from DB
+        setHistory(prev => ({
+            ...prev,
+            [dateKey]: { snapshots: [blocksFromDb], index: 0 }
+        }));
         
         if (!isLoaded) {
             setIsLoaded(true);
@@ -821,10 +822,8 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     if (dayHistory && dayHistory.index > 0) {
       const newIndex = dayHistory.index - 1;
       const newBlocks = dayHistory.snapshots[newIndex];
-      // Set the blocks locally and save to Firestore
       setTimeBlocks(newBlocks);
       saveTimeBlocksToFirestore(newBlocks, currentDate);
-      // Update just the index in the history state
       setHistory(prev => ({
         ...prev,
         [dateKey]: { ...dayHistory, index: newIndex },
@@ -838,10 +837,8 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     if (dayHistory && dayHistory.index < dayHistory.snapshots.length - 1) {
       const newIndex = dayHistory.index + 1;
       const newBlocks = dayHistory.snapshots[newIndex];
-      // Set the blocks locally and save to Firestore
       setTimeBlocks(newBlocks);
       saveTimeBlocksToFirestore(newBlocks, currentDate);
-      // Update just the index in the history state
       setHistory(prev => ({
         ...prev,
         [dateKey]: { ...dayHistory, index: newIndex },
@@ -850,12 +847,11 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   };
   
   const setCurrentDate = (date: Date) => {
-    // Save any pending changes before switching date
     saveTimeBlocksToFirestore(timeBlocks, currentDate);
     
     setCurrentDateState(startOfDay(date));
-    setIsLoaded(false); // Trigger loading state for new date
-    setTimeBlocks([]); // Clear current blocks to prevent flash of old content
+    setIsLoaded(false); 
+    setTimeBlocks([]); 
   };
   
   const goToToday = () => {
