@@ -83,7 +83,7 @@ export default function LandingPage() {
              <div className="relative mx-auto border-slate-800 dark:border-slate-800 bg-slate-800 border-[8px] rounded-t-xl w-full h-[auto] max-w-4xl shadow-2xl">
                 <div className="rounded-xl overflow-hidden bg-white dark:bg-slate-900">
                   <Image
-                    src="https://placehold.co/1200x750.png"
+                    src="/timebubbleshot.png"
                     alt="TimeBubble App Preview"
                     width={1200}
                     height={750}
