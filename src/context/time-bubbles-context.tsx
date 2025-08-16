@@ -113,7 +113,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [history, setHistory] = useState<HistoryState>({});
-  const lastSavedBlocks = useRef<TimeBlock[]>([]);
   
   const [templates, setTemplates] = useState<BubbleTemplate[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -152,15 +151,16 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     if (!user || !blocks) return;
     const dateKey = getDayKey(date);
     const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dateKey);
+    // Ensure all startTimes are converted to string for Firestore serialization
     const blocksToSave = blocks.map(b => ({ ...b, startTime: ensureDateObject(b.startTime).toISOString() }));
     await setDoc(dayDocRef, { blocks: blocksToSave }, { merge: true });
-    lastSavedBlocks.current = blocks;
   }, [user]);
 
   const updateHistory = useCallback((date: Date, newBlocks: TimeBlock[]) => {
     const dateKey = getDayKey(date);
     setHistory(prev => {
         const currentHistory = prev[dateKey] ?? { snapshots: [[]], index: 0 };
+        // If we are undoing, we don't want to create a new branch in history
         const newSnapshots = currentHistory.snapshots.slice(0, currentHistory.index + 1);
         newSnapshots.push(newBlocks);
         
@@ -178,12 +178,12 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   let finalBlocks: TimeBlock[] = [];
   setTimeBlocks(prevBlocks => {
       finalBlocks = typeof newBlocks === 'function' ? newBlocks(prevBlocks) : newBlocks;
-      updateHistory(date, finalBlocks);
-      if (saveToDb) {
-          saveTimeBlocksToFirestore(finalBlocks, date);
-      }
       return finalBlocks;
   });
+  updateHistory(date, finalBlocks);
+  if (saveToDb) {
+      saveTimeBlocksToFirestore(finalBlocks, date);
+  }
 }, [updateHistory, saveTimeBlocksToFirestore]);
   
   const getDailyTips = useCallback(async () => {
@@ -301,9 +301,8 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     return lastEndTime; // Place at the very end
   }, []);
 
-  const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>, saveToDb: boolean = false) => {
-    let finalBlocks: TimeBlock[] = [];
-    setTimeBlocks(prev => {
+  const updateBlock = useCallback((id: string, updates: Partial<TimeBlock>, saveToDb: boolean = true) => {
+    setTimeBlocksWithHistory(prev => {
         const blockIndex = prev.findIndex(b => b.id === id);
         if (blockIndex === -1) return prev;
         
@@ -314,33 +313,25 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
             setLastCompletedBlock(updatedBlock);
         }
 
+        // If a drag/resize happened, resolve collisions
         if (saveToDb && (updates.startTime || updates.duration)) {
             const newStartTime = findAvailableSlot(updatedBlock.startTime, updatedBlock.duration, newBlocks, id);
             updatedBlock.startTime = newStartTime;
         }
         
         newBlocks[blockIndex] = updatedBlock;
-        finalBlocks = newBlocks;
         return newBlocks;
-    });
-
-    if (saveToDb) {
-        saveTimeBlocksToFirestore(finalBlocks, currentDate);
-    }
-    updateHistory(currentDate, finalBlocks);
-  }, [currentDate, saveTimeBlocksToFirestore, findAvailableSlot, updateHistory]);
+    }, currentDate, saveToDb);
+  }, [currentDate, setTimeBlocksWithHistory, findAvailableSlot]);
   
   useEffect(() => {
     const onEndTimeNotify = (block: TimeBlock) => {
       playNotificationSound();
-      setTimeBlocks(currentBlocks => {
-        const latestBlock = currentBlocks.find(b => b.id === block.id);
-        if (latestBlock && !latestBlock.actionable) {
-          updateBlock(latestBlock.id, { notified: true, actionable: true }, true);
-          setActionableBlock(latestBlock);
-        }
-        return currentBlocks;
-      });
+      const latestBlock = timeBlocks.find(b => b.id === block.id);
+      if (latestBlock && !latestBlock.actionable) {
+        updateBlock(latestBlock.id, { notified: true, actionable: true }, true);
+        setActionableBlock(latestBlock);
+      }
     };
 
     const onPreNotify = (block: TimeBlock) => {
@@ -357,9 +348,10 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         const startTime = ensureDateObject(block.startTime);
         if (startTime > new Date()) {
           NotificationManager.scheduleNotification(block, onEndTimeNotify, onPreNotify);
+          // We mark it as scheduled locally to prevent rescheduling
           setTimeBlocks(currentBlocks => {
             const index = currentBlocks.findIndex(b => b.id === block.id);
-            if (index !== -1 && !currentBlocks[index].notificationScheduled) {
+            if (index !== -1) {
               const newBlocks = [...currentBlocks];
               newBlocks[index] = { ...newBlocks[index], notificationScheduled: true };
               return newBlocks;
@@ -415,22 +407,6 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
         return () => clearInterval(intervalId);
     }, [isMissedTasksDrawerOpen, toast, getMissedTasks]);
-  
-  useEffect(() => {
-    const hasUnsavedChanges = JSON.stringify(timeBlocks) !== JSON.stringify(lastSavedBlocks.current);
-    if (isLoaded && hasUnsavedChanges && timeBlocks.length > 0) {
-      const nonDragUpdates = timeBlocks.filter(block => {
-          const lastSavedVersion = lastSavedBlocks.current.find(b => b.id === block.id);
-          if (!lastSavedVersion) return true; // new block
-          // Only save if a property other than position/duration changed without a DB save flag
-          return block.completed !== lastSavedVersion.completed || block.title !== lastSavedVersion.title;
-      });
-
-      if (nonDragUpdates.length > 0) {
-          saveTimeBlocksToFirestore(timeBlocks, currentDate);
-      }
-    }
-  }, [timeBlocks, isLoaded, currentDate, saveTimeBlocksToFirestore]);
 
 
   useEffect(() => {
@@ -444,20 +420,24 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
     const unsubscribe = onSnapshot(dayDocRef, (docSnap) => {
         let blocksFromDb: TimeBlock[] = [];
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.blocks) {
-                blocksFromDb = data.blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
-            }
+        if (docSnap.exists() && docSnap.data().blocks) {
+            blocksFromDb = docSnap.data().blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
         }
-        setTimeBlocks(blocksFromDb);
-        lastSavedBlocks.current = blocksFromDb;
-
-        setHistory(prev => ({ 
-            ...prev, 
-            [dateKey]: { snapshots: [blocksFromDb], index: 0 }
-        }));
-        setIsLoaded(true);
+        
+        // This is a critical check to prevent local state from being overwritten during an action
+        // We only update if the remote data is different from the current state.
+        if (JSON.stringify(blocksFromDb) !== JSON.stringify(timeBlocks)) {
+          setTimeBlocks(blocksFromDb);
+          // Reset history for the day with the new data from DB
+          setHistory(prev => ({
+              ...prev,
+              [dateKey]: { snapshots: [blocksFromDb], index: 0 }
+          }));
+        }
+        
+        if (!isLoaded) {
+            setIsLoaded(true);
+        }
     }, (error) => {
         console.error("Error listening to day data:", error);
         toast({ title: 'Connection Error', description: 'Could not sync your data.', variant: 'destructive' });
@@ -465,7 +445,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     });
 
     return () => unsubscribe();
-  }, [user, currentDate, toast]);
+  }, [user, currentDate, toast, isLoaded]); // Rerun when user or date changes
 
   useEffect(() => {
     if (!user || !db) return;
@@ -550,21 +530,15 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         return;
     }
     
-    let blocksForDate: TimeBlock[] = [];
-    // If we're adding to the current date, use the state. Otherwise, fetch.
-    if (getDayKey(date) === getDayKey(currentDate)) {
-        blocksForDate = timeBlocks;
-    } else {
-        blocksForDate = await getBlocksForDate(date);
-    }
+    const isCurrentOpenDate = getDayKey(date) === getDayKey(currentDate);
+    const blocksForDate = isCurrentOpenDate ? timeBlocks : await getBlocksForDate(date);
             
     const newStartTime = findAvailableSlot(block.startTime, block.duration, blocksForDate);
     const newBlock: TimeBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false, notified: false, actionable: false, notificationScheduled: false };
     
     const newBlocks = [...blocksForDate, newBlock];
     
-    // If it's the current date, update the state. In either case, save to DB.
-    if (getDayKey(date) === getDayKey(currentDate)) {
+    if (isCurrentOpenDate) {
         setTimeBlocksWithHistory(newBlocks, date, true);
     } else {
         await saveTimeBlocksToFirestore(newBlocks, date);
@@ -847,8 +821,10 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     if (dayHistory && dayHistory.index > 0) {
       const newIndex = dayHistory.index - 1;
       const newBlocks = dayHistory.snapshots[newIndex];
+      // Set the blocks locally and save to Firestore
       setTimeBlocks(newBlocks);
       saveTimeBlocksToFirestore(newBlocks, currentDate);
+      // Update just the index in the history state
       setHistory(prev => ({
         ...prev,
         [dateKey]: { ...dayHistory, index: newIndex },
@@ -862,8 +838,10 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     if (dayHistory && dayHistory.index < dayHistory.snapshots.length - 1) {
       const newIndex = dayHistory.index + 1;
       const newBlocks = dayHistory.snapshots[newIndex];
+      // Set the blocks locally and save to Firestore
       setTimeBlocks(newBlocks);
       saveTimeBlocksToFirestore(newBlocks, currentDate);
+      // Update just the index in the history state
       setHistory(prev => ({
         ...prev,
         [dateKey]: { ...dayHistory, index: newIndex },
@@ -872,11 +850,12 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   };
   
   const setCurrentDate = (date: Date) => {
-    if(isLoaded && JSON.stringify(timeBlocks) !== JSON.stringify(lastSavedBlocks.current)) {
-      saveTimeBlocksToFirestore(timeBlocks, currentDate);
-    }
+    // Save any pending changes before switching date
+    saveTimeBlocksToFirestore(timeBlocks, currentDate);
+    
     setCurrentDateState(startOfDay(date));
     setIsLoaded(false); // Trigger loading state for new date
+    setTimeBlocks([]); // Clear current blocks to prevent flash of old content
   };
   
   const goToToday = () => {
