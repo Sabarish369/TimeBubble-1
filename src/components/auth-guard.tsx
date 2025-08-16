@@ -4,10 +4,20 @@
 import { useAuth } from '@/context/auth-context';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { LoginModal } from '@/components/login-modal';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   
+  useEffect(() => {
+    if (!loading && !user && pathname?.startsWith('/app')) {
+      router.push('/');
+    }
+  }, [user, loading, router, pathname]);
+
   if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -16,14 +26,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
   
-  if (!user) {
-    // Although the modal is controlled on page.tsx,
-    // this ensures nothing is rendered behind it if the user is not authenticated.
-    // It also provides a fallback.
-    return (
+  // If on an app route and no user, show loading spinner while redirecting
+  if (pathname?.startsWith('/app') && !user) {
+     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
-        <LoginModal isOpen={true} onClose={() => {}} />
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-40" />
+        <LoadingSpinner className="h-40 w-40 text-primary" />
       </div>
     );
   }

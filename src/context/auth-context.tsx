@@ -16,6 +16,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -38,6 +39,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isPro, setIsPro] = useState(false); // Default to false
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
+
+  const setLoginCookie = (loggedIn: boolean) => {
+    if (typeof window !== 'undefined') {
+      document.cookie = `firebase-auth-logged-in=${loggedIn}; path=/; max-age=${loggedIn ? 30 * 24 * 60 * 60 : 0}`;
+    }
+  };
 
   useEffect(() => {
     if (!auth || !Object.keys(auth).length) {
@@ -49,6 +57,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      setLoginCookie(!!user);
+      if (user) {
+        // router.push('/app'); // Redirect on login
+      }
       // In a real app, you'd check for Pro status from your database here.
       // For now, we'll leave it as the default `false`.
       // Example: if (user) { checkProStatus(user.uid).then(setIsPro); }
@@ -166,7 +178,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
-    await performAuthAction(() => firebaseSignOut(auth));
+    await performAuthAction(async () => {
+      await firebaseSignOut(auth);
+      router.push('/'); // Redirect to landing page on sign out
+    });
   };
   
   const sendPasswordReset = async (email: string) => {
