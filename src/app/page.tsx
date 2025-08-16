@@ -8,8 +8,9 @@ import { ArrowRight, BarChart, BrainCircuit, GanttChartSquare, Sparkles, Wand2 }
 import Image from "next/image";
 import Link from "next/link";
 import { LoginModal } from "@/components/login-modal";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 function FeatureCard({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) {
   return (
@@ -25,19 +26,27 @@ function FeatureCard({ icon: Icon, title, description }: { icon: React.ElementTy
   );
 }
 
-function TestimonialCard({ text, author, role }: { text: string, author: string, role: string }) {
-  return (
-    <div className="p-6 rounded-lg bg-background border shadow-sm">
-      <blockquote className="italic text-foreground/80 mb-4">“{text}”</blockquote>
-      <p className="font-semibold text-right">{author}</p>
-      <p className="text-sm text-muted-foreground text-right">{role}</p>
-    </div>
-  );
-}
-
 export default function LandingPage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const router = useRouter();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  useEffect(() => {
+    // If not loading and user is logged in, redirect to the app
+    if (!loading && user) {
+      router.push('/app');
+    }
+  }, [user, loading, router]);
+
+  // While loading auth state, or if user is found and we are about to redirect, show a spinner.
+  if (loading || user) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <LoadingSpinner className="h-40 w-40 text-primary" />
+      </div>
+    );
+  }
+
 
   return (
     <>
@@ -47,15 +56,7 @@ export default function LandingPage() {
           <div className="container mx-auto flex items-center justify-between p-4">
             <TimeBubbleLogo className="h-6 w-auto" />
             <div className="flex items-center gap-4">
-              {user ? (
-                <Button asChild>
-                  <Link href="/app">
-                    Go to App <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              ) : (
-                <Button onClick={() => setIsLoginModalOpen(true)}>Sign In</Button>
-              )}
+              <Button onClick={() => setIsLoginModalOpen(true)}>Sign In</Button>
             </div>
           </div>
         </header>
@@ -71,10 +72,8 @@ export default function LandingPage() {
               <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
                 TimeBubble is a visual time management tool that helps you see your day, plan with clarity, and achieve focus like never before. Stop managing lists and start shaping your time.
               </p>
-              <Button size="lg" asChild>
-                <Link href={user ? "/app" : "#"}>
-                  Get Started for Free <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
+              <Button size="lg" onClick={() => setIsLoginModalOpen(true)}>
+                Get Started for Free <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </section>
@@ -83,7 +82,7 @@ export default function LandingPage() {
           <section className="container mx-auto px-4 -mt-16">
              <div className="relative mx-auto border-slate-800 dark:border-slate-800 bg-slate-800 border-[8px] rounded-t-xl w-full h-[auto] max-w-4xl shadow-2xl">
                 <div className="rounded-xl overflow-hidden bg-white">
-                  <img src="https://placehold.co/1200x750.png" data-ai-hint="app screenshot" alt="TimeBubble App Preview" className="w-full h-auto" />
+                  <Image src="https://placehold.co/1200x750.png" data-ai-hint="app screenshot" alt="TimeBubble App Preview" width={1200} height={750} className="w-full h-auto" />
                 </div>
             </div>
           </section>
@@ -140,10 +139,8 @@ export default function LandingPage() {
               <p className="text-lg text-muted-foreground mt-4 max-w-2xl mx-auto mb-8">
                 Start organizing your life with intention. It's free to get started.
               </p>
-              <Button size="lg" asChild>
-                <Link href={user ? "/app" : "#"}>
-                  Start Floating Bubbles Now
-                </Link>
+              <Button size="lg" onClick={() => setIsLoginModalOpen(true)}>
+                Start Floating Bubbles Now
               </Button>
             </div>
           </section>
