@@ -9,6 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 
 export async function enablePush({ userId }: { userId: string }) {
+  // All logic is temporarily commented out to prevent errors.
+  /*
   if (!messaging) {
     throw new Error('Firebase Messaging is not initialized.');
   }
@@ -64,4 +66,7 @@ export async function enablePush({ userId }: { userId: string }) {
     }
     throw new Error('An unknown error occurred during push setup.');
   }
+  */
+  console.log("Push notifications are temporarily disabled.");
+  return Promise.resolve({ ok: false, message: "Temporarily disabled" });
 }
