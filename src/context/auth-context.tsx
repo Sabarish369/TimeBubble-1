@@ -14,15 +14,16 @@ import {
   sendPasswordResetEmail,
   type User,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
-  isPro: boolean; // Add isPro flag
+  isPro: boolean; 
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -36,7 +37,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isPro, setIsPro] = useState(false); // Default to false
+  const [isPro, setIsPro] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -54,25 +55,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    const checkProStatus = async (user: User) => {
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists() && userDoc.data().isPro) {
+        setIsPro(true);
+      } else {
+        setIsPro(false);
+        // If the doc doesn't exist, create it for the user
+        if (!userDoc.exists()) {
+          setDoc(userDocRef, { email: user.email, isPro: false }, { merge: true });
+        }
+      }
+    };
+    
     setLoading(true);
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoginCookie(!!user);
       if (user) {
-        // router.push('/app'); // Redirect on login
+        checkProStatus(user);
+      } else {
+        setIsPro(false);
       }
-      // In a real app, you'd check for Pro status from your database here.
-      // For now, we'll leave it as the default `false`.
-      // Example: if (user) { checkProStatus(user.uid).then(setIsPro); }
       setLoading(false);
     });
     
-    // Check for redirect result on initial load
     getRedirectResult(auth)
       .then((result) => {
         if (result) {
-          // This is the successfully signed-in user.
-          // The onAuthStateChanged observer will handle setting the user.
           toast({
             title: 'Signed In',
             description: `Welcome back, ${result.user.displayName}!`,
@@ -83,7 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         handleAuthError(err);
       })
       .finally(() => {
-        setLoading(false); // Ensure loading is false after redirect check
+        setLoading(false);
       });
 
     return () => unsubscribe();
@@ -95,7 +106,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         switch (err.code) {
             case 'auth/popup-closed-by-user':
             case 'auth/cancelled-popup-request':
-                // This is a common case when the user closes the popup. We don't need to show an error.
                 return; 
             case 'auth/user-not-found':
             case 'auth/invalid-credential':
@@ -149,6 +159,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await performAuthAction(async () => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCredential.user, { displayName });
+        const userDocRef = doc(db, 'users', userCredential.user.uid);
+        await setDoc(userDocRef, { email, displayName, isPro: false });
         toast({
             title: 'Account Created!',
             description: 'Welcome to TimeBubble!',
@@ -170,17 +182,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithRedirect(auth, provider);
-      // After the redirect, the getRedirectResult in useEffect will handle the result.
     } catch (err) {
       handleAuthError(err);
-      setIsAuthLoading(false); // Ensure loading is stopped on immediate error
+      setIsAuthLoading(false);
     }
   };
 
   const signOut = async () => {
     await performAuthAction(async () => {
       await firebaseSignOut(auth);
-      router.push('/'); // Redirect to landing page on sign out
+      router.push('/');
     });
   };
   

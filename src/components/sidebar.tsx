@@ -154,7 +154,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     >
       <DailySidebarTip />
 
-      <div className='flex items-center gap-2'>
+      <div className="grid grid-cols-[1fr_auto] gap-2">
         <Button className='flex-grow' onClick={handleOpenCreateBubbleModal}>
           <CalendarPlus className="mr-2 h-5 w-5" />
           Add Bubble
