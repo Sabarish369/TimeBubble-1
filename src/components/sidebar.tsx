@@ -2,7 +2,7 @@
 'use client';
 
 import type { DragEvent } from 'react';
-import { Briefcase, BookOpen, Coffee, User, Heart, Plus, Trash2, Pencil, type LucideIcon, CalendarPlus, History } from 'lucide-react';
+import { Briefcase, BookOpen, Coffee, User, Heart, Plus, Trash2, Pencil, type LucideIcon, CalendarPlus, History, BellRing } from 'lucide-react';
 import { BUBBLE_COLORS, SIDEBAR_WIDTH } from '@/lib/constants';
 import type { BubbleCategory, BubbleTemplate } from '@/types';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
@@ -27,6 +27,8 @@ import { useAuth } from '@/context/auth-context';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { ProModal } from './pro-modal';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { enablePush } from '@/lib/push-client';
+import { useToast } from '@/hooks/use-toast';
 
 const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   work: Briefcase,
@@ -51,12 +53,14 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { templates, updateTemplate, deleteTemplate, setIsBubbleCreateModalOpen } = useTimeBubbles();
-  const { isPro } = useAuth();
+  const { user, isPro } = useAuth();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isMissedTasksDrawerOpen, setIsMissedTasksDrawerOpen] = useState(false);
   const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<BubbleTemplate | undefined>(undefined);
+  const [isPushLoading, setIsPushLoading] = useState(false);
   const isMobile = useIsMobile();
+  const { toast } = useToast();
 
   const allTemplates = [...defaultTemplates.map(t => {
     const userOverride = templates.find(ut => ut.id === t.id);
@@ -138,6 +142,26 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     if(isMobile) onClose();
   }
 
+  const handleEnablePush = async () => {
+    if (!user) return;
+    setIsPushLoading(true);
+    try {
+      await enablePush({ userId: user.uid });
+      toast({
+        title: 'Notifications Enabled',
+        description: 'You will now receive reminders for your bubbles.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Notification Error',
+        description: error.message || 'Could not enable notifications.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsPushLoading(false);
+    }
+  };
+
 
   return (
     <>
@@ -152,8 +176,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     >
       <DailySidebarTip />
 
-      <div className='p-2 flex items-center gap-2'>
-        <Button className='w-full' onClick={handleOpenCreateBubbleModal}>
+      <div className='p-2 grid grid-cols-3 gap-2'>
+        <Button className='col-span-2' onClick={handleOpenCreateBubbleModal}>
           <CalendarPlus className="mr-2 h-5 w-5" />
           Add Bubble
         </Button>
@@ -162,6 +186,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <span className="sr-only">Show missed tasks</span>
         </Button>
       </div>
+
+       <div className="px-2">
+        <Button variant="outline" className="w-full" onClick={handleEnablePush} disabled={isPushLoading}>
+          <BellRing className="mr-2 h-5 w-5" />
+          {isPushLoading ? 'Enabling...' : 'Enable Notifications'}
+        </Button>
+      </div>
+
 
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-center">Templates</h2>

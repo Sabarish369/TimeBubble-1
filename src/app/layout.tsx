@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   keywords: ['time management', 'productivity app', 'time blocking', 'AI assistant', 'daily planner', 'visual calendar', 'focus tool', 'Next.js', 'React'],
   authors: [{ name: 'TimeBubble Team' }],
   creator: 'TimeBubble Team',
+  manifest: '/manifest.json',
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -62,6 +63,9 @@ export default function RootLayout({
             type="application/ld+json"
             dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body className="font-body antialiased" suppressHydrationWarning>
         <AuthProvider>
