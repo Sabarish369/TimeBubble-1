@@ -1,7 +1,9 @@
+// DO NOT USE import/export syntax, this file is not processed by a bundler
+// It is served as-is from the /public folder
 
-// Use the official Firebase messaging service worker
-importScripts('https://www.gstatic.com/firebasejs/11.9.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging-compat.js');
+// These scripts are required for Firebase to work in a service worker
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js');
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -17,8 +19,7 @@ const firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 
-// Retrieve an instance of Firebase Messaging so that it can handle background
-// messages.
+// Retrieve an instance of Firebase Messaging so that it can handle background messages.
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
@@ -30,7 +31,7 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
-    icon: '/favicon.ico',
+    icon: '/favicon.ico'
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
