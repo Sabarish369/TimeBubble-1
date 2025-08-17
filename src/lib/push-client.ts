@@ -1,44 +1,58 @@
 
 'use client';
 
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+import { messaging, db } from '@/lib/firebase';
+import { getToken, onMessage } from 'firebase/messaging';
+import { doc, setDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const raw = atob(base64);
-  const out = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; ++i) out[i] = raw.charCodeAt(i);
-  return out;
-}
+const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 
 export async function enablePush({ userId }: { userId: string }) {
-  if (!VAPID_PUBLIC_KEY) {
-    throw new Error('VAPID public key not configured.');
+  if (!messaging) {
+    throw new Error('Firebase Messaging is not initialized.');
+  }
+  if (!VAPID_KEY) {
+    throw new Error('Firebase VAPID key is not configured in environment variables.');
   }
 
-  if (!('serviceWorker' in navigator)) throw new Error('Service Workers are not supported');
-  if (!('PushManager' in window)) throw new Error('Push messaging is not supported');
+  try {
+    // 1) Ask for permission
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      throw new Error('Notification permission denied.');
+    }
 
-  // 1) Ask permission
-  const perm = await Notification.requestPermission();
-  if (perm !== 'granted') throw new Error('Permission denied');
+    // 2) Get FCM Token
+    const fcmToken = await getToken(messaging, { vapidKey: VAPID_KEY });
 
-  // 2) Register SW
-  const reg = await navigator.serviceWorker.register('/sw.js');
+    if (fcmToken) {
+      // 3) Save token to Firestore
+      const userDocRef = doc(db, 'users', userId, 'settings', 'fcm');
+      await setDoc(userDocRef, { token: fcmToken }, { merge: true });
+      console.log('FCM Token saved for user:', userId);
 
-  // 3) Subscribe
-  const sub = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-  });
+      // Listen for foreground messages
+      onMessage(messaging, (payload) => {
+        console.log('Message received. ', payload);
+        const { toast } = useToast();
+        toast({
+          title: payload.notification?.title,
+          description: payload.notification?.body,
+        });
+      });
+      
+    } else {
+      throw new Error('Could not get FCM token.');
+    }
 
-  // 4) Send to our server
-  await fetch('/api/save-subscription', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: userId, subscription: sub })
-  });
+    return { ok: true };
 
-  return { ok: true };
+  } catch (error) {
+    console.error('Error enabling push notifications:', error);
+    if (error instanceof Error) {
+        throw error;
+    }
+    throw new Error('An unknown error occurred during push setup.');
+  }
 }
