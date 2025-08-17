@@ -1,11 +1,12 @@
-// DO NOT USE import/export syntax, this file is not processed by a bundler
-// It is served as-is from the /public folder
+// This file must be in the /public directory.
 
-// These scripts are required for Firebase to work in a service worker
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js');
+// Imports the Firebase app and messaging scripts.
+// See: https://firebase.google.com/docs/web/setup#access-firebase
+importScripts('https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js');
+importScripts('https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging.js');
 
-// Your web app's Firebase configuration
+// Initialize the Firebase app in the service worker with your project's configuration.
+// These values are hardcoded because the service worker cannot access environment variables.
 const firebaseConfig = {
   apiKey: "AIzaSyAG4I-f3oGmyGBJ1Yt2mKpGlZGjqoBDVWE",
   authDomain: "schedule-b95fe.firebaseapp.com",
@@ -13,10 +14,8 @@ const firebaseConfig = {
   storageBucket: "schedule-b95fe.firebasestorage.app",
   messagingSenderId: "378862884455",
   appId: "1:378862884455:web:88c02590bbb78c40af26c2",
-  measurementId: "G-57W71X8MGS"
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 
 // Retrieve an instance of Firebase Messaging so that it can handle background messages.
@@ -27,11 +26,12 @@ messaging.onBackgroundMessage((payload) => {
     '[firebase-messaging-sw.js] Received background message ',
     payload
   );
+  
   // Customize notification here
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
-    icon: '/favicon.ico'
+    icon: payload.notification.icon || '/favicon.ico'
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);

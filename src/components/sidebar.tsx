@@ -187,12 +187,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </Button>
       </div>
 
-       {/* <div className="px-2">
+       <div className="px-2">
         <Button variant="outline" className="w-full" onClick={handleEnablePush} disabled={isPushLoading}>
           <BellRing className="mr-2 h-5 w-5" />
           {isPushLoading ? 'Enabling...' : 'Enable Notifications'}
         </Button>
-      </div> */}
+      </div>
 
 
       <div className="flex items-center justify-between">
