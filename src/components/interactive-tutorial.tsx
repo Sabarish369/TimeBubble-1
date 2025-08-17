@@ -215,7 +215,7 @@ export function InteractiveTutorial({ onFinish }: { onFinish: () => void }) {
             style={tooltipStyle}
         >
             <h3 className="font-bold text-lg mb-2">{currentStep.title}</h3>
-            <p className="text-sm text-muted-foreground mb-4">{current.description}</p>
+            <p className="text-sm text-muted-foreground mb-4">{currentStep.description}</p>
             <div className="flex justify-between items-center">
                  <span className='text-xs text-muted-foreground'>{step + 1} / {tutorialSteps.length}</span>
                 <div className='flex gap-2'>
