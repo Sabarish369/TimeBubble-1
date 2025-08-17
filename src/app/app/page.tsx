@@ -15,8 +15,10 @@ import { cn } from "@/lib/utils";
 import { FloatingToolbar } from "@/components/floating-toolbar";
 import { LoginModal } from "@/components/login-modal";
 import { useAuth } from "@/context/auth-context";
-import { ProModal } from "@/components/pro-modal";
+import { TutorialModal } from "@/components/tutorial-modal";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+const TUTORIAL_STORAGE_KEY = 'timebubble_tutorial_completed';
 
 export default function AppPage() {
   const mainRef = useRef<HTMLElement>(null);
@@ -35,13 +37,24 @@ export default function AppPage() {
   
   const { user } = useAuth();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
+
 
   useEffect(() => {
     // This logic might be redundant if AuthGuard is used, but can be a fallback.
     setIsLoginModalOpen(!user);
   }, [user]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      const tutorialCompleted = localStorage.getItem(TUTORIAL_STORAGE_KEY);
+      if (!tutorialCompleted) {
+        setIsTutorialOpen(true);
+      }
+    }
+  }, [isLoaded]);
 
   // Find the first actionable block to show in the modal
   const blockToShow = actionableBlock ?? timeBlocks.find(b => b.actionable);
@@ -88,6 +101,11 @@ export default function AppPage() {
     setActionableBlock(null);
   }
 
+  const handleFinishTutorial = () => {
+    localStorage.setItem(TUTORIAL_STORAGE_KEY, 'true');
+    setIsTutorialOpen(false);
+  }
+
   return (
     <div className="flex flex-col h-screen bg-background text-foreground font-body overflow-hidden">
       <Header onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
@@ -119,6 +137,7 @@ export default function AppPage() {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
       />
+      <TutorialModal isOpen={isTutorialOpen} onClose={handleFinishTutorial} />
     </div>
   );
 }

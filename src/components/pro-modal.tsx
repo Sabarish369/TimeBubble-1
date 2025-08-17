@@ -67,7 +67,7 @@ export function ProModal({ isOpen, onClose }: ProModalProps) {
         </div>
 
         <DialogFooter>
-          <Button size="lg" className="w-full">
+          <Button size="lg" className="w-full" disabled>
             Upgrade Now (Coming Soon)
           </Button>
         </DialogFooter>
