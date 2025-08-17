@@ -159,7 +159,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <CalendarPlus className="mr-2 h-5 w-5" />
           Add Bubble
         </Button>
-        <Button variant="outline" size="icon" onClick={() => setIsMissedTasksDrawerOpen(true)}>
+        <Button id="missed-tasks-button" variant="outline" size="icon" onClick={() => setIsMissedTasksDrawerOpen(true)}>
             <History className="h-5 w-5" />
             <span className="sr-only">Show missed tasks</span>
         </Button>

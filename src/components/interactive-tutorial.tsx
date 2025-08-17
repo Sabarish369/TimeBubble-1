@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from './ui/button';
-import { ArrowRight, ArrowLeft } from 'lucide-react';
+import { ArrowRight, ArrowLeft, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
@@ -68,21 +68,10 @@ export function InteractiveTutorial({ onFinish }: { onFinish: () => void }) {
       tooltipPosition: 'bottom',
     },
     {
-      title: "What if time runs out?",
-      description: "When a bubble's time is up, this dialog appears, letting you reflect on your work, reschedule it for later, or dismiss it.",
-      tooltipPosition: 'bottom',
-      action: () => {
-         // Show a fake action prompt for demonstration
-         setActionableBlock({
-            id: 'tutorial-dummy',
-            title: 'Design Mockups',
-            startTime: new Date(),
-            duration: 60,
-            category: 'work',
-            color: 'mint',
-            completed: false,
-         });
-      }
+      elementId: 'missed-tasks-button',
+      title: 'Review Overdue Tasks',
+      description: "Click this history button to see any bubbles you missed. You can reschedule or dismiss them from there.",
+      tooltipPosition: 'right',
     },
     {
       elementId: 'header-actions',
