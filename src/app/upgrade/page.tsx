@@ -2,11 +2,17 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { Check, X, Star } from "lucide-react";
+import { Check, X, Star, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { TimeBubbleLogo } from "@/components/timebubble-logo";
 import { AuthGuard } from "@/components/auth-guard";
+import { useAuth } from "@/context/auth-context";
+import { useState } from "react";
+import { loadStripe } from '@stripe/stripe-js';
+import { useToast } from "@/hooks/use-toast";
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 const freeFeatures = [
     { text: 'Visual Time-Blocking Timeline', included: true },
@@ -31,7 +37,7 @@ const proFeatures = [
 ];
 
 
-function PlanColumn({ title, price, priceSubtitle, description, features, isRecommended = false }: { title: string, price: string, priceSubtitle: string, description: string, features: {text: string, included: boolean}[], isRecommended?: boolean }) {
+function PlanColumn({ title, price, priceSubtitle, description, features, onUpgrade, isLoading, isRecommended = false }: { title: string, price: string, priceSubtitle: string, description: string, features: {text: string, included: boolean}[], onUpgrade?: () => void, isLoading?: boolean, isRecommended?: boolean }) {
   return (
     <div className={cn("p-8 rounded-2xl border bg-primary/5 transition-all w-full max-w-md", isRecommended ? "border-primary shadow-2xl ring-2 ring-primary" : "border-border/50")}>
       <h3 className="text-2xl font-bold text-center mb-2">{title}</h3>
@@ -41,8 +47,9 @@ function PlanColumn({ title, price, priceSubtitle, description, features, isReco
       <p className="text-muted-foreground text-center mb-8 h-10">{priceSubtitle}</p>
       
       {isRecommended && (
-        <Button size="lg" className="w-full mb-8" disabled>
-          Upgrade Now (Coming Soon)
+        <Button size="lg" className="w-full mb-8" onClick={onUpgrade} disabled={isLoading}>
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isLoading ? 'Redirecting...' : 'Upgrade Now'}
         </Button>
       )}
 
@@ -62,6 +69,59 @@ function PlanColumn({ title, price, priceSubtitle, description, features, isReco
 
 
 export default function UpgradePage() {
+    const { user } = useAuth();
+    const [isLoading, setIsLoading] = useState(false);
+    const { toast } = useToast();
+
+    const handleUpgrade = async () => {
+        if (!user) {
+            toast({
+                title: "Not signed in",
+                description: "You need to be signed in to upgrade.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const res = await fetch('/api/create-checkout-session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId: user.uid }),
+            });
+
+            if (!res.ok) {
+                const { error } = await res.json();
+                throw new Error(error || 'Could not create checkout session.');
+            }
+
+            const { sessionId } = await res.json();
+            const stripe = await stripePromise;
+
+            if (!stripe) {
+              throw new Error('Stripe.js has not loaded yet.');
+            }
+
+            const { error } = await stripe.redirectToCheckout({ sessionId });
+
+            if (error) {
+                throw new Error(error.message);
+            }
+        } catch (error: any) {
+            toast({
+                title: "Upgrade Error",
+                description: error.message,
+                variant: "destructive",
+            });
+            setIsLoading(false);
+        }
+    };
+
+
     return (
     <AuthGuard>
         <div className="flex flex-col min-h-screen bg-background text-foreground">
@@ -98,14 +158,10 @@ export default function UpgradePage() {
                             priceSubtitle="One-time payment"
                             description="Unlock every feature, forever. For our first supporters."
                             features={proFeatures}
+                            onUpgrade={handleUpgrade}
+                            isLoading={isLoading}
                             isRecommended
                         />
-                    </div>
-
-                    <div className="text-center mt-16">
-                        <p className="text-sm text-muted-foreground">
-                            Payment processing is coming soon. Lock in your early bird status now!
-                        </p>
                     </div>
                 </div>
             </main>
