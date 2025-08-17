@@ -2,7 +2,7 @@
 'use client';
 
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Menu, Sparkles } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -17,6 +17,7 @@ import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { cn } from '@/lib/utils';
 import { UserProfile } from './user-profile';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { DailyTipsDrawer } from './daily-tips-drawer';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -80,10 +81,11 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           </Button>
         </div>
       </div>
-      <div className="flex items-center gap-2 md:gap-4">
+      <div id="header-actions" className="flex items-center gap-2 md:gap-4">
         <SmartSuggestions />
         <ThemeToggle />
         <UserProfile />
+        <DailyTipsDrawer />
       </div>
     </header>
   );

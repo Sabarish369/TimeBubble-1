@@ -143,6 +143,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <>
     <aside
+      id="sidebar"
       className={cn(
         "p-4 border-r bg-gradient-to-br from-primary/10 via-background to-accent/10 shrink-0 flex flex-col space-y-4 transition-transform duration-300 ease-in-out z-50",
         isMobile ? "absolute top-0 left-0 h-full bg-background" : "relative",
@@ -164,7 +165,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </Button>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" id="templates-header">
         <h2 className="text-xl font-semibold text-center">Templates</h2>
         <TooltipProvider>
             <Tooltip delayDuration={100}>
@@ -185,14 +186,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </TooltipProvider>
       </div>
       
-      <div className={cn("space-y-3 overflow-y-auto flex-1 no-scrollbar")}>
-        {allTemplates.map((template) => {
+      <div id="templates-list" className={cn("space-y-3 overflow-y-auto flex-1 no-scrollbar")}>
+        {allTemplates.map((template, index) => {
           const Icon = categoryIcons[template.category];
           const isUserCreated = !template.isDefault || templates.some(t => t.id === template.id && !t.isDefault);
 
           return (
             <div
               key={template.id}
+              id={index === 0 ? 'first-template-item' : undefined}
               draggable
               onDragStart={(e) => handleDragStart(e, template)}
               className="p-3 rounded-lg shadow-sm cursor-grab active:cursor-grabbing flex items-center gap-3 transition-shadow hover:shadow-md relative group"

@@ -59,7 +59,7 @@ export function DailyTipsDrawer() {
 
   return (
     <>
-      <div className={cn("absolute top-1/2 -translate-y-1/2 right-0 z-40 transition-transform duration-500", isOpen && "translate-x-[-384px]")}>
+      <div id="ai-tips-drawer-trigger" className={cn("absolute top-1/2 -translate-y-1/2 right-0 z-40 transition-transform duration-500", isOpen && "translate-x-[-384px]")}>
           <Button 
             variant="outline" 
             size="icon" 

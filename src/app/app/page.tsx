@@ -15,10 +15,10 @@ import { cn } from "@/lib/utils";
 import { FloatingToolbar } from "@/components/floating-toolbar";
 import { LoginModal } from "@/components/login-modal";
 import { useAuth } from "@/context/auth-context";
-import { TutorialModal } from "@/components/tutorial-modal";
+import { InteractiveTutorial } from "@/components/interactive-tutorial";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-const TUTORIAL_STORAGE_KEY = 'timebubble_tutorial_completed';
+const TUTORIAL_STORAGE_KEY = 'timebubble_tutorial_completed_interactive_v1';
 
 export default function AppPage() {
   const mainRef = useRef<HTMLElement>(null);
@@ -37,7 +37,7 @@ export default function AppPage() {
   
   const { user } = useAuth();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -51,7 +51,7 @@ export default function AppPage() {
     if (isLoaded) {
       const tutorialCompleted = localStorage.getItem(TUTORIAL_STORAGE_KEY);
       if (!tutorialCompleted) {
-        setIsTutorialOpen(true);
+        setShowTutorial(true);
       }
     }
   }, [isLoaded]);
@@ -81,9 +81,18 @@ export default function AppPage() {
     if (!isMobile) {
       setIsSidebarOpen(true);
     } else {
-      setIsSidebarOpen(false);
+      // For tutorial purposes on mobile, we might want it open initially
+      if (!showTutorial) {
+        setIsSidebarOpen(false);
+      }
     }
-  }, [isMobile]);
+  }, [isMobile, showTutorial]);
+  
+  useEffect(() => {
+    if (showTutorial && isMobile) {
+      setIsSidebarOpen(true);
+    }
+  }, [showTutorial, isMobile]);
 
   if (!isLoaded) {
     return (
@@ -103,7 +112,10 @@ export default function AppPage() {
 
   const handleFinishTutorial = () => {
     localStorage.setItem(TUTORIAL_STORAGE_KEY, 'true');
-    setIsTutorialOpen(false);
+    setShowTutorial(false);
+     if (isMobile) {
+      setIsSidebarOpen(false);
+    }
   }
 
   return (
@@ -113,6 +125,7 @@ export default function AppPage() {
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
         <main 
           ref={mainRef} 
+          id="timeline-main"
           className={cn(
             "flex-1 overflow-y-auto bg-gradient-to-b from-primary/5 via-background to-accent/5 no-scrollbar transition-all duration-300",
             isSidebarOpen && isMobile && "opacity-50 pointer-events-none"
@@ -137,7 +150,7 @@ export default function AppPage() {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
       />
-      <TutorialModal isOpen={isTutorialOpen} onClose={handleFinishTutorial} />
+      {showTutorial && <InteractiveTutorial onFinish={handleFinishTutorial} />}
     </div>
   );
 }
