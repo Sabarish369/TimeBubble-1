@@ -12,7 +12,7 @@ const freeFeatures = [
     { text: 'Visual Time-Blocking Timeline', included: true },
     { text: 'Unlimited Time Bubbles', included: true },
     { text: '3 Custom Bubble Templates', included: true },
-    { text: 'Basic Daily Summary', included: true },
+    { text: 'Basic Daily Summary', included: false },
     { text: 'AI-Powered Insights', included: false },
     { text: 'Proactive AI Tips & Nudges', included: false },
     { text: 'Long-Term Trend Analysis', included: false },
