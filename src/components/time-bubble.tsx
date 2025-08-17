@@ -193,10 +193,10 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
         setLiveDuration(newDuration);
       }
       if (isResizing === 'top') {
-        const newTop = dragStartRef.current.initialTop + deltaY;
         const newHeight = dragStartRef.current.initialHeight - deltaY;
         
         if (newHeight >= 15 * pixelsPerMinute) {
+          const newTop = dragStartRef.current.initialTop + deltaY;
           const newMinutesRaw = newTop / pixelsPerMinute;
           const newMinutes = Math.max(0, newMinutesRaw);
           const newStartTime = new Date(liveStartTime);
