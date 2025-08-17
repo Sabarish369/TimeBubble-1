@@ -63,7 +63,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const allTemplates = [...defaultTemplates.map(t => {
     const userOverride = templates.find(ut => ut.id === t.id);
     return userOverride ? { ...t, ...userOverride, isDefault: true } : t;
-  }), ...templates.filter(t => !defaultTemplates.some(dt => dt.id === t.id))];
+  }), ...templates.filter(t => !t.isDefault)];
 
   const userCreatedTemplatesCount = templates.filter(t => !t.isDefault).length;
   const templateLimitReached = !isPro && userCreatedTemplatesCount >= 3;
@@ -153,8 +153,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     >
       <DailySidebarTip />
 
-      <div className='p-2 grid grid-cols-3 gap-2'>
-        <Button className='col-span-2' onClick={handleOpenCreateBubbleModal}>
+      <div className='p-2 flex items-center gap-2'>
+        <Button className='flex-grow' onClick={handleOpenCreateBubbleModal}>
           <CalendarPlus className="mr-2 h-5 w-5" />
           Add Bubble
         </Button>
