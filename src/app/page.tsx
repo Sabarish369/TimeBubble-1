@@ -5,7 +5,6 @@ import { TimeBubbleLogo } from "@/components/timebubble-logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { ArrowRight, BarChart, BrainCircuit, GanttChartSquare, Sparkles, Wand2 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { LoginModal } from "@/components/login-modal";
 import { useEffect, useState } from "react";
