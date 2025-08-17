@@ -15,9 +15,10 @@ import { Button } from '@/components/ui/button';
 import { LogOut, User, Star } from 'lucide-react';
 import { useState } from 'react';
 import { ProModal } from './pro-modal';
+import Link from 'next/link';
 
 export function UserProfile() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isPro } = useAuth();
   const [isProModalOpen, setIsProModalOpen] = useState(false);
 
   if (!user) {
@@ -52,10 +53,14 @@ export function UserProfile() {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setIsProModalOpen(true)}>
-            <Star className="mr-2 h-4 w-4 text-amber-500" />
-            <span>Upgrade to Pro</span>
-          </DropdownMenuItem>
+          {!isPro && (
+            <DropdownMenuItem asChild>
+              <Link href="/upgrade">
+                <Star className="mr-2 h-4 w-4 text-amber-500" />
+                <span>Upgrade to Pro</span>
+              </Link>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={signOut}>
             <LogOut className="mr-2 h-4 w-4" />

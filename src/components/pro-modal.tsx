@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { Zap, BarChart, BrainCircuit, Star } from 'lucide-react';
+import Link from 'next/link';
 
 interface ProModalProps {
   isOpen: boolean;
@@ -66,10 +67,11 @@ export function ProModal({ isOpen, onClose }: ProModalProps) {
           })}
         </div>
 
-        <DialogFooter>
-          <Button size="lg" className="w-full" disabled>
-            Upgrade Now (Coming Soon)
+        <DialogFooter className="flex-col gap-2">
+          <Button size="lg" className="w-full" asChild>
+            <Link href="/upgrade">View Pro Plans</Link>
           </Button>
+          <Button size="lg" variant="ghost" onClick={onClose}>Maybe Later</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
