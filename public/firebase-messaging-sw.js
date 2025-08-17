@@ -1,14 +1,12 @@
-// This file is intentionally left blank. It will be overwritten by the build process.
-// It gives us a place to put our service worker logic.
-// We have to use importScripts to get the firebase libraries.
-self.importScripts('https://www.gstatic.com/firebasejs/11.9.1/firebase-app-compat.js');
-self.importScripts('https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging-compat.js');
+
+// Use the official Firebase messaging service worker
+importScripts('https://www.gstatic.com/firebasejs/11.9.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/11.9.1/firebase-messaging-compat.js');
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAG4I-f3oGmyGBJ1Yt2mKpGlZGjqoBDVWE",
   authDomain: "schedule-b95fe.firebaseapp.com",
-  databaseURL: "https://schedule-b95fe-default-rtdb.firebaseio.com",
   projectId: "schedule-b95fe",
   storageBucket: "schedule-b95fe.firebasestorage.app",
   messagingSenderId: "378862884455",
@@ -19,6 +17,8 @@ const firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 
+// Retrieve an instance of Firebase Messaging so that it can handle background
+// messages.
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
