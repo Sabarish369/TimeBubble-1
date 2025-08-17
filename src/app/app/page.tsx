@@ -18,7 +18,7 @@ import { useAuth } from "@/context/auth-context";
 import { InteractiveTutorial } from "@/components/interactive-tutorial";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-const TUTORIAL_STORAGE_KEY = 'timebubble_tutorial_completed_interactive_v1';
+const TUTORIAL_STORAGE_KEY = 'timebubble_tutorial_completed_interactive_v2';
 
 export default function AppPage() {
   const mainRef = useRef<HTMLElement>(null);

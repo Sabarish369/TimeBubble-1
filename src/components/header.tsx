@@ -44,7 +44,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         )}
         <TimeBubbleLogo className="h-6 w-auto" />
       </div>
-      <div className="flex-1 flex justify-center items-center gap-1 md:gap-2">
+      <div id="date-navigation" className="flex-1 flex justify-center items-center gap-1 md:gap-2">
         <Button variant="outline" size={isMobile ? 'sm' : 'default'} onClick={goToToday}>
           Today
         </Button>
