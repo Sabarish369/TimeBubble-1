@@ -15,6 +15,9 @@ export async function enablePush({ userId }: { userId: string }) {
   if (!VAPID_KEY) {
     throw new Error('Firebase VAPID key is not configured in environment variables.');
   }
+   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    throw new Error('Push notifications are not supported by this browser.');
+  }
 
   try {
     // 1) Ask for permission
@@ -23,8 +26,14 @@ export async function enablePush({ userId }: { userId: string }) {
       throw new Error('Notification permission denied.');
     }
 
+    // Register the service worker
+    const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+
     // 2) Get FCM Token
-    const fcmToken = await getToken(messaging, { vapidKey: VAPID_KEY });
+    const fcmToken = await getToken(messaging, { 
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: swRegistration
+    });
 
     if (fcmToken) {
       // 3) Save token to Firestore
