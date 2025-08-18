@@ -45,7 +45,8 @@ const dailyInsightsFlow = ai.defineFlow(
     outputSchema: DailyInsightsOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
+    const llm = googleAI.model('gemini-1.5-flash', {apiKey: input.apiKey});
+    const { output } = await prompt(input, {model: llm});
     return output!;
   }
 );

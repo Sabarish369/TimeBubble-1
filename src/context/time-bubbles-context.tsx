@@ -110,7 +110,7 @@ const playNotificationSound = () => {
 };
 
 export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
-  const { user } = useAuth();
+  const { user, geminiApiKey } = useAuth();
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [history, setHistory] = useState<HistoryState>({});
   
@@ -187,6 +187,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 }, [updateHistory, saveTimeBlocksToFirestore]);
   
   const getDailyTips = useCallback(async () => {
+    if (!geminiApiKey) return;
     setIsLoadingTips(true);
     try {
         const sortedBlocks = timeBlocks
@@ -201,6 +202,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
             schedule: JSON.stringify({ completedBlock, nextTask }),
             productivityPatterns: "User tends to be most productive in the morning and after short breaks.",
             currentTime: now.toISOString(),
+            apiKey: geminiApiKey,
         };
 
         const result = await fetchDailyTips(input);
@@ -228,7 +230,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     } finally {
         setIsLoadingTips(false);
     }
-  }, [toast, timeBlocks, lastCompletedBlock, setDailyTips, setIsLoadingTips]);
+  }, [toast, timeBlocks, lastCompletedBlock, setDailyTips, setIsLoadingTips, geminiApiKey]);
 
 
   useEffect(() => {
@@ -731,11 +733,12 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
   
   const getDailyInsights = async () => {
+    if (!geminiApiKey) return;
     setIsLoadingInsights(true);
     setDailyInsights(null);
     try {
       const dailyData = getBlocksForSuggestions();
-      const result = await fetchDailyInsights({ dailyData });
+      const result = await fetchDailyInsights({ dailyData, apiKey: geminiApiKey });
       setDailyInsights(result);
     } catch (error) {
       console.error('Error getting AI insights:', error);
@@ -751,9 +754,10 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   };
 
   const getNewDailySidebarTip = useCallback(async (input: DailySidebarTipInput): Promise<DailySidebarTip> => {
-    const result = await getDailySidebarTip(input);
+    if (!geminiApiKey) throw new Error("API key is not set.");
+    const result = await getDailySidebarTip({ ...input, apiKey: geminiApiKey });
     return result;
-  }, []);
+  }, [geminiApiKey]);
   
 
   const clearAllMissedTasks = async () => {
@@ -805,8 +809,8 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
   const saveUserPreferences = useCallback(async (prefs: Partial<UserPreferences>) => {
     if (!user) return;
-    const prefsDocRef = doc(db, 'users', user.uid, 'settings', 'preferences');
-    await setDoc(prefsDocRef, prefs, { merge: true });
+    const userDocRef = doc(db, 'users', user.uid);
+    await setDoc(userDocRef, prefs, { merge: true });
   }, [user]);
   
   const setTheme = (newTheme: Theme) => {

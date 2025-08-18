@@ -12,14 +12,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { LogOut, User, Star } from 'lucide-react';
+import { LogOut, User, Star, KeyRound } from 'lucide-react';
 import { useState } from 'react';
 import { ProModal } from './pro-modal';
 import Link from 'next/link';
+import { ApiKeyModal } from './api-key-modal';
 
 export function UserProfile() {
   const { user, signOut, isPro } = useAuth();
   const [isProModalOpen, setIsProModalOpen] = useState(false);
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
   if (!user) {
     return null;
@@ -53,7 +55,12 @@ export function UserProfile() {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {!isPro && (
+          {isPro ? (
+             <DropdownMenuItem onClick={() => setIsApiKeyModalOpen(true)}>
+                <KeyRound className="mr-2 h-4 w-4" />
+                <span>Manage API Key</span>
+              </DropdownMenuItem>
+          ) : (
             <DropdownMenuItem asChild>
               <Link href="/upgrade">
                 <Star className="mr-2 h-4 w-4 text-amber-500" />
@@ -69,6 +76,7 @@ export function UserProfile() {
         </DropdownMenuContent>
       </DropdownMenu>
       <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
+      <ApiKeyModal isOpen={isApiKeyModalOpen} onClose={() => setIsApiKeyModalOpen(false)} />
     </>
   );
 }

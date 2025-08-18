@@ -18,12 +18,15 @@ import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import type { UserPreferences } from '@/types';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
-  isPro: boolean; 
+  isPro: boolean;
+  geminiApiKey: string | null;
+  setGeminiApiKey: (key: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -38,6 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPro, setIsPro] = useState(false);
+  const [geminiApiKey, setGeminiApiKeyState] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -47,6 +51,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       document.cookie = `firebase-auth-logged-in=${loggedIn}; path=/; max-age=${loggedIn ? 30 * 24 * 60 * 60 : 0}`;
     }
   };
+  
+  const checkUserStatus = async (user: User) => {
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        setIsPro(!!data.isPro);
+        setGeminiApiKeyState(data.geminiApiKey || null);
+      } else {
+        // If the doc doesn't exist, create it for the user
+        await setDoc(userDocRef, { email: user.email, isPro: false }, { merge: true });
+        setIsPro(false);
+        setGeminiApiKeyState(null);
+      }
+    };
+
 
   useEffect(() => {
     if (!auth || !Object.keys(auth).length) {
@@ -54,29 +74,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return;
     }
-
-    const checkProStatus = async (user: User) => {
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-      if (userDoc.exists() && userDoc.data().isPro) {
-        setIsPro(true);
-      } else {
-        setIsPro(false);
-        // If the doc doesn't exist, create it for the user
-        if (!userDoc.exists()) {
-          setDoc(userDocRef, { email: user.email, isPro: false }, { merge: true });
-        }
-      }
-    };
     
     setLoading(true);
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoginCookie(!!user);
       if (user) {
-        checkProStatus(user);
+        checkUserStatus(user);
       } else {
         setIsPro(false);
+        setGeminiApiKeyState(null);
       }
       setLoading(false);
     });
@@ -205,12 +212,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const setGeminiApiKey = async (key: string) => {
+    if (!user) return;
+    setGeminiApiKeyState(key);
+    const userDocRef = doc(db, 'users', user.uid);
+    await setDoc(userDocRef, { geminiApiKey: key }, { merge: true });
+    toast({
+        title: 'API Key Saved',
+        description: 'Your Gemini API key has been successfully saved.',
+    });
+  };
 
   const value = {
     user,
     loading: loading || isAuthLoading,
     error,
     isPro,
+    geminiApiKey,
+    setGeminiApiKey,
     signIn,
     signUp,
     signInWithGoogle,

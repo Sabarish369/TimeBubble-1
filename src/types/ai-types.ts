@@ -1,8 +1,13 @@
+
 import {z} from 'genkit';
 
 /**
  * @fileOverview Types for AI flows.
  */
+
+const ApiKeySchema = {
+    apiKey: z.string().optional().describe("A Google AI API key.")
+};
 
 // Types for diagnose-plant.ts
 export const DiagnosePlantInputSchema = z.object({
@@ -12,6 +17,7 @@ export const DiagnosePlantInputSchema = z.object({
       "A photo of a plant, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
   description: z.string().describe('The description of the plant.'),
+  ...ApiKeySchema,
 });
 export type DiagnosePlantInput = z.infer<typeof DiagnosePlantInputSchema>;
 
@@ -33,6 +39,7 @@ export type DiagnosePlantOutput = z.infer<typeof DiagnosePlantOutputSchema>;
 export const SmartSuggestionsInputSchema = z.object({
   dailyData: z.string().describe('JSON string of the user\'s daily time block data, each block should include the id, title, startTime, duration, color, category, position, completed, and reflection.'),
   userPreferences: z.string().describe('JSON string of the user\'s preferences including theme and working hours.'),
+  ...ApiKeySchema,
 });
 export type SmartSuggestionsInput = z.infer<typeof SmartSuggestionsInputSchema>;
 
@@ -44,6 +51,7 @@ export type SmartSuggestionsOutput = z.infer<typeof SmartSuggestionsOutputSchema
 // Types for daily-insights.ts
 export const DailyInsightsInputSchema = z.object({
   dailyData: z.string().describe('A JSON string representing the user\'s time blocks for the day. Includes titles, categories, durations, and reflection data (mood, productivity).'),
+  ...ApiKeySchema,
 });
 export type DailyInsightsInput = z.infer<typeof DailyInsightsInputSchema>;
 
@@ -61,6 +69,7 @@ export const DailyTipsInputSchema = z.object({
   schedule: z.string().describe("A JSON string of the user's schedule for today. Includes titles, categories, start times, and durations."),
   productivityPatterns: z.string().describe("A summary of the user's historical productivity and mood patterns."),
   currentTime: z.string().describe("The current time in ISO format."),
+  ...ApiKeySchema,
 });
 export type DailyTipsInput = z.infer<typeof DailyTipsInputSchema>;
 
@@ -77,6 +86,7 @@ export type DailyTips = z.infer<typeof DailyTipsOutputSchema>;
 // Types for daily-sidebar-tip.ts
 export const DailySidebarTipInputSchema = z.object({
   scheduleData: z.string().describe("A JSON string of the user's schedule for the day. Includes titles, categories, and durations."),
+  ...ApiKeySchema,
 });
 export type DailySidebarTipInput = z.infer<typeof DailySidebarTipInputSchema>;
 

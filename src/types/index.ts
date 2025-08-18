@@ -45,7 +45,8 @@ export interface BubbleTemplate {
 export type Theme = 'light' | 'dark';
 
 export interface UserPreferences {
-  theme: Theme;
+  theme?: Theme;
+  geminiApiKey?: string;
 }
 
 export type DailyInsights = z.infer<typeof DailyInsightsOutputSchema>;

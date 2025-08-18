@@ -47,14 +47,17 @@ const dailySidebarTipFlow = ai.defineFlow(
     if (!input.scheduleData || JSON.parse(input.scheduleData).length === 0) {
       return { tip: "A fresh start. What's one small thing you can accomplish today to feel great?" };
     }
+
+    const llm = googleAI.model('gemini-1.5-flash', {apiKey: input.apiKey});
+    
     try {
-      const { output } = await prompt(input);
+      const { output } = await prompt(input, { model: llm });
       return output!;
     } catch (error) {
       // Simple retry mechanism for transient errors like 503
       console.warn('First attempt to get daily tip failed, retrying in 2 seconds...', error);
       await new Promise(resolve => setTimeout(resolve, 2000));
-      const { output } = await prompt(input);
+      const { output } = await prompt(input, { model: llm });
       return output!;
     }
   }

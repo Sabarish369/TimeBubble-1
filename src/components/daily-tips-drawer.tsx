@@ -21,6 +21,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Card, CardContent } from './ui/card';
 import { useAuth } from '@/context/auth-context';
 import { ProModal } from './pro-modal';
+import { ApiKeyModal } from './api-key-modal';
 
 const tipIcons: Record<string, LucideIcon> = {
   Productivity: Zap,
@@ -33,29 +34,40 @@ const tipIcons: Record<string, LucideIcon> = {
 export function DailyTipsDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   const { getDailyTips, dailyTips, isLoadingTips } = useTimeBubbles();
-  const { isPro } = useAuth();
+  const { isPro, geminiApiKey } = useAuth();
   const [isProModalOpen, setIsProModalOpen] = useState(false);
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
 
-  const handleOpen = () => {
-    if (isPro) {
-      setIsOpen(true);
-    } else {
+  const handleOpen = (e: React.MouseEvent) => {
+    if (!isPro) {
+      e.preventDefault();
       setIsProModalOpen(true);
+    } else if (!geminiApiKey) {
+      e.preventDefault();
+      setIsApiKeyModalOpen(true);
+    } else {
+      setIsOpen(true);
     }
   };
 
   useEffect(() => {
     // Fetch tips when the drawer is opened for the first time
-    if (isPro && isOpen && !dailyTips && !isLoadingTips) {
+    if (isPro && geminiApiKey && isOpen && !dailyTips && !isLoadingTips) {
       getDailyTips();
     }
-  }, [isOpen, dailyTips, isLoadingTips, getDailyTips, isPro]);
+  }, [isOpen, dailyTips, isLoadingTips, getDailyTips, isPro, geminiApiKey]);
   
   const TipIcon = ({ type }: { type: string }) => {
     const Icon = tipIcons[type] || Lightbulb;
     return <Icon className="h-6 w-6 mb-3 text-primary" />;
   };
+  
+  const handleRefresh = () => {
+    if (isPro && geminiApiKey) {
+      getDailyTips();
+    }
+  }
 
   return (
     <>
@@ -120,18 +132,19 @@ export function DailyTipsDrawer() {
                 <AlertTitle>No tips available yet.</AlertTitle>
                 <AlertDescription>
                   Start your day or refresh to get new AI-powered suggestions.
-                </AlertDescription>
+                </Description>
               </Alert>
           )}
 
           <div className="mt-6 text-center">
-            <Button onClick={getDailyTips} disabled={isLoadingTips}>
+            <Button onClick={handleRefresh} disabled={isLoadingTips}>
                 {isLoadingTips ? "Optimizing..." : "Refresh Tips"}
             </Button>
           </div>
         </SheetContent>
       </Sheet>
       <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
+      <ApiKeyModal isOpen={isApiKeyModalOpen} onClose={() => setIsApiKeyModalOpen(false)} />
     </>
   );
 }

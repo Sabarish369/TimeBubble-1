@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A plant problem diagnosis AI agent.
@@ -36,7 +37,8 @@ const diagnosePlantFlow = ai.defineFlow(
     outputSchema: DiagnosePlantOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const llm = googleAI.model('gemini-1.5-flash', {apiKey: input.apiKey});
+    const {output} = await prompt(input, {model: llm});
     return output!;
   }
 );
