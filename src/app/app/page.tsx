@@ -44,6 +44,22 @@ export default function AppPage() {
   useEffect(() => {
     // Ensure this only runs on the client
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then((registration) => {
+            const firebaseConfig = {
+                apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+                authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+                projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+                storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+                messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+                appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+            };
+            // Send config to the service worker.
+            registration.active?.postMessage({
+                type: 'SET_FIREBASE_CONFIG',
+                payload: firebaseConfig,
+            });
+        });
+
         navigator.serviceWorker.register('/firebase-messaging-sw.js')
         .then((registration) => console.log("Service Worker registered with scope:", registration.scope))
         .catch((err) => console.log("Service Worker registration failed:", err));

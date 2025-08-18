@@ -9,13 +9,6 @@ import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { app, db } from "./firebase";
 import { doc, setDoc } from "firebase/firestore";
 
-declare const self: ServiceWorkerGlobalScope & {
-  FIREBASE_VAPID_KEY: string;
-};
-
-// Store timeout IDs in a map for easy cancellation
-const notificationTimeouts = new Map<string, number[]>();
-
 /**
  * Request notification permission from the user and get FCM token.
  */
@@ -33,7 +26,7 @@ export async function requestPermissionAndGetToken(userId: string) {
       console.log("Notification permission granted.");
       
       const fcmToken = await getToken(messaging, {
-        vapidKey: self.FIREBASE_VAPID_KEY,
+        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
       });
 
       if (fcmToken) {
@@ -84,19 +77,12 @@ export function setupForegroundMessageListener() {
  * @param blockId The ID of the block whose notifications should be cleared.
  */
 export function clearNotification(blockId: string) {
-  if (notificationTimeouts.has(blockId)) {
-    const timeouts = notificationTimeouts.get(blockId)!;
-    timeouts.forEach(timeoutId => clearTimeout(timeoutId));
-    notificationTimeouts.delete(blockId);
-  }
+  // This function is now a no-op as notifications are handled by FCM.
 }
 
 /**
  * Clears all scheduled notifications.
  */
 export function clearAllNotifications() {
-  for (const blockId of notificationTimeouts.keys()) {
-    clearNotification(blockId);
-  }
-  notificationTimeouts.clear();
+  // This function is now a no-op.
 }
