@@ -7,6 +7,7 @@
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { app, db } from "./firebase";
 import { doc, setDoc } from "firebase/firestore";
+import { urlBase64ToUint8Array } from "./utils";
 
 /**
  * Request notification permission from the user and get FCM token.
@@ -31,7 +32,7 @@ export async function requestPermissionAndGetToken(userId: string) {
       }
       
       const fcmToken = await getToken(messaging, {
-        vapidKey: vapidKey,
+        vapidKey: urlBase64ToUint8Array(vapidKey),
       });
 
       if (fcmToken) {
