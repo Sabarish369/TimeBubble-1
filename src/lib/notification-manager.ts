@@ -27,11 +27,14 @@ export async function requestPermissionAndGetToken(userId: string) {
     if (permission === "granted") {
       console.log("Notification permission granted.");
 
-      const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+      let vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
       if (!vapidKey) {
         console.error("VAPID key is missing from environment variables.");
         return;
       }
+
+      // Sanitize the key: remove quotes and trim whitespace
+      vapidKey = vapidKey.trim().replace(/^"(.*)"$/, '$1');
       
       const fcmToken = await getToken(messaging, {
         vapidKey: urlBase64ToUint8Array(vapidKey),
