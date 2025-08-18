@@ -185,6 +185,24 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
       saveTimeBlocksToFirestore(finalBlocks, date);
   }
 }, [updateHistory, saveTimeBlocksToFirestore]);
+
+  const getBlocksForDate = useCallback(async (date: Date): Promise<TimeBlock[]> => {
+    if (!user) return [];
+    const dayKey = getDayKey(date);
+    const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dayKey);
+    try {
+        const docSnap = await getDoc(dayDocRef);
+        if (docSnap.exists()) {
+            if (docSnap.data().blocks) {
+                return docSnap.data().blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
+            }
+        }
+        return [];
+    } catch (error) {
+        console.error("Error fetching blocks for date:", error);
+        return [];
+    }
+  }, [user]);
   
   const getDailyTips = useCallback(async () => {
     if (!geminiApiKey) return;
@@ -511,24 +529,6 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     }
   }, [theme]);
 
-  const getBlocksForDate = useCallback(async (date: Date): Promise<TimeBlock[]> => {
-    if (!user) return [];
-    const dayKey = getDayKey(date);
-    const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dayKey);
-    try {
-        const docSnap = await getDoc(dayDocRef);
-        if (docSnap.exists()) {
-            if (docSnap.data().blocks) {
-                return docSnap.data().blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
-            }
-        }
-        return [];
-    } catch (error) {
-        console.error("Error fetching blocks for date:", error);
-        return [];
-    }
-  }, [user]);
-  
   const addBlockOnDate = useCallback(async (block: Omit<TimeBlock, 'id' | 'completed'>, date: Date) => {
     if (!user) {
         toast({ title: 'Not signed in', description: 'You must be signed in to add bubbles.', variant: 'destructive'});
