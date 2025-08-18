@@ -30,8 +30,12 @@ if (!firebaseConfig.apiKey) {
     app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestore(app);
-    if (typeof window !== 'undefined') {
-        messaging = getMessaging(app);
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+        try {
+            messaging = getMessaging(app);
+        } catch (error) {
+            console.error("Failed to initialize Firebase Messaging:", error);
+        }
     }
 }
 

@@ -1,119 +1,73 @@
 
 /**
- * @fileoverview Manages scheduling and displaying browser notifications.
- * This is a self-contained module to be used on the client-side.
- * It does not use Service Workers, so notifications only work while the
- * browser tab is open and may be delayed if the tab is inactive.
+ * @fileoverview Manages scheduling and displaying browser push notifications via Firebase Cloud Messaging.
  */
 
 import type { TimeBlock } from "@/types";
 import { ensureDateObject } from "./time-bubbles-utils";
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { app, db } from "./firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 // Store timeout IDs in a map for easy cancellation
 const notificationTimeouts = new Map<string, number[]>();
 
-const PRE_START_ALERT_MINUTES = 5;
-
 /**
- * Request notification permission from the user.
+ * Request notification permission from the user and get FCM token.
  */
-export function requestPermission() {
-  if (typeof window === 'undefined' || !('Notification' in window)) {
-    return;
-  }
-
-  if (Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
-}
-
-/**
- * Schedules a notification for a given time block.
- * @param block The time block to schedule a notification for.
- * @param onNotify Callback function when the notification fires.
- * @param onPreNotify Callback function for the pre-start notification.
- */
-export function scheduleNotification(
-  block: TimeBlock,
-  onNotify: (block: TimeBlock) => void,
-  onPreNotify: (block: TimeBlock) => void
-) {
-  if (typeof window === 'undefined' || Notification.permission !== 'granted') {
-    return;
-  }
-
-  clearNotification(block.id); // Clear any existing timeouts for this block
-
-  const now = new Date();
-  const timeouts: number[] = [];
-
-  const startTime = ensureDateObject(block.startTime);
-
-  // --- Validate Date Object ---
-  if (isNaN(startTime.getTime())) {
-    console.error(`[NotificationManager] Invalid startTime for block "${block.title}" (ID: ${block.id}). Notification not scheduled.`);
+export async function requestPermissionAndGetToken(userId: string) {
+  if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
+    console.warn("Push notifications are not supported in this browser.");
     return;
   }
   
-  // --- Schedule Pre-Start Notification ---
-  const preAlertTime = new Date(startTime.getTime() - PRE_START_ALERT_MINUTES * 60000);
-  const preAlertTimeoutMs = preAlertTime.getTime() - now.getTime();
+  const messaging = getMessaging(app);
 
-  if (preAlertTimeoutMs > 0) {
-    const preAlertTimeoutId = window.setTimeout(() => {
-      const notificationMessage = `Get ready, "${block.title}" starts in ${PRE_START_ALERT_MINUTES} minutes.`;
-      showNotification(
-        notificationMessage,
-        'Prepare for your next focused session.'
-      );
-      if (onPreNotify) {
-        onPreNotify(block);
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+      console.log("Notification permission granted.");
+      
+      const fcmToken = await getToken(messaging, {
+        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+      });
+
+      if (fcmToken) {
+        console.log("FCM Token:", fcmToken);
+        // Save the token to the user's document in Firestore
+        const userDocRef = doc(db, 'users', userId);
+        await setDoc(userDocRef, { fcmToken }, { merge: true });
+      } else {
+        console.warn("No registration token available. Request permission to generate one.");
       }
-    }, preAlertTimeoutMs);
-    timeouts.push(preAlertTimeoutId);
-    console.log(`[NotificationManager] "Get Ready" alert for "${block.title}" scheduled for ${preAlertTime.toLocaleTimeString()}`);
-  }
-
-  // --- Schedule Final Notification ---
-  const endTime = new Date(startTime.getTime() + block.duration * 60000);
-  const finalTimeoutMs = endTime.getTime() - now.getTime();
-
-  if (finalTimeoutMs > 0) {
-    const finalTimeoutId = window.setTimeout(() => {
-      showNotification(`Time's up for "${block.title}"!`, 'Time to reflect on your task.');
-      onNotify(block);
-    }, finalTimeoutMs);
-    timeouts.push(finalTimeoutId);
-    console.log(`[NotificationManager] "Time's Up" alert for "${block.title}" scheduled for ${endTime.toLocaleTimeString()}`);
-  }
-
-  if (timeouts.length > 0) {
-    notificationTimeouts.set(block.id, timeouts);
+    } else {
+      console.warn("Notification permission denied.");
+    }
+  } catch (error) {
+    console.error("An error occurred while requesting permission or getting the token.", error);
   }
 }
 
-
 /**
- * Displays a browser notification.
- * @param title The title of the notification.
- * @param body The body text of the notification.
+ * Sets up the listener for foreground messages.
  */
-function showNotification(title: string, body: string) {
-    if (typeof window === 'undefined' || Notification.permission !== 'granted') {
-        // Fallback for when notifications are not granted
-        console.log(`[Notification Fallback] ${title}: ${body}`);
-        return;
-    }
-  
-    const notification = new Notification(title, {
-        body,
-        icon: '/favicon.ico', // Ensure you have a favicon at this path
+export function setupForegroundMessageListener() {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    
+    const messaging = getMessaging(app);
+    
+    onMessage(messaging, (payload) => {
+        console.log("Foreground message received:", payload);
+        // Show a notification for the foreground message.
+        // The service worker handles background messages.
+        const notificationTitle = payload.notification?.title ?? "New Notification";
+        const notificationOptions = {
+            body: payload.notification?.body ?? "",
+            icon: payload.notification?.icon ?? "/logo.svg",
+        };
+        
+        new Notification(notificationTitle, notificationOptions);
     });
-
-    // Optional: handle click
-    notification.onclick = () => {
-        window.focus();
-    };
 }
 
 

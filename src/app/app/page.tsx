@@ -41,6 +41,13 @@ export default function AppPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
 
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then((registration) => console.log("Service Worker registered with scope:", registration.scope))
+        .catch((err) => console.log("Service Worker registration failed:", err));
+    }
+  }, []);
 
   useEffect(() => {
     // This logic might be redundant if AuthGuard is used, but can be a fallback.

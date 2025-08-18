@@ -140,12 +140,11 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
    useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'default') {
-        NotificationManager.requestPermission();
-      }
+    if (typeof window !== 'undefined' && user) {
+        NotificationManager.requestPermissionAndGetToken(user.uid);
+        NotificationManager.setupForegroundMessageListener();
     }
-  }, []);
+  }, [user]);
 
   const saveTimeBlocksToFirestore = useCallback(async (blocks: TimeBlock[], date: Date) => {
     if (!user || !blocks) return;
@@ -345,45 +344,6 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         return newBlocks;
     }, currentDate, saveToDb);
   }, [currentDate, setTimeBlocksWithHistory, findAvailableSlot]);
-  
-  useEffect(() => {
-    const onEndTimeNotify = (block: TimeBlock) => {
-      playNotificationSound();
-      const latestBlock = timeBlocks.find(b => b.id === block.id);
-      if (latestBlock && !latestBlock.actionable) {
-        updateBlock(latestBlock.id, { notified: true, actionable: true }, true);
-        setActionableBlock(latestBlock);
-      }
-    };
-
-    const onPreNotify = (block: TimeBlock) => {
-      toast({
-        title: `Get Ready: ${block.title}`,
-        description: `Starts in 5 minutes.`,
-      });
-    };
-
-    NotificationManager.clearAllNotifications();
-
-    timeBlocks.forEach(block => {
-      if (!block.completed && !block.notificationScheduled) {
-        const startTime = ensureDateObject(block.startTime);
-        if (startTime > new Date()) {
-          NotificationManager.scheduleNotification(block, onEndTimeNotify, onPreNotify);
-          // We mark it as scheduled locally to prevent rescheduling
-          setTimeBlocks(currentBlocks => {
-            const index = currentBlocks.findIndex(b => b.id === block.id);
-            if (index !== -1) {
-              const newBlocks = [...currentBlocks];
-              newBlocks[index] = { ...newBlocks[index], notificationScheduled: true };
-              return newBlocks;
-            }
-            return currentBlocks;
-          });
-        }
-      }
-    });
-  }, [timeBlocks, updateBlock, toast]);
   
   const getMissedTasks = useCallback(async (): Promise<MissedTaskGroup[]> => {
     if (!user) return [];
