@@ -54,20 +54,24 @@ export async function requestPermissionAndGetToken(userId: string) {
 export function setupForegroundMessageListener() {
     if (typeof window === 'undefined' || !('Notification' in window)) return;
     
-    const messaging = getMessaging(app);
-    
-    onMessage(messaging, (payload) => {
-        console.log("Foreground message received:", payload);
-        // Show a notification for the foreground message.
-        // The service worker handles background messages.
-        const notificationTitle = payload.notification?.title ?? "New Notification";
-        const notificationOptions = {
-            body: payload.notification?.body ?? "",
-            icon: payload.notification?.icon ?? "/logo.svg",
-        };
+    try {
+        const messaging = getMessaging(app);
         
-        new Notification(notificationTitle, notificationOptions);
-    });
+        onMessage(messaging, (payload) => {
+            console.log("Foreground message received:", payload);
+            // Show a notification for the foreground message.
+            // The service worker handles background messages.
+            const notificationTitle = payload.notification?.title ?? "New Notification";
+            const notificationOptions = {
+                body: payload.notification?.body ?? "",
+                icon: payload.notification?.icon ?? "/logo.svg",
+            };
+            
+            new Notification(notificationTitle, notificationOptions);
+        });
+    } catch(e) {
+        console.error("Could not set up foreground message listener. Is Firebase configured?", e);
+    }
 }
 
 
