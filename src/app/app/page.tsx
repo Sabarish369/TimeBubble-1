@@ -44,19 +44,10 @@ export default function AppPage() {
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    // Register service worker and set up notifications
-    if (user && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        .then((registration) => {
-          console.log('Service Worker registered with scope:', registration.scope);
-          // After successful registration, request permission and get token
-          NotificationManager.requestPermissionAndGetToken(user.uid);
-        })
-        .catch((err) => {
-          console.error('Service Worker registration failed:', err);
-        });
-        
-      NotificationManager.setupForegroundMessageListener();
+    // Request permission and get token
+    if (user && 'Notification' in window && 'serviceWorker' in navigator) {
+        NotificationManager.requestPermissionAndGetToken(user.uid);
+        NotificationManager.setupForegroundMessageListener();
     }
   }, [user]);
 

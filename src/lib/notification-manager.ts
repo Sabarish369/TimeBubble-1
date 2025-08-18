@@ -4,12 +4,9 @@
  * @fileoverview Manages scheduling and displaying browser push notifications via Firebase Cloud Messaging.
  */
 
-import type { TimeBlock } from "@/types";
-import { ensureDateObject } from "./time-bubbles-utils";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { app, db } from "./firebase";
 import { doc, setDoc } from "firebase/firestore";
-import { urlBase64ToUint8Array } from "./utils";
 
 /**
  * Request notification permission from the user and get FCM token.
@@ -27,14 +24,11 @@ export async function requestPermissionAndGetToken(userId: string) {
     if (permission === "granted") {
       console.log("Notification permission granted.");
 
-      let vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+      const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
       if (!vapidKey) {
         console.error("VAPID key is missing from environment variables.");
         return;
       }
-
-      // Sanitize the key: remove quotes and trim whitespace
-      vapidKey = vapidKey.trim().replace(/^"(.*)"$/, '$1');
       
       const fcmToken = await getToken(messaging, {
         vapidKey: vapidKey,
