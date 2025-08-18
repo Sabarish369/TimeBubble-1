@@ -132,7 +132,7 @@ export function DailyTipsDrawer() {
                 <AlertTitle>No tips available yet.</AlertTitle>
                 <AlertDescription>
                   Start your day or refresh to get new AI-powered suggestions.
-                </Description>
+                </AlertDescription>
               </Alert>
           )}
 

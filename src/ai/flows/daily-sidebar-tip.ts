@@ -16,7 +16,6 @@ export async function getDailySidebarTip(input: DailySidebarTipInput): Promise<D
 
 const prompt = ai.definePrompt({
   name: 'dailySidebarTipPrompt',
-  model: googleAI.model('gemini-1.5-flash'),
   input: { schema: DailySidebarTipInputSchema },
   output: { schema: DailySidebarTipOutputSchema },
   prompt: `You are an inspiring and insightful wellness and productivity coach. 

@@ -17,7 +17,6 @@ export async function getDailyTips(input: DailyTipsInput): Promise<DailyTips> {
 
 const prompt = ai.definePrompt({
   name: 'dailyTipsPrompt',
-  model: googleAI.model('gemini-1.5-flash'),
   input: { schema: DailyTipsInputSchema },
   output: { schema: DailyTipsOutputSchema },
   prompt: `You are an AI assistant and wellness coach in a time management app called TimeBubble. Your role is to provide a single, insightful, supportive, and motivational tip to help the user optimize their day at the exact moment they complete a task.

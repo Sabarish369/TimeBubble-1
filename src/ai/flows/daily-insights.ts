@@ -17,7 +17,6 @@ export async function getDailyInsights(input: DailyInsightsInput): Promise<Daily
 
 const prompt = ai.definePrompt({
   name: 'dailyInsightsPrompt',
-  model: googleAI.model('gemini-1.5-flash'),
   input: { schema: DailyInsightsInputSchema },
   output: { schema: DailyInsightsOutputSchema },
   prompt: `You are a friendly and insightful time management and wellness coach.
