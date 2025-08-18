@@ -13,7 +13,6 @@ export const metadata: Metadata = {
   keywords: ['time management', 'productivity app', 'time blocking', 'AI assistant', 'daily planner', 'visual calendar', 'focus tool', 'Next.js', 'React'],
   authors: [{ name: 'TimeBubble Team' }],
   creator: 'TimeBubble Team',
-  manifest: '/manifest.json',
   openGraph: {
     type: 'website',
     locale: 'en_US',
