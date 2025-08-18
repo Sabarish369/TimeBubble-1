@@ -37,7 +37,7 @@ export async function requestPermissionAndGetToken(userId: string) {
       vapidKey = vapidKey.trim().replace(/^"(.*)"$/, '$1');
       
       const fcmToken = await getToken(messaging, {
-        vapidKey: urlBase64ToUint8Array(vapidKey),
+        vapidKey: vapidKey,
       });
 
       if (fcmToken) {
