@@ -9,7 +9,7 @@ import { TimeBubbleLogo } from "@/components/timebubble-logo";
 import { AuthGuard } from "@/components/auth-guard";
 import { useAuth } from "@/context/auth-context";
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 const freeFeatures = [
     { text: 'Visual Time-Blocking Timeline', included: true },
@@ -44,9 +44,9 @@ function PlanColumn({ title, price, priceSubtitle, description, features, onUpgr
       <p className="text-muted-foreground text-center mb-8 h-10">{priceSubtitle}</p>
       
       {isRecommended && (
-        <Button size="lg" className="w-full mb-8" onClick={onUpgrade} disabled={isLoading || true}>
+        <Button size="lg" className="w-full mb-8" onClick={onUpgrade} disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isLoading ? 'Redirecting...' : 'Upgrade Now'}
+          {isLoading ? 'Processing...' : 'Upgrade Now'}
         </Button>
       )}
 
@@ -67,15 +67,15 @@ function PlanColumn({ title, price, priceSubtitle, description, features, onUpgr
 
 export default function UpgradePage() {
     const { user } = useAuth();
+    const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
-    const { toast } = useToast();
 
     const handleUpgrade = async () => {
-        toast({
-            title: "Payment Integration Not Active",
-            description: "A payment provider has not been configured for this application yet.",
-            variant: "default",
-        });
+        if (!user) return;
+        setIsLoading(true);
+        // Simulate a successful payment flow by redirecting to the success page
+        // A real implementation would call a payment provider first.
+        router.push('/upgrade/success?session_id=simulated_session');
     };
 
 

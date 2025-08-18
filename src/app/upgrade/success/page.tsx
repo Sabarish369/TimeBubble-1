@@ -22,8 +22,8 @@ export default function UpgradeSuccessPage() {
         try {
           const userDocRef = doc(db, 'users', user.uid);
           await setDoc(userDocRef, { isPro: true }, { merge: true });
-          // Optionally, you can store the session ID for reconciliation
-          // await setDoc(doc(db, 'stripe_sessions', sessionId), { userId: user.uid, status: 'completed' });
+          // In a real scenario, you would also record the session ID
+          // to prevent users from re-using the same success URL.
         } catch (error) {
           console.error("Failed to update user to Pro:", error);
           // Handle error - maybe show a message to the user to contact support
