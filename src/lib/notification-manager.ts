@@ -8,6 +8,7 @@ import { ensureDateObject } from "./time-bubbles-utils";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { app, db } from "./firebase";
 import { doc, setDoc } from "firebase/firestore";
+import { urlBase64ToUint8Array } from "./utils";
 
 /**
  * Request notification permission from the user and get FCM token.
@@ -24,9 +25,15 @@ export async function requestPermissionAndGetToken(userId: string) {
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
       console.log("Notification permission granted.");
+
+      const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+      if (!vapidKey) {
+        console.error("VAPID key is missing from environment variables.");
+        return;
+      }
       
       const fcmToken = await getToken(messaging, {
-        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+        vapidKey: vapidKey,
       });
 
       if (fcmToken) {
