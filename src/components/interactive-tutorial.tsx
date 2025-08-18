@@ -12,7 +12,7 @@ interface TutorialStep {
   elementId?: string;
   title: string;
   description: string;
-  tooltipPosition: 'top' | 'bottom' | 'left' | 'right';
+  tooltipPosition: 'top' | 'bottom' | 'left' | 'right' | 'center';
   action?: () => void;
 }
 
@@ -59,7 +59,7 @@ export function InteractiveTutorial({ onFinish }: { onFinish: () => void }) {
       elementId: 'timeline-main',
       title: 'Your Visual Timeline',
       description: "This is your timeline. Double-click anywhere on an empty spot to create a custom time bubble for a specific time.",
-      tooltipPosition: 'left',
+      tooltipPosition: 'center',
     },
     {
       elementId: 'date-navigation',
@@ -134,7 +134,7 @@ export function InteractiveTutorial({ onFinish }: { onFinish: () => void }) {
 
     let tempTooltipPosition = currentStepConfig.tooltipPosition;
     if (isMobile) {
-        if (tempTooltipPosition === 'left' || tempTooltipPosition === 'right') {
+        if (tempTooltipPosition === 'left' || tempTooltipPosition === 'right' || tempTooltipPosition === 'center') {
             tempTooltipPosition = 'bottom';
         }
     }
@@ -163,6 +163,13 @@ export function InteractiveTutorial({ onFinish }: { onFinish: () => void }) {
                 transform: 'translate(-100%, -50%)',
             };
             break;
+        case 'center':
+            style = {
+                top: `${newElementRect.top + newElementRect.height / 2}px`,
+                left: `${newElementRect.left + newElementRect.width / 2}px`,
+                transform: 'translate(-50%, -50%)',
+            };
+            break;
         case 'right':
         default:
             style = {
@@ -173,23 +180,36 @@ export function InteractiveTutorial({ onFinish }: { onFinish: () => void }) {
             break;
     }
 
-    // Boundary checks
-    if (style.left && (parseInt(style.left, 10) + tooltipWidth > window.innerWidth)) {
-        style.left = `${window.innerWidth - tooltipWidth - gap}px`;
+    // Boundary checks to ensure the tooltip is always visible
+    let finalLeft = style.left ? parseFloat(style.left) : 0;
+    let finalTop = style.top ? parseFloat(style.top) : 0;
+
+    // Adjust for transform
+    if (style.transform.includes('translateX(-50%)')) finalLeft -= tooltipWidth / 2;
+    if (style.transform.includes('translateY(-50%)')) finalTop -= tooltipHeight / 2;
+    if (style.transform.includes('translateX(-100%)')) finalLeft -= tooltipWidth;
+    if (style.transform.includes('translateY(-100%)')) finalTop -= tooltipHeight;
+    
+    if (finalLeft < gap) {
+      style.left = `${gap}px`;
     }
-     if (style.left && parseInt(style.left, 10) < 0) {
-        style.left = `${gap}px`;
+    if (finalLeft + tooltipWidth > window.innerWidth - gap) {
+      style.left = `${window.innerWidth - tooltipWidth - gap}px`;
     }
-     if (style.top && (parseInt(style.top, 10) < 0)) {
-        style.top = `${gap}px`;
+    if (finalTop < gap) {
+      style.top = `${gap}px`;
     }
-    if (style.top && (parseInt(style.top, 10) + tooltipHeight > window.innerHeight)) {
-        style.top = `${window.innerHeight - tooltipHeight - gap}px`;
+    if (finalTop + tooltipHeight > window.innerHeight - gap) {
+      style.top = `${window.innerHeight - tooltipHeight - gap}px`;
     }
     
+    // After boundary checks, if we moved the tooltip, we might need to reset transform.
+    // This part is tricky; for now, we'll let the simple boundary check handle it.
+    // The most important thing is visibility.
+
     setTooltipStyle(style);
 
-  }, [step, onFinish, isMobile, setActionableBlock]);
+  }, [step, onFinish, isMobile, setActionableBlock, tutorialSteps]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -296,3 +316,5 @@ export function InteractiveTutorial({ onFinish }: { onFinish: () => void }) {
     </div>
   );
 }
+
+    
