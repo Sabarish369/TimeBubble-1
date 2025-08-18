@@ -206,19 +206,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         };
 
         const result = await fetchDailyTips(input);
-        
-        if (result.tips && result.tips.length > 0) {
-            setDailyTips(result);
-            const randomTip = result.tips[Math.floor(Math.random() * result.tips.length)];
-            toast({
-                title: randomTip.type,
-                description: randomTip.suggestion,
-                variant: 'dark',
-                tipType: randomTip.type,
-            });
-        } else {
-            setDailyTips(null);
-        }
+        setDailyTips(result);
     } catch (error) {
         console.error('Error getting AI proactive tip:', error);
         toast({
