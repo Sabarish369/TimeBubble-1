@@ -9,6 +9,10 @@ import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { app, db } from "./firebase";
 import { doc, setDoc } from "firebase/firestore";
 
+declare const self: ServiceWorkerGlobalScope & {
+  FIREBASE_VAPID_KEY: string;
+};
+
 // Store timeout IDs in a map for easy cancellation
 const notificationTimeouts = new Map<string, number[]>();
 
@@ -29,7 +33,7 @@ export async function requestPermissionAndGetToken(userId: string) {
       console.log("Notification permission granted.");
       
       const fcmToken = await getToken(messaging, {
-        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+        vapidKey: self.FIREBASE_VAPID_KEY,
       });
 
       if (fcmToken) {

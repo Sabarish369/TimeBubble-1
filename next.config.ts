@@ -29,13 +29,11 @@ const nextConfig: NextConfig = {
         'self.FIREBASE_STORAGE_BUCKET': JSON.stringify(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET),
         'self.FIREBASE_MESSAGING_SENDER_ID': JSON.stringify(process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID),
         'self.FIREBASE_APP_ID': JSON.stringify(process.env.NEXT_PUBLIC_FIREBASE_APP_ID),
+        'self.FIREBASE_VAPID_KEY': JSON.stringify(process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY),
       })
     );
     return config;
   },
-  env: {
-    NEXT_PUBLIC_FIREBASE_VAPID_KEY: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
-  }
 };
 
 export default nextConfig;
