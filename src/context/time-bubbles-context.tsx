@@ -9,7 +9,7 @@ import { getDailyTips as fetchDailyTips } from '@/ai/flows/daily-tips';
 import { getDailySidebarTip } from '@/ai/flows/daily-sidebar-tip';
 import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
-import { addDays, format, startOfDay, isToday, isPast } from 'date-fns';
+import { addDays, format, startOfDay, isToday, isPast, subDays } from 'date-fns';
 import * as NotificationManager from '@/lib/notification-manager';
 import { useAuth } from './auth-context';
 import { db } from '@/lib/firebase';
@@ -189,19 +189,32 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   const getDailyTips = useCallback(async () => {
     if (!geminiApiKey) return;
     setIsLoadingTips(true);
+    setDailyTips(null);
     try {
-        const sortedBlocks = timeBlocks
-            .map(b => ({ ...b, startTime: ensureDateObject(b.startTime) }))
-            .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+        const yesterday = subDays(currentDate, 1);
+        const previousDayBlocks = await getBlocksForDate(yesterday);
         
-        const now = new Date();
-        const completedBlock = lastCompletedBlock;
-        const nextTask = sortedBlocks.find(b => b.startTime > now && !b.completed);
+        if (previousDayBlocks.length === 0) {
+            toast({
+                title: 'Not enough data for tips',
+                description: 'Once you complete a day, AI tips will be generated for you here.',
+            });
+            setIsLoadingTips(false);
+            return;
+        }
+
+        const schedule = JSON.stringify(previousDayBlocks);
+        const productivityPatterns = JSON.stringify(
+            previousDayBlocks.filter(b => b.reflection).map(b => ({
+                title: b.title,
+                mood: b.reflection?.mood,
+                productivity: b.reflection?.productivity,
+            }))
+        );
 
         const input = {
-            schedule: JSON.stringify({ completedBlock, nextTask }),
-            productivityPatterns: "User tends to be most productive in the morning and after short breaks.",
-            currentTime: now.toISOString(),
+            schedule,
+            productivityPatterns,
             apiKey: geminiApiKey,
         };
 
@@ -211,22 +224,23 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         console.error('Error getting AI proactive tip:', error);
         toast({
             title: 'AI Tip Error',
-            description: 'Could not fetch a tip right now.',
+            description: 'Could not fetch tips for today.',
             variant: 'destructive',
         });
         setDailyTips(null);
     } finally {
         setIsLoadingTips(false);
     }
-  }, [toast, timeBlocks, lastCompletedBlock, setDailyTips, setIsLoadingTips, geminiApiKey]);
+  }, [geminiApiKey, currentDate, getBlocksForDate, toast]);
 
 
   useEffect(() => {
     if (lastCompletedBlock) {
-      getDailyTips();
+      // The logic to trigger tips immediately after a block is completed has been removed
+      // as per the new requirement to generate tips for the next day.
       setLastCompletedBlock(null); 
     }
-  }, [lastCompletedBlock, getDailyTips]);
+  }, [lastCompletedBlock]);
 
   const findAvailableSlot = useCallback((
     requestedStartTime: Date,
