@@ -9,10 +9,7 @@ import { TimeBubbleLogo } from "@/components/timebubble-logo";
 import { AuthGuard } from "@/components/auth-guard";
 import { useAuth } from "@/context/auth-context";
 import { useState } from "react";
-import { loadStripe } from '@stripe/stripe-js';
 import { useToast } from "@/hooks/use-toast";
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 const freeFeatures = [
     { text: 'Visual Time-Blocking Timeline', included: true },
@@ -47,7 +44,7 @@ function PlanColumn({ title, price, priceSubtitle, description, features, onUpgr
       <p className="text-muted-foreground text-center mb-8 h-10">{priceSubtitle}</p>
       
       {isRecommended && (
-        <Button size="lg" className="w-full mb-8" onClick={onUpgrade} disabled={isLoading}>
+        <Button size="lg" className="w-full mb-8" onClick={onUpgrade} disabled={isLoading || true}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isLoading ? 'Redirecting...' : 'Upgrade Now'}
         </Button>
@@ -74,51 +71,11 @@ export default function UpgradePage() {
     const { toast } = useToast();
 
     const handleUpgrade = async () => {
-        if (!user) {
-            toast({
-                title: "Not signed in",
-                description: "You need to be signed in to upgrade.",
-                variant: "destructive",
-            });
-            return;
-        }
-
-        setIsLoading(true);
-
-        try {
-            const res = await fetch('/api/create-checkout-session', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ userId: user.uid }),
-            });
-
-            if (!res.ok) {
-                const { error } = await res.json();
-                throw new Error(error || 'Could not create checkout session.');
-            }
-
-            const { sessionId } = await res.json();
-            const stripe = await stripePromise;
-
-            if (!stripe) {
-              throw new Error('Stripe.js has not loaded yet.');
-            }
-
-            const { error } = await stripe.redirectToCheckout({ sessionId });
-
-            if (error) {
-                throw new Error(error.message);
-            }
-        } catch (error: any) {
-            toast({
-                title: "Upgrade Error",
-                description: error.message,
-                variant: "destructive",
-            });
-            setIsLoading(false);
-        }
+        toast({
+            title: "Payment Integration Not Active",
+            description: "A payment provider has not been configured for this application yet.",
+            variant: "default",
+        });
     };
 
 
