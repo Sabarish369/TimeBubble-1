@@ -1,4 +1,5 @@
 
+
 /**
  * @fileoverview Manages scheduling and displaying browser push notifications via Firebase Cloud Messaging.
  */
@@ -33,7 +34,7 @@ export async function requestPermissionAndGetToken(userId: string) {
       }
       
       const fcmToken = await getToken(messaging, {
-        vapidKey: vapidKey,
+        vapidKey: urlBase64ToUint8Array(vapidKey),
       });
 
       if (fcmToken) {
