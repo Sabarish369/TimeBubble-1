@@ -1,4 +1,3 @@
-
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -9,7 +8,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   experimental: {
-    allowedOrigins: ['*.replit.dev'],
+    // Remove allowedOrigins as it's not a valid experimental option
   },
   images: {
     remotePatterns: [
