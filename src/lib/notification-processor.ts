@@ -1,46 +1,39 @@
 
-import { getPendingNotifications, markNotificationAsSent, ScheduledNotification } from './notification-scheduler';
+import { getPendingNotifications, markNotificationAsProcessed, type ScheduledNotification } from './notification-scheduler';
 import { showGetReadyNotification, canShowBrowserNotifications } from './browser-notification';
 
 /**
- * Process and send pending notifications
+ * Process all pending notifications
  */
-export async function processPendingNotifications() {
+export async function processPendingNotifications(): Promise<void> {
   try {
     const pendingNotifications = await getPendingNotifications();
     
     if (pendingNotifications.length === 0) {
-      return { processed: 0, errors: 0 };
+      return;
     }
 
     console.log(`Processing ${pendingNotifications.length} pending notifications`);
-    
-    let processed = 0;
-    let errors = 0;
 
     for (const notification of pendingNotifications) {
       try {
         await sendNotification(notification);
-        await markNotificationAsSent(notification.id!);
-        processed++;
+        if (notification.id) {
+          await markNotificationAsProcessed(notification.id);
+        }
       } catch (error) {
-        console.error(`Failed to send notification ${notification.id}:`, error);
-        errors++;
+        console.error(`Failed to send notification for ${notification.bubbleTitle}:`, error);
       }
     }
-
-    console.log(`Notification processing complete: ${processed} sent, ${errors} errors`);
-    return { processed, errors };
   } catch (error) {
-    console.error('Error processing notifications:', error);
-    return { processed: 0, errors: 1 };
+    console.error('Error processing pending notifications:', error);
   }
 }
 
 /**
  * Send a single notification
  */
-async function sendNotification(notification: ScheduledNotification) {
+async function sendNotification(notification: ScheduledNotification): Promise<void> {
   const { bubbleTitle, notificationType, userId, bubbleId } = notification;
   
   try {
@@ -63,7 +56,9 @@ async function sendNotification(notification: ScheduledNotification) {
     });
 
     if (response.ok) {
-      return response.json();
+      const result = await response.json();
+      console.log(`✅ FCM notification sent for "${bubbleTitle}" (${notificationType})`);
+      return;
     }
   } catch (error) {
     console.warn('FCM notification failed, trying browser notification:', error);
@@ -71,12 +66,11 @@ async function sendNotification(notification: ScheduledNotification) {
 
   // Fallback to browser notification
   if (canShowBrowserNotifications()) {
-    const minutes = notificationType === '15min' ? 15 : 1;
-    const success = await showGetReadyNotification(bubbleTitle, minutes);
+    const success = await sendBrowserNotification(bubbleTitle, notificationType);
     
     if (success) {
-      console.log(`Sent browser notification for "${bubbleTitle}" (${notificationType})`);
-      return { success: true, method: 'browser' };
+      console.log(`✅ Browser notification sent for "${bubbleTitle}" (${notificationType})`);
+      return;
     }
   }
 
@@ -84,14 +78,40 @@ async function sendNotification(notification: ScheduledNotification) {
 }
 
 /**
+ * Send browser notification as fallback
+ */
+async function sendBrowserNotification(taskTitle: string, type: '15min' | '1min' | 'completed'): Promise<boolean> {
+  try {
+    const title = getNotificationTitle(type);
+    const body = getNotificationBody(taskTitle, type);
+    
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, {
+        body,
+        icon: '/logo.svg',
+        tag: `task-${type}`, // Prevents duplicate notifications
+        requireInteraction: type === '1min' || type === 'completed', // Keep important notifications visible
+      });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Browser notification error:', error);
+    return false;
+  }
+}
+
+/**
  * Generate notification title based on type
  */
-function getNotificationTitle(type: '15min' | '1min'): string {
+function getNotificationTitle(type: '15min' | '1min' | 'completed'): string {
   switch (type) {
     case '15min':
       return '⏰ Task Starting Soon';
     case '1min':
       return '🚨 Task Starting Now';
+    case 'completed':
+      return '✅ Task Completed';
     default:
       return '📅 Task Reminder';
   }
@@ -100,12 +120,14 @@ function getNotificationTitle(type: '15min' | '1min'): string {
 /**
  * Generate notification body based on task and type
  */
-function getNotificationBody(taskTitle: string, type: '15min' | '1min'): string {
+function getNotificationBody(taskTitle: string, type: '15min' | '1min' | 'completed'): string {
   switch (type) {
     case '15min':
       return `"${taskTitle}" starts in 15 minutes. Get ready!`;
     case '1min':
       return `"${taskTitle}" starts in 1 minute. Time to begin!`;
+    case 'completed':
+      return `Great job! You've completed "${taskTitle}". Time for a break or your next task.`;
     default:
       return `Don't forget: "${taskTitle}"`;
   }
@@ -114,7 +136,7 @@ function getNotificationBody(taskTitle: string, type: '15min' | '1min'): string 
 /**
  * Start the notification processor (runs every minute)
  */
-export function startNotificationProcessor() {
+export function startNotificationProcessor(): (() => void) | undefined {
   if (typeof window !== 'undefined') {
     // Only run on client side
     const intervalId = setInterval(processPendingNotifications, 60000); // Check every minute
@@ -124,5 +146,5 @@ export function startNotificationProcessor() {
     
     return () => clearInterval(intervalId);
   }
-  return () => {};
+  return undefined;
 }

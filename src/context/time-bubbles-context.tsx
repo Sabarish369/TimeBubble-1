@@ -12,10 +12,11 @@ import { addDays, format, startOfDay, isToday, isPast, subDays } from 'date-fns'
 import * as NotificationManager from '@/lib/notification-manager';
 import { useAuth } from './auth-context';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc, writeBatch, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc, writeBatch, Timestamp, query, where } from 'firebase/firestore';
 import { ensureDateObject } from '@/lib/time-bubbles-utils';
 import { scheduleNotificationsForBubble, clearNotificationsForBubble } from '@/lib/notification-scheduler';
 import { startNotificationProcessor } from '@/lib/notification-processor';
+import { useNotifications } from '@/hooks/use-notifications';
 
 type Theme = 'light' | 'dark';
 
@@ -139,6 +140,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setThemeState] = useState<Theme>('dark');
   const [isMissedTasksDrawerOpen, setIsMissedTasksDrawerOpen] = useState(false);
 
+  const { scheduleTaskNotifications, clearTaskNotifications } = useNotifications();
 
   const { toast } = useToast();
 
@@ -552,7 +554,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   }, [addBlockOnDate]);
 
 
-  const deleteBlock = useCallback(async (id: string) => {
+  const deleteBlock = useCallback(async (id: string): Promise<void> => {
     if (!user?.uid) throw new Error('User not authenticated');
 
     const bubbleRef = doc(db, 'timeBubbles', id);
@@ -563,7 +565,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
     // Clear FCM notifications
     try {
-      await clearNotificationsForBubble(id);
+      await clearTaskNotifications(id);
     } catch (error) {
       console.error('Failed to clear notifications for bubble:', error);
     }
@@ -791,7 +793,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
                   if (remainingBlocks.length > 0) {
                       batch.set(dayDocRef, { blocks: remainingBlocks });
                   } else {
-                      batch.delete(dayDocRef);
+                      batch.delete(docSnap.ref);
                   }
               }
           }

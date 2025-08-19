@@ -1,98 +1,111 @@
-import { doc, collection, addDoc, query, where, getDocs, deleteDoc, Timestamp } from 'firebase/firestore';
+
 import { db } from './firebase';
-import { showGetReadyNotification, canShowBrowserNotifications } from './browser-notification';
+import { collection, addDoc, query, where, getDocs, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 
 export interface ScheduledNotification {
   id?: string;
   userId: string;
   bubbleId: string;
   bubbleTitle: string;
+  notificationType: '15min' | '1min' | 'completed';
   scheduledTime: Date;
-  notificationType: '15min' | '1min';
-  sent: boolean;
+  processed: boolean;
+  createdAt: Date;
 }
 
 /**
- * Schedule notifications for a time bubble
+ * Schedule notifications for a task bubble
  */
 export async function scheduleNotificationsForBubble(
   userId: string,
   bubbleId: string,
   bubbleTitle: string,
-  startTime: Date
+  startTime: Date,
+  duration: number = 60 // duration in minutes
 ): Promise<number> {
-  const notifications: Omit<ScheduledNotification, 'id'>[] = [];
-  let scheduledCount = 0;
+  try {
+    // Clear any existing notifications for this bubble
+    await clearNotificationsForBubble(bubbleId);
 
-  // 15-minute warning
-  const fifteenMinBefore = new Date(startTime.getTime() - 15 * 60 * 1000);
-  if (fifteenMinBefore > new Date()) {
+    const notifications: Omit<ScheduledNotification, 'id'>[] = [];
+    const now = new Date();
+
+    // 15-minute warning notification
+    const fifteenMinBefore = new Date(startTime.getTime() - 15 * 60 * 1000);
+    if (fifteenMinBefore > now) {
+      notifications.push({
+        userId,
+        bubbleId,
+        bubbleTitle,
+        notificationType: '15min',
+        scheduledTime: fifteenMinBefore,
+        processed: false,
+        createdAt: now
+      });
+    }
+
+    // 1-minute warning notification
+    const oneMinBefore = new Date(startTime.getTime() - 1 * 60 * 1000);
+    if (oneMinBefore > now) {
+      notifications.push({
+        userId,
+        bubbleId,
+        bubbleTitle,
+        notificationType: '1min',
+        scheduledTime: oneMinBefore,
+        processed: false,
+        createdAt: now
+      });
+    }
+
+    // Task completed notification (after task duration)
+    const completedTime = new Date(startTime.getTime() + duration * 60 * 1000);
     notifications.push({
       userId,
       bubbleId,
       bubbleTitle,
-      notificationType: '15min',
-      scheduledTime: Timestamp.fromDate(fifteenMinBefore),
-      sent: false,
+      notificationType: 'completed',
+      scheduledTime: completedTime,
+      processed: false,
+      createdAt: now
     });
 
-    // Schedule immediate browser notification for 15-min warning
-    if (canShowBrowserNotifications()) {
-      const timeUntilNotification = fifteenMinBefore.getTime() - Date.now();
-      if (timeUntilNotification > 0) {
-        setTimeout(() => {
-          showGetReadyNotification(bubbleTitle, 15);
-        }, timeUntilNotification);
-        scheduledCount++;
-      }
+    // Save notifications to Firestore
+    const notificationsRef = collection(db, 'scheduledNotifications');
+    for (const notification of notifications) {
+      await addDoc(notificationsRef, {
+        ...notification,
+        scheduledTime: Timestamp.fromDate(notification.scheduledTime),
+        createdAt: Timestamp.fromDate(notification.createdAt)
+      });
     }
+
+    console.log(`Scheduled ${notifications.length} notifications for "${bubbleTitle}"`);
+    return notifications.length;
+  } catch (error) {
+    console.error('Error scheduling notifications:', error);
+    throw error;
   }
-
-  // 1-minute warning
-  const oneMinBefore = new Date(startTime.getTime() - 1 * 60 * 1000);
-  if (oneMinBefore > new Date()) {
-    notifications.push({
-      userId,
-      bubbleId,
-      bubbleTitle,
-      notificationType: '1min',
-      scheduledTime: Timestamp.fromDate(oneMinBefore),
-      sent: false,
-    });
-
-    // Schedule immediate browser notification for 1-min warning
-    if (canShowBrowserNotifications()) {
-      const timeUntilNotification = oneMinBefore.getTime() - Date.now();
-      if (timeUntilNotification > 0) {
-        setTimeout(() => {
-          showGetReadyNotification(bubbleTitle, 1);
-        }, timeUntilNotification);
-        scheduledCount++;
-      }
-    }
-  }
-
-  // Save to Firestore (as backup/for other devices)
-  for (const notification of notifications) {
-    await addDoc(collection(db, 'scheduledNotifications'), notification);
-  }
-
-  console.log(`Scheduled ${scheduledCount} immediate browser notifications for "${bubbleTitle}"`);
-  return notifications.length;
 }
 
 /**
- * Clear all notifications for a specific bubble
+ * Clear notifications for a specific bubble
  */
-export async function clearNotificationsForBubble(bubbleId: string) {
+export async function clearNotificationsForBubble(bubbleId: string): Promise<void> {
   try {
     const notificationsRef = collection(db, 'scheduledNotifications');
-    const q = query(notificationsRef, where('bubbleId', '==', bubbleId));
+    const q = query(
+      notificationsRef,
+      where('bubbleId', '==', bubbleId),
+      where('processed', '==', false)
+    );
+    
     const querySnapshot = await getDocs(q);
-
-    const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+    const deletePromises = querySnapshot.docs.map(docSnapshot => 
+      deleteDoc(doc(db, 'scheduledNotifications', docSnapshot.id))
+    );
+    
     await Promise.all(deletePromises);
-
     console.log(`Cleared notifications for bubble: ${bubbleId}`);
   } catch (error) {
     console.error('Error clearing notifications:', error);
@@ -100,7 +113,7 @@ export async function clearNotificationsForBubble(bubbleId: string) {
 }
 
 /**
- * Get pending notifications that should be sent now
+ * Get pending notifications that need to be sent
  */
 export async function getPendingNotifications(): Promise<ScheduledNotification[]> {
   try {
@@ -108,15 +121,16 @@ export async function getPendingNotifications(): Promise<ScheduledNotification[]
     const notificationsRef = collection(db, 'scheduledNotifications');
     const q = query(
       notificationsRef,
-      where('sent', '==', false),
+      where('processed', '==', false),
       where('scheduledTime', '<=', Timestamp.fromDate(now))
     );
-
+    
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-      scheduledTime: doc.data().scheduledTime.toDate()
+      scheduledTime: doc.data().scheduledTime.toDate(),
+      createdAt: doc.data().createdAt.toDate()
     })) as ScheduledNotification[];
   } catch (error) {
     console.error('Error getting pending notifications:', error);
@@ -125,13 +139,13 @@ export async function getPendingNotifications(): Promise<ScheduledNotification[]
 }
 
 /**
- * Mark notification as sent
+ * Mark notification as processed
  */
-export async function markNotificationAsSent(notificationId: string) {
+export async function markNotificationAsProcessed(notificationId: string): Promise<void> {
   try {
     const notificationRef = doc(db, 'scheduledNotifications', notificationId);
-    await deleteDoc(notificationRef); // Remove sent notifications to keep collection clean
+    await deleteDoc(notificationRef);
   } catch (error) {
-    console.error('Error marking notification as sent:', error);
+    console.error('Error marking notification as processed:', error);
   }
 }

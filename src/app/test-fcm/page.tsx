@@ -144,12 +144,14 @@ export default function TestFCMPage() {
         user.uid,
         'test-bubble-' + Date.now(),
         'Test Task Scheduling',
-        testStartTime
+        testStartTime,
+        30 // 30 minute duration
       );
       
       addTestResult(`✅ Scheduled ${count} test notifications`);
       addTestResult(`Task starts at: ${testStartTime.toLocaleTimeString()}`);
-      addTestResult('Note: Notifications will be processed by the background service');
+      addTestResult('Notifications: 15min warning, 1min warning, completion alert');
+      addTestResult('Note: Notifications will be processed automatically every minute');
     } catch (error) {
       addTestResult(`Scheduling error: ${error}`);
     }
