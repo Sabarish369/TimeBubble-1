@@ -1,7 +1,7 @@
 
-// Import the Firebase app and messaging services
-import { initializeApp } from "firebase/app";
-import { getMessaging } from "firebase/messaging/sw";
+// Import the Firebase app and messaging libraries
+import { initializeApp } from 'firebase/app';
+import { getMessaging } from 'firebase/messaging/sw';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -13,10 +13,12 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
+// Initialize the Firebase app in the service worker
 const app = initializeApp(firebaseConfig);
+
+// Initialize Firebase Cloud Messaging and get a reference to the service
 const messaging = getMessaging(app);
 
-// The service worker is intentionally left blank after initialization.
-// Firebase SDK handles the rest.
-// You can add custom background message handling here if needed.
+// The service worker doesn't need to do anything else.
+// Firebase automatically handles background notifications.
+console.log('Firebase messaging service worker successfully set up.');
