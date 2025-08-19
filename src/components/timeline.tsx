@@ -66,8 +66,22 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
       }
 
       addBlock({ ...template, startTime });
+      
+      // Success animation
+      if (timelineRef.current) {
+        timelineRef.current.classList.remove('drag-over-active');
+        timelineRef.current.classList.add('drop-success');
+        setTimeout(() => {
+          if (timelineRef.current) {
+            timelineRef.current.classList.remove('drop-success');
+          }
+        }, 600);
+      }
     } catch (error) {
       console.error("Failed to parse dropped data", error);
+      if (timelineRef.current) {
+        timelineRef.current.classList.remove('drag-over-active');
+      }
     }
   };
 
@@ -90,14 +104,14 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
     if (timelineRef.current) {
-      timelineRef.current.classList.add('border-blue-500'); // Example: Add a visual indicator
+      timelineRef.current.classList.add('drag-over-active');
     }
   };
 
   const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (timelineRef.current) {
-      timelineRef.current.classList.remove('border-blue-500'); // Remove visual indicator
+    if (timelineRef.current && !timelineRef.current.contains(e.relatedTarget as Node)) {
+      timelineRef.current.classList.remove('drag-over-active');
     }
   };
 
