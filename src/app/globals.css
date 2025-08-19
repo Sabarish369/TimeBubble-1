@@ -250,4 +250,46 @@ body {
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
   }
+
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    .mobile-friendly-tap {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    .mobile-text {
+      font-size: 16px; /* Prevents zoom on input focus */
+    }
+    
+    .mobile-spacing {
+      padding: 12px;
+      margin: 8px 0;
+    }
+  }
+
+  /* Touch-friendly interactions */
+  .touch-friendly {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Improved drag experience on mobile */
+  .drag-handle {
+    cursor: grab;
+    touch-action: none;
+  }
+  
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+
+  /* Better mobile modal sizing */
+  @media (max-width: 640px) {
+    .mobile-modal {
+      margin: 0;
+      max-height: 100vh;
+      border-radius: 0;
+    }
+  }
 }

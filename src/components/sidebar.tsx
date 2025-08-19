@@ -197,7 +197,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               id={index === 0 ? 'first-template-item' : undefined}
               draggable
               onDragStart={(e) => handleDragStart(e, template)}
-              className="p-3 rounded-lg shadow-sm cursor-grab active:cursor-grabbing flex items-center gap-3 transition-shadow hover:shadow-md relative group"
+              className="p-3 rounded-lg shadow-sm cursor-grab active:cursor-grabbing flex items-center gap-3 transition-shadow hover:shadow-md relative group touch-friendly drag-handle mobile-spacing"
               style={{ backgroundColor: `hsl(var(--bubble-${template.color}))` }}
             >
               <Icon className="h-5 w-5 shrink-0 text-slate-700 dark:text-white" />
@@ -205,11 +205,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <p className="font-medium text-sm text-slate-800 dark:text-white">{template.title}</p>
                 <p className="text-xs text-slate-700 dark:text-white/80">{template.duration} min</p>
               </div>
-              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+              <div className={cn("absolute top-1 right-1 transition-opacity flex gap-1", isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className={cn("h-7 w-7", isMobile && "mobile-friendly-tap h-9 w-9")}
                     onClick={() => handleOpenEditModal(template)}
                   >
                     <Pencil className="h-4 w-4 text-slate-700 dark:text-white/80" />
@@ -220,7 +220,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7"
+                        className={cn("h-7 w-7", isMobile && "mobile-friendly-tap h-9 w-9")}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Trash2 className="h-4 w-4 text-slate-700 dark:text-white/80" />

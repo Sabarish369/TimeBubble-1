@@ -35,10 +35,10 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   const isMobile = useIsMobile();
 
   return (
-    <header className="flex items-center justify-between p-2 md:p-4 border-b shrink-0 bg-gradient-to-r from-primary/10 via-background to-accent/10">
+    <header className="flex items-center justify-between p-2 md:p-4 border-b shrink-0 bg-gradient-to-r from-primary/10 via-background to-accent/10 touch-friendly">
       <div className="flex items-center gap-2 md:gap-4">
         {isMobile && (
-          <Button variant="ghost" size="icon" onClick={onToggleSidebar}>
+          <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="mobile-friendly-tap">
             <Menu className="h-6 w-6" />
             <span className="sr-only">Toggle Sidebar</span>
           </Button>
@@ -50,7 +50,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           Today
         </Button>
         <div className="flex items-center gap-1 rounded-md border p-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToPreviousDay}>
+          <Button variant="ghost" size="icon" className={cn("h-7 w-7", isMobile && "mobile-friendly-tap h-9 w-9")} onClick={goToPreviousDay}>
             <ChevronLeft className="h-5 w-5" />
             <span className="sr-only">Previous day</span>
           </Button>
@@ -76,7 +76,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
               />
             </PopoverContent>
           </Popover>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToNextDay}>
+          <Button variant="ghost" size="icon" className={cn("h-7 w-7", isMobile && "mobile-friendly-tap h-9 w-9")} onClick={goToNextDay}>
             <ChevronRight className="h-5 w-5" />
             <span className="sr-only">Next day</span>
           </Button>

@@ -1,4 +1,3 @@
-
 'use client';
 import type { DragEvent, MouseEvent, RefObject } from 'react';
 import React from 'react';
@@ -48,13 +47,13 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
       const template = JSON.parse(data);
       const mainContainer = timelineRef.current.parentElement;
       if (!mainContainer) return;
-      
+
       const rect = timelineRef.current.getBoundingClientRect();
       const dropY = e.clientY - rect.top;
-      
+
       const minutesFromTop = Math.round(dropY / pixelsPerMinute);
       const clampedMinutes = Math.max(0, minutesFromTop);
-      
+
       const startTime = new Date(currentDate);
       startTime.setHours(Math.floor(clampedMinutes / 60), clampedMinutes % 60, 0, 0);
 
@@ -75,14 +74,14 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
   const handleDoubleClick = (e: MouseEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest('[class*="absolute left-[80px]"]')) return;
     if (!timelineRef.current) return;
-    
+
     const rect = timelineRef.current.getBoundingClientRect();
     const y = e.clientY - rect.top;
     const minutesFromTop = Math.round(y / pixelsPerMinute);
 
     const startTime = new Date(currentDate);
     startTime.setHours(Math.floor(minutesFromTop/60), minutesFromTop % 60, 0, 0);
-    
+
     setNewBubbleStartTime(startTime);
     setIsBubbleCreateModalOpen(true);
   };
@@ -95,7 +94,7 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
   return (
     <div
       ref={timelineRef}
-      className="relative w-full"
+      className="relative w-full touch-friendly"
       style={{ height: `${TOTAL_HOURS * hourHeight}px` }}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
