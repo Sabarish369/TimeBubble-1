@@ -9,6 +9,7 @@ import * as NotificationManager from '@/lib/notification-manager';
 import { getMessaging, getToken } from 'firebase/messaging';
 import { app } from '@/lib/firebase';
 import { urlBase64ToUint8Array } from '@/lib/utils';
+import { showGetReadyNotification, requestNotificationPermission, canShowBrowserNotifications } from '@/lib/browser-notification';
 
 export default function TestFCMPage() {
   const { user } = useAuth();
@@ -94,18 +95,109 @@ export default function TestFCMPage() {
   };
 
   const sendTestFCMMessage = async () => {
-    if (!fcmToken) {
-      addTestResult('Error: No FCM token available');
+    if (!fcmToken || !user) {
+      addTestResult('Error: No FCM token or user available');
       return;
     }
 
     try {
-      // This would normally be sent from your backend
-      // For testing, we'll just simulate what the backend would send
-      addTestResult('Note: In production, FCM messages are sent from the backend');
-      addTestResult(`Test would send to token: ${fcmToken.substring(0, 20)}...`);
+      const response = await fetch('/api/send-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.uid,
+          title: '🧪 Test Notification',
+          body: 'This is a test FCM notification from your task scheduler!',
+          bubbleId: 'test-bubble',
+          notificationType: 'test',
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        addTestResult('✅ Test FCM message sent successfully');
+        addTestResult(`Result: ${result.message}`);
+      } else {
+        addTestResult(`❌ FCM send failed: ${result.error}`);
+      }
     } catch (error) {
       addTestResult(`FCM send error: ${error}`);
+    }
+  };
+
+  const testNotificationScheduling = async () => {
+    if (!user) {
+      addTestResult('Error: User not logged in');
+      return;
+    }
+
+    try {
+      const { scheduleNotificationsForBubble } = await import('@/lib/notification-scheduler');
+      
+      // Create a test task starting in 2 minutes
+      const testStartTime = new Date(Date.now() + 2 * 60 * 1000);
+      
+      const count = await scheduleNotificationsForBubble(
+        user.uid,
+        'test-bubble-' + Date.now(),
+        'Test Task Scheduling',
+        testStartTime,
+        30 // 30 minute duration
+      );
+      
+      addTestResult(`✅ Scheduled ${count} test notifications`);
+      addTestResult(`Task starts at: ${testStartTime.toLocaleTimeString()}`);
+      addTestResult('Notifications: 15min warning, 1min warning, completion alert');
+      addTestResult('Note: Notifications will be processed automatically every minute');
+    } catch (error) {
+      addTestResult(`Scheduling error: ${error}`);
+    }
+  };
+
+  const testBrowserGetReadyNotification = async () => {
+    try {
+      const hasPermission = canShowBrowserNotifications();
+      if (!hasPermission) {
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+          addTestResult('❌ Browser notification permission denied');
+          return;
+        }
+      }
+
+      const success = await showGetReadyNotification('Test Task', 15);
+      if (success) {
+        addTestResult('✅ Browser "Get Ready" notification sent (15 min warning)');
+      } else {
+        addTestResult('❌ Failed to send browser notification');
+      }
+    } catch (error) {
+      addTestResult(`Browser notification error: ${error}`);
+    }
+  };
+
+  const testBrowserUrgentNotification = async () => {
+    try {
+      const hasPermission = canShowBrowserNotifications();
+      if (!hasPermission) {
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+          addTestResult('❌ Browser notification permission denied');
+          return;
+        }
+      }
+
+      const success = await showGetReadyNotification('Test Urgent Task', 1);
+      if (success) {
+        addTestResult('✅ Browser urgent notification sent (1 min warning)');
+      } else {
+        addTestResult('❌ Failed to send urgent browser notification');
+      }
+    } catch (error) {
+      addTestResult(`Browser urgent notification error: ${error}`);
     }
   };
 
@@ -147,8 +239,17 @@ export default function TestFCMPage() {
                 <Button onClick={testBrowserNotification} variant="outline">
                   Send Test Browser Notification
                 </Button>
+                <Button onClick={testBrowserGetReadyNotification} variant="outline">
+                  Test "Get Ready" Notification (15 min)
+                </Button>
+                <Button onClick={testBrowserUrgentNotification} variant="outline">
+                  Test Urgent Notification (1 min)
+                </Button>
                 <Button onClick={sendTestFCMMessage} variant="outline">
-                  Simulate FCM Message
+                  Send Test FCM Message
+                </Button>
+                <Button onClick={testNotificationScheduling} variant="outline">
+                  Test Notification Scheduling
                 </Button>
                 <Button onClick={clearResults} variant="ghost">
                   Clear Results

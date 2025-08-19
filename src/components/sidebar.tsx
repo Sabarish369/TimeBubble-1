@@ -94,26 +94,82 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
 
     const target = e.currentTarget;
-    // Create a custom drag image
+    
+    // Add drag start animation to original element
+    target.style.transform = 'scale(0.95) rotate(-2deg)';
+    target.style.opacity = '0.6';
+    target.style.transition = 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    target.classList.add('dragging-source');
+    
+    // Create enhanced custom drag image with better visual feedback
     const dragImage = target.cloneNode(true) as HTMLElement;
-    dragImage.style.position = 'absolute';
-    dragImage.style.top = '-1000px'; // Position off-screen
-    dragImage.style.width = `${target.offsetWidth}px`;
-    dragImage.style.height = `${target.offsetHeight}px`;
-    dragImage.style.opacity = '0.8'; // Make it semi-transparent
-    dragImage.style.pointerEvents = 'none';
-    dragImage.classList.add('is-glowing');
-    (dragImage.style as any).setProperty('--glow-color', `hsl(var(--bubble-${template.color}))`);
+    dragImage.style.cssText = `
+      position: absolute !important;
+      top: -3000px !important;
+      left: -3000px !important;
+      width: ${target.offsetWidth}px !important;
+      height: ${target.offsetHeight}px !important;
+      opacity: 0.95 !important;
+      pointer-events: none !important;
+      transform: scale(1.1) rotate(3deg) !important;
+      filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.35)) brightness(1.1) !important;
+      border: 2px solid rgba(255, 255, 255, 0.6) !important;
+      border-radius: 14px !important;
+      z-index: 10000 !important;
+      transition: none !important;
+      background: linear-gradient(135deg, hsl(var(--bubble-${template.color})) 0%, hsl(var(--bubble-${template.color})) 70%, rgba(255,255,255,0.3) 100%) !important;
+    `;
+    
+    dragImage.classList.add('enhanced-drag-ghost');
+    dragImage.setAttribute('data-color', template.color);
+
+    // Add magical trail effect
+    const trail = document.createElement('div');
+    trail.style.cssText = `
+      position: absolute !important;
+      inset: -4px !important;
+      background: linear-gradient(45deg, 
+        transparent 0%, 
+        hsl(var(--bubble-${template.color}) / 0.4) 25%, 
+        hsl(var(--bubble-${template.color}) / 0.6) 50%, 
+        hsl(var(--bubble-${template.color}) / 0.4) 75%, 
+        transparent 100%) !important;
+      border-radius: 16px !important;
+      filter: blur(2px) !important;
+      animation: trailShimmer 1.5s infinite ease-in-out !important;
+      z-index: -1 !important;
+    `;
+    dragImage.appendChild(trail);
 
     document.body.appendChild(dragImage);
     e.dataTransfer.setDragImage(dragImage, target.offsetWidth / 2, target.offsetHeight / 2);
 
-    // Clean up the cloned element after the drag starts
+    // Enhanced cleanup with smoother transitions
     setTimeout(() => {
         if(document.body.contains(dragImage)) {
             document.body.removeChild(dragImage);
         }
-    }, 0);
+    }, 50);
+  };
+
+  const handleDragEnd = (e: DragEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    target.classList.remove('dragging-source');
+    
+    // Enhanced bounce-back animation
+    target.style.transform = 'scale(1.05)';
+    target.style.opacity = '1';
+    target.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    
+    setTimeout(() => {
+      target.style.transform = 'scale(1.02)';
+    }, 100);
+    
+    setTimeout(() => {
+      target.style.transform = '';
+      target.style.opacity = '';
+      target.style.transition = '';
+    }, 400);
   };
 
   const handleOpenCreateTemplateModal = () => {
@@ -186,7 +242,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </TooltipProvider>
       </div>
       
-      <div id="templates-list" className={cn("space-y-3 overflow-y-auto flex-1 no-scrollbar")}>
+      <div id="templates-list" className={cn("space-y-3 overflow-y-auto flex-1 no-scrollbar px-1")}>
         {allTemplates.map((template, index) => {
           const Icon = categoryIcons[template.category];
           const isUserCreated = !template.isDefault || templates.some(t => t.id === template.id && !t.isDefault);
@@ -197,7 +253,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               id={index === 0 ? 'first-template-item' : undefined}
               draggable
               onDragStart={(e) => handleDragStart(e, template)}
-              className="p-3 rounded-lg shadow-sm cursor-grab active:cursor-grabbing flex items-center gap-3 transition-shadow hover:shadow-md relative group"
+              onDragEnd={(e) => handleDragEnd(e)}
+              className="p-3 rounded-lg shadow-sm cursor-grab active:cursor-grabbing flex items-center gap-3 transition-all duration-300 hover:shadow-lg hover:scale-105 hover:-translate-y-1 relative group touch-friendly drag-handle mobile-spacing template-item"
               style={{ backgroundColor: `hsl(var(--bubble-${template.color}))` }}
             >
               <Icon className="h-5 w-5 shrink-0 text-slate-700 dark:text-white" />
@@ -205,11 +262,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <p className="font-medium text-sm text-slate-800 dark:text-white">{template.title}</p>
                 <p className="text-xs text-slate-700 dark:text-white/80">{template.duration} min</p>
               </div>
-              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+              <div className={cn("absolute top-1 right-1 transition-opacity flex gap-1", isMobile ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className={cn("h-7 w-7", isMobile && "mobile-friendly-tap h-9 w-9")}
                     onClick={() => handleOpenEditModal(template)}
                   >
                     <Pencil className="h-4 w-4 text-slate-700 dark:text-white/80" />
@@ -220,7 +277,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7"
+                        className={cn("h-7 w-7", isMobile && "mobile-friendly-tap h-9 w-9")}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Trash2 className="h-4 w-4 text-slate-700 dark:text-white/80" />

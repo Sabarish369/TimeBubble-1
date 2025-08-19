@@ -1,4 +1,3 @@
-
 'use client';
 import type { DragEvent, MouseEvent, RefObject } from 'react';
 import React from 'react';
@@ -48,13 +47,13 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
       const template = JSON.parse(data);
       const mainContainer = timelineRef.current.parentElement;
       if (!mainContainer) return;
-      
+
       const rect = timelineRef.current.getBoundingClientRect();
       const dropY = e.clientY - rect.top;
-      
+
       const minutesFromTop = Math.round(dropY / pixelsPerMinute);
       const clampedMinutes = Math.max(0, minutesFromTop);
-      
+
       const startTime = new Date(currentDate);
       startTime.setHours(Math.floor(clampedMinutes / 60), clampedMinutes % 60, 0, 0);
 
@@ -67,22 +66,36 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
       }
 
       addBlock({ ...template, startTime });
+      
+      // Success animation
+      if (timelineRef.current) {
+        timelineRef.current.classList.remove('drag-over-active');
+        timelineRef.current.classList.add('drop-success');
+        setTimeout(() => {
+          if (timelineRef.current) {
+            timelineRef.current.classList.remove('drop-success');
+          }
+        }, 600);
+      }
     } catch (error) {
       console.error("Failed to parse dropped data", error);
+      if (timelineRef.current) {
+        timelineRef.current.classList.remove('drag-over-active');
+      }
     }
   };
 
   const handleDoubleClick = (e: MouseEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest('[class*="absolute left-[80px]"]')) return;
     if (!timelineRef.current) return;
-    
+
     const rect = timelineRef.current.getBoundingClientRect();
     const y = e.clientY - rect.top;
     const minutesFromTop = Math.round(y / pixelsPerMinute);
 
     const startTime = new Date(currentDate);
     startTime.setHours(Math.floor(minutesFromTop/60), minutesFromTop % 60, 0, 0);
-    
+
     setNewBubbleStartTime(startTime);
     setIsBubbleCreateModalOpen(true);
   };
@@ -90,16 +103,27 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
+    if (timelineRef.current) {
+      timelineRef.current.classList.add('drag-over-active');
+    }
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (timelineRef.current && !timelineRef.current.contains(e.relatedTarget as Node)) {
+      timelineRef.current.classList.remove('drag-over-active');
+    }
   };
 
   return (
     <div
       ref={timelineRef}
-      className="relative w-full"
+      className="relative bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-200"
       style={{ height: `${TOTAL_HOURS * hourHeight}px` }}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDoubleClick={handleDoubleClick}
+      onDragLeave={handleDragLeave}
     >
       <TimelineGrid />
       <CurrentTimeIndicator />

@@ -13,36 +13,60 @@ const firebaseConfig = {
   projectId: "schedule-b95fe",
   storageBucket: "schedule-b95fe.firebasestorage.app",
   messagingSenderId: "378862884455",
-  appId: "1:378862884455:web:88c02590bbb78c40af26c2",
-  measurementId: "G-57W71X8MGS"
+  appId: "1:378862884455:web:88c02590bbb78c40af26c2"
 };
 
-try {
-  if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-    console.log("[firebase-messaging-sw.js] Firebase initialized.");
+// Initialize Firebase in service worker
+firebase.initializeApp(firebaseConfig);
+
+// Retrieve Firebase Messaging instance
+const messaging = firebase.messaging();
+
+// Handle background messages
+messaging.onBackgroundMessage((payload) => {
+  console.log('[firebase-messaging-sw.js] Received background message ', payload);
+  
+  const notificationTitle = payload.notification?.title || 'TimeBubble Notification';
+  const notificationOptions = {
+    body: payload.notification?.body || 'You have a new notification',
+    icon: '/logo.svg',
+    badge: '/logo.svg',
+    tag: payload.data?.type || 'default',
+    data: payload.data,
+    requireInteraction: true,
+    actions: [
+      {
+        action: 'view',
+        title: 'View Task'
+      },
+      {
+        action: 'dismiss',
+        title: 'Dismiss'
+      }
+    ]
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// Handle notification click events
+self.addEventListener('notificationclick', (event) => {
+  console.log('[firebase-messaging-sw.js] Notification click received.');
+
+  event.notification.close();
+
+  if (event.action === 'view') {
+    // Open the app and navigate to the specific task
+    event.waitUntil(
+      clients.openWindow('/')
+    );
+  } else if (event.action === 'dismiss') {
+    // Just close the notification
+    return;
   } else {
-    firebase.app(); // if already initialized, use that one
+    // Default click behavior - open the app
+    event.waitUntil(
+      clients.openWindow('/')
+    );
   }
-} catch (e) {
-  console.error("[firebase-messaging-sw.js] Error during initialization:", e);
-}
-
-// Retrieve an instance of Firebase Messaging so that it can handle background messages.
-try {
-  const messaging = firebase.messaging();
-
-  messaging.onBackgroundMessage(function(payload) {
-    console.log('[firebase-messaging-sw.js] Received background message ', payload);
-    // Customize notification here
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-      body: payload.notification.body,
-      icon: payload.notification.icon || '/logo.svg',
-    };
-
-    self.registration.showNotification(notificationTitle, notificationOptions);
-  });
-} catch(e) {
-   console.error("[firebase-messaging-sw.js] Error creating messaging instance:", e);
-}
+});

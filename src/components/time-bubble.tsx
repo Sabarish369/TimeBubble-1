@@ -46,6 +46,8 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'top' | 'bottom' | null>(null);
   const [didMove, setDidMove] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   
   const [liveStartTime, setLiveStartTime] = useState(ensureDateObject(block.startTime));
   const [liveDuration, setLiveDuration] = useState(block.duration);
@@ -110,6 +112,12 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
     e.preventDefault();
     e.stopPropagation();
 
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+
     setIsDragging(true);
     setDidMove(false);
     const top = (ensureDateObject(block.startTime).getHours() * 60 + ensureDateObject(block.startTime).getMinutes()) * pixelsPerMinute;
@@ -150,9 +158,21 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
   const handleMouseUp = useCallback(() => {
     if (isDragging || isResizing) {
       updateBlock(block.id, { startTime: liveStartTime, duration: liveDuration }, true);
+      
+      // Add a subtle "snap" animation
+      setTimeout(() => {
+        const element = document.querySelector(`[data-bubble-id="${block.id}"]`) as HTMLElement;
+        if (element) {
+          element.style.animation = 'snapInPlace 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+          setTimeout(() => {
+            element.style.animation = '';
+          }, 300);
+        }
+      }, 50);
     }
     setIsDragging(false);
     setIsResizing(null);
+    setDragOffset({ x: 0, y: 0 });
     stopAutoScroll();
   }, [isResizing, isDragging, block.id, liveStartTime, liveDuration, updateBlock, stopAutoScroll]);
 
@@ -270,8 +290,11 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
   const bubbleStyle: React.CSSProperties = {
     top: `${top}px`,
     height: `${height}px`,
-    transition: isDragging || isResizing ? 'none' : 'top 0.2s ease-out, height 0.2s ease-out, box-shadow 0.3s ease-in-out, background 0.3s ease-in-out, opacity 0.3s ease-in-out',
+    transform: isDragging ? `scale(1.02) rotate(${Math.sin(Date.now() * 0.001) * 0.5}deg)` : isHovering ? 'scale(1.01)' : 'scale(1)',
+    transition: isDragging || isResizing ? 'none' : 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
     '--glow-color': `var(--bubble-${block.color})`,
+    zIndex: isDragging ? 40 : isHovering ? 20 : 'auto',
+    filter: isDragging ? 'drop-shadow(0 10px 25px rgba(0, 0, 0, 0.3))' : 'none',
   };
   
   const handleUndoComplete = () => {
@@ -281,17 +304,21 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
   
   return (
     <div
+      data-bubble-id={block.id}
       className={cn(
-        'absolute left-[50px] md:left-[80px] right-2 md:right-4 rounded-lg p-2 md:p-3 flex flex-col items-start shadow-md transition-all duration-200',
+        'absolute left-[50px] md:left-[80px] right-2 md:right-4 rounded-lg p-2 md:p-3 flex flex-col items-start shadow-md time-bubble',
         'select-none', 
         'outline outline-1 outline-slate-300/50 dark:outline-slate-700/50',
-        isDragging && 'shadow-lg scale-105 z-30 cursor-grabbing',
-        isResizing && 'shadow-lg z-30',
+        isDragging && 'shadow-2xl cursor-grabbing drag-active time-bubble-dragging',
+        isResizing && 'shadow-xl resize-active',
+        isHovering && !isDragging && !isResizing && 'shadow-lg hover-active',
         showAsCurrent && 'is-glowing',
-        isInteractive && !isDragging && 'cursor-pointer'
+        isInteractive && !isDragging && 'cursor-pointer hover:shadow-lg'
       )}
       style={bubbleStyle}
       onMouseDown={isInteractive ? handleMouseDown : undefined}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
       onClick={isInteractive ? handleClick : undefined}
     >
        <div 
@@ -424,11 +451,19 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
       )}
 
       <div
-        className="absolute -top-px left-0 w-full h-1.5 cursor-n-resize z-20"
+        className={cn(
+          "absolute -top-px left-0 w-full h-2 cursor-n-resize z-20 resize-handle",
+          "hover:bg-blue-400/20 transition-all duration-200",
+          isResizing === 'top' && "bg-blue-400/40"
+        )}
         onMouseDown={isInteractive ? (e) => handleResizeMouseDown(e, 'top') : undefined}
       />
       <div
-        className="absolute -bottom-px left-0 w-full h-1.5 cursor-s-resize z-20"
+        className={cn(
+          "absolute -bottom-px left-0 w-full h-2 cursor-s-resize z-20 resize-handle",
+          "hover:bg-blue-400/20 transition-all duration-200",
+          isResizing === 'bottom' && "bg-blue-400/40"
+        )}
         onMouseDown={isInteractive ? (e) => handleResizeMouseDown(e, 'bottom') : undefined}
       />
     </div>

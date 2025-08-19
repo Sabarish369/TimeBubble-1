@@ -6,8 +6,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Converts a base64 string to a Uint8Array.
- * This is required for the Push API's applicationServerKey.
+ * Converts a base64 URL-safe string to a Uint8Array.
+ * This is used for VAPID keys in Firebase Cloud Messaging.
  */
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
