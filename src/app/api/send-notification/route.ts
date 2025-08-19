@@ -6,17 +6,15 @@ import { getFirestore } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin SDK
 if (!getApps().length) {
-  // In production, you would use proper service account credentials
-  // For now, we'll use the default credentials or environment variables
   try {
     initializeApp({
-      // You'll need to add your service account key here or use environment variables
-      // credential: cert({
-      //   projectId: process.env.FIREBASE_PROJECT_ID,
-      //   privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      //   clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // }),
+      credential: cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      }),
     });
+    console.log('Firebase Admin SDK initialized successfully');
   } catch (error) {
     console.error('Firebase Admin initialization error:', error);
   }
