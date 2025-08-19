@@ -17,10 +17,14 @@ export async function requestPermissionAndGetToken(userId: string) {
     console.warn("Push notifications are not supported in this browser.");
     return;
   }
-  
-  const messaging = getMessaging(app);
 
   try {
+    // First, ensure service worker is registered
+    await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    console.log("Service worker registered successfully");
+    
+    const messaging = getMessaging(app);
+
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
       console.log("Notification permission granted.");
@@ -40,6 +44,7 @@ export async function requestPermissionAndGetToken(userId: string) {
         // Save the token to the user's document in Firestore
         const userDocRef = doc(db, 'users', userId);
         await setDoc(userDocRef, { fcmToken }, { merge: true });
+        return fcmToken;
       } else {
         console.warn("No registration token available. Request permission to generate one.");
       }
@@ -48,6 +53,7 @@ export async function requestPermissionAndGetToken(userId: string) {
     }
   } catch (error) {
     console.error("An error occurred while requesting permission or getting the token.", error);
+    throw error;
   }
 }
 

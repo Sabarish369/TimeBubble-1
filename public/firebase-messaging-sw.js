@@ -6,7 +6,7 @@
 importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js");
 
-// Firebase configuration - these values are injected by Next.js
+// Firebase configuration - these values should match your .env.local
 const firebaseConfig = {
   apiKey: "AIzaSyAG4I-f3oGmyGBJ1Yt2mKpGlZGjqoBDVWE",
   authDomain: "schedule-b95fe.firebaseapp.com",
@@ -14,6 +14,7 @@ const firebaseConfig = {
   storageBucket: "schedule-b95fe.firebasestorage.app",
   messagingSenderId: "378862884455",
   appId: "1:378862884455:web:88c02590bbb78c40af26c2",
+  measurementId: "G-57W71X8MGS"
 };
 
 try {
