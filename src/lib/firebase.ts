@@ -1,7 +1,7 @@
 
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getAuth, type Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { getFirestore, type Firestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getMessaging, type Messaging } from 'firebase/messaging';
 
 const firebaseConfig = {
@@ -28,8 +28,17 @@ if (!firebaseConfig.apiKey) {
 } else {
     // Initialize Firebase only if it hasn't been initialized yet.
     app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    auth = getAuth(app);
+    auth = getAuth(app)
+ ;
+    // Explicitly set persistence to local
+ setPersistence(auth, browserLocalPersistence)
+ .catch((error) => {
+ console.error("Failed to set Firebase Auth persistence:", error);
+ });
     db = getFirestore(app);
+ // Enable Firestore offline persistence (optional but recommended)
+ enableIndexedDbPersistence(db)
+ .catch((err) => console.error("Firestore persistence failed:", err));
     if (typeof window !== 'undefined' && 'Notification' in window) {
         try {
             messaging = getMessaging(app);

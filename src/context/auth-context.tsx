@@ -1,12 +1,12 @@
 
 'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from 'react';
 import {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithRedirect,
+ signInWithPopup,
   getRedirectResult,
   GoogleAuthProvider,
   signOut as firebaseSignOut,
@@ -17,7 +17,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import type { UserPreferences } from '@/types';
 
 interface AuthContextType {
@@ -32,6 +32,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
+  refreshUserStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,20 +53,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  const checkUserStatus = async (user: User) => {
-      const userDocRef = doc(db, 'users', user.uid);
+  const refreshUserStatus = useCallback(async () => {
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      const userDocRef = doc(db, 'users', currentUser.uid);
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         const data = userDoc.data();
         setIsPro(!!data.isPro);
         setGeminiApiKeyState(data.geminiApiKey || null);
-      } else {
-        // If the doc doesn't exist, create it for the user
-        await setDoc(userDocRef, { email: user.email, isPro: false }, { merge: true });
-        setIsPro(false);
-        setGeminiApiKeyState(null);
       }
-    };
+    }
+  }, []);
 
 
   useEffect(() => {
@@ -76,35 +75,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     setLoading(true);
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+
+    const handleUserChange = (user: User | null) => {
       setUser(user);
       setLoginCookie(!!user);
       if (user) {
-        checkUserStatus(user);
+        // Set up a real-time listener for the user document
+        const userDocRef = doc(db, 'users', user.uid);
+        const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setIsPro(!!data.isPro);
+            setGeminiApiKeyState(data.geminiApiKey || null);
+          } else {
+            // New user, create their doc
+            setDoc(userDocRef, { email: user.email, displayName: user.displayName, isPro: false }, { merge: true });
+            setIsPro(false);
+            setGeminiApiKeyState(null);
+          }
+        });
+        return unsubscribe;
       } else {
+        // User logged out, clear state
         setIsPro(false);
         setGeminiApiKeyState(null);
+        return () => {};
       }
-      setLoading(false);
-    });
+    };
     
+    // Check for redirect result first
     getRedirectResult(auth)
       .then((result) => {
         if (result) {
-          toast({
-            title: 'Signed In',
-            description: `Welcome back, ${result.user.displayName}!`,
-          });
+          toast({ title: 'Signed in successfully!' });
         }
+        // Then set up the auth state listener
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+          const unsubscribeUserDoc = handleUserChange(user);
+          // Set loading to false only after the initial user check is complete
+          setLoading(false);
+          return () => {
+            unsubscribeAuth();
+            unsubscribeUserDoc();
+          };
+        });
       })
       .catch((err) => {
         handleAuthError(err);
-      })
-      .finally(() => {
         setLoading(false);
       });
 
-    return () => unsubscribe();
   }, [toast]);
 
   const handleAuthError = (err: any) => {
@@ -145,19 +165,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setError(message);
   }
 
-  const performAuthAction = async (action: () => Promise<any>) => {
+  const performAuthAction = async (action: () => Promise<any>, setsLoading = true) => {
     if (!auth || !Object.keys(auth).length) {
       setError("Firebase is not configured. Cannot perform authentication.");
       return;
     }
-    setIsAuthLoading(true);
     setError(null);
+    if(setsLoading) setIsAuthLoading(true);
     try {
       await action();
     } catch (err) {
       handleAuthError(err);
     } finally {
-      setIsAuthLoading(false);
+      if(setsLoading) setIsAuthLoading(false);
     }
   };
 
@@ -166,8 +186,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await performAuthAction(async () => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCredential.user, { displayName });
-        const userDocRef = doc(db, 'users', userCredential.user.uid);
-        await setDoc(userDocRef, { email, displayName, isPro: false });
+        // The onSnapshot listener will create the user doc, so we don't need to do it here.
         toast({
             title: 'Account Created!',
             description: 'Welcome to TimeBubble!',
@@ -184,15 +203,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setError("Firebase is not configured. Cannot perform authentication.");
       return;
     }
-    setIsAuthLoading(true);
     setError(null);
     const provider = new GoogleAuthProvider();
-    try {
-      await signInWithRedirect(auth, provider);
-    } catch (err) {
-      handleAuthError(err);
-      setIsAuthLoading(false);
-    }
+    // Use performAuthAction without setting loading state, as redirect handles it
+    await performAuthAction(() => signInWithRedirect(auth, provider), false);
   };
 
   const signOut = async () => {
@@ -235,6 +249,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signInWithGoogle,
     signOut,
     sendPasswordReset,
+    refreshUserStatus,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

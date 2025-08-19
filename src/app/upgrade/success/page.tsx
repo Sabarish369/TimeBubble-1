@@ -13,7 +13,7 @@ import { LoadingSpinner } from '@/components/loading-spinner';
 import { CelebrationPopper } from '@/components/celebration-popper';
 
 export default function UpgradeSuccessPage() {
-  const { user } = useAuth();
+  const { user, refreshUserStatus } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const sessionId = searchParams.get('session_id');
@@ -26,11 +26,13 @@ export default function UpgradeSuccessPage() {
         try {
           const userDocRef = doc(db, 'users', user.uid);
           await setDoc(userDocRef, { isPro: true }, { merge: true });
+          // Manually trigger a refresh of user status
+          await refreshUserStatus();
           
-          // Wait for 2 seconds to show the success message, then redirect
+          // Wait for a moment to show the success message, then redirect
           setTimeout(() => {
             router.push('/app');
-          }, 2000);
+          }, 3000);
 
         } catch (err) {
           console.error("Failed to update user to Pro:", err);
@@ -41,7 +43,7 @@ export default function UpgradeSuccessPage() {
       };
       updateUserToPro();
     }
-  }, [user, sessionId, router]);
+  }, [user, sessionId, router, refreshUserStatus]);
 
   if (!sessionId) {
     return (
@@ -78,7 +80,7 @@ export default function UpgradeSuccessPage() {
       <CheckCircle2 className="h-24 w-24 text-green-500 mb-6" />
       <h1 className="text-4xl md:text-5xl font-bold mb-4">Upgrade Successful!</h1>
       <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-8">
-        Welcome to TimeBubble Pro! You will be redirected to the app shortly.
+        Welcome to TimeBubble Pro! Please wait while we redirect you to the app...
       </p>
       <LoadingSpinner className="h-20 w-20" />
     </div>
