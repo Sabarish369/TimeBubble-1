@@ -46,7 +46,7 @@ export function ProWelcomeModal({ isOpen, onClose }: ProWelcomeModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg p-0">
-        <DialogHeader className="text-center items-center pt-8 px-6 pb-4">
+        <DialogHeader className="items-center text-center p-6 pb-2">
           <div className='p-3 rounded-full bg-primary/10 mb-4'>
             <Star className="h-10 w-10 text-amber-500" />
           </div>
