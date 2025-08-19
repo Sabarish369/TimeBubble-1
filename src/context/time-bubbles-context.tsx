@@ -555,21 +555,8 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
 
   const deleteBlock = useCallback(async (id: string): Promise<void> => {
-    if (!user?.uid) throw new Error('User not authenticated');
-
-    const bubbleRef = doc(db, 'timeBubbles', id);
-    await deleteDoc(bubbleRef);
-
-    // Clear any scheduled browser notifications
-    NotificationManager.clearNotification(id);
-
-    // Clear FCM notifications
-    try {
-      await clearTaskNotifications(id);
-    } catch (error) {
-      console.error('Failed to clear notifications for bubble:', error);
-    }
-  }, [user]);
+    setTimeBlocksWithHistory(prev => prev.filter(b => b.id !== id), currentDate, true);
+  }, [currentDate, setTimeBlocksWithHistory]);
 
   const deleteBlockFromDate = async (id: string, date: Date | string) => {
     if (!user) return;
