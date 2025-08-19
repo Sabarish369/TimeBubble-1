@@ -423,7 +423,16 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         }
     }, (error) => {
         console.error("Error listening to day data:", error);
-        toast({ title: 'Connection Error', description: 'Could not sync your data.', variant: 'destructive' });
+         if (error.code === 'permission-denied') {
+            toast({
+                title: 'Permission Error',
+                description: 'Could not load daily data. Please check your Firestore security rules.',
+                variant: 'destructive',
+                duration: 10000,
+            });
+        } else {
+            toast({ title: 'Connection Error', description: 'Could not sync your data.', variant: 'destructive' });
+        }
         setIsLoaded(true);
     });
 
@@ -441,6 +450,14 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         }
     }, (error) => {
         console.error("Error listening to templates:", error);
+         if (error.code === 'permission-denied') {
+            toast({
+                title: 'Permission Error',
+                description: 'Could not load templates. Please check your Firestore security rules.',
+                variant: 'destructive',
+                duration: 10000,
+            });
+        }
     });
     return () => unsubscribe();
   }, [user]);
@@ -468,6 +485,16 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
       } else {
         // If no prefs, set default and save
         saveUserPreferences({ theme: 'dark' });
+      }
+    }, (error) => {
+      console.error("Error listening to user preferences:", error);
+      if (error.code === 'permission-denied') {
+        toast({
+          title: 'Permission Error',
+          description: 'Could not load your preferences. Please check your Firestore security rules.',
+          variant: 'destructive',
+          duration: 10000,
+        });
       }
     });
     return () => unsubscribe();

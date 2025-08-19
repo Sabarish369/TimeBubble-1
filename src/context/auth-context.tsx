@@ -73,57 +73,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return;
     }
-    
-    setLoading(true);
 
-    const handleUserChange = (user: User | null) => {
-      setUser(user);
-      setLoginCookie(!!user);
-      if (user) {
-        // Set up a real-time listener for the user document
-        const userDocRef = doc(db, 'users', user.uid);
-        const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setIsPro(!!data.isPro);
-            setGeminiApiKeyState(data.geminiApiKey || null);
-          } else {
-            // New user, create their doc
-            setDoc(userDocRef, { email: user.email, displayName: user.displayName, isPro: false }, { merge: true });
-            setIsPro(false);
-            setGeminiApiKeyState(null);
-          }
-        });
-        return unsubscribe;
-      } else {
-        // User logged out, clear state
-        setIsPro(false);
-        setGeminiApiKeyState(null);
-        return () => {};
-      }
-    };
-    
-    // Check for redirect result first
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result) {
-          toast({ title: 'Signed in successfully!' });
-        }
-        // Then set up the auth state listener
-        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-          const unsubscribeUserDoc = handleUserChange(user);
-          // Set loading to false only after the initial user check is complete
-          setLoading(false);
-          return () => {
-            unsubscribeAuth();
-            unsubscribeUserDoc();
-          };
-        });
-      })
-      .catch((err) => {
-        handleAuthError(err);
-        setLoading(false);
-      });
+    setLoading(true);
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      handleUserChange(user);
+      setLoading(false);
+    });
+    return () => unsubscribeAuth();
 
   }, [toast]);
 
@@ -204,10 +160,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     setError(null);
-    const provider = new GoogleAuthProvider();
-    // Use performAuthAction without setting loading state, as redirect handles it
-    await performAuthAction(() => signInWithRedirect(auth, provider), false);
+    const provider = new GoogleAuthProvider(); // Ensure provider is created here
+    await performAuthAction(async () => {
+      await signInWithPopup(auth, provider); // Use signInWithPopup
+    });
+    // The redirect method doesn't return a promise that resolves with a result
+    // We rely on the onAuthStateChanged listener after the redirect
   };
+
+  // The handleUserChange function needs to be defined outside or hoisted
+  const handleUserChange = (user: User | null) => {
+    setUser(user);
+    setLoginCookie(!!user);
+    if (user) {
+      // Set up a real-time listener for the user document
+      const userDocRef = doc(db, 'users', user.uid);
+      const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setIsPro(!!data.isPro);
+          // Check if geminiApiKey is null or undefined before setting state
+          setGeminiApiKeyState(data.geminiApiKey || null);
+        } else {
+          // New user, create their doc
+          setDoc(userDocRef, { email: user.email, displayName: user.displayName, isPro: false }, { merge: true });
+          setIsPro(false);
+          setGeminiApiKeyState(null);
+        }
+      }, (error) => {
+          console.error("Firestore user data listener error:", error);
+          if (error.code === 'permission-denied') {
+              toast({
+                  title: 'Permission Error',
+                  description: "Your security rules are preventing access to user data. Please check your Firestore rules.",
+                  variant: 'destructive',
+                  duration: 10000,
+              });
+          }
+      });
+      return unsubscribe;
+
+    } else {
+      // User logged out, clear state
+      setIsPro(false);
+      setGeminiApiKeyState(null);
+      return () => {};
+    }
+  };
+
 
   const signOut = async () => {
     await performAuthAction(async () => {
