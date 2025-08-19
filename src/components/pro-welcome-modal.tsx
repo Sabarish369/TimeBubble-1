@@ -62,7 +62,7 @@ export function ProWelcomeModal({ isOpen, onClose }: ProWelcomeModalProps) {
           </div>
           <DialogTitle className="text-2xl md:text-3xl">Thank You for Your Support!</DialogTitle>
           <DialogDescription className="text-base">
-            As an early supporter, you're helping shape the future of TimeBubble. We're working hard, but there might be a few rough edges. Your feedback is invaluable to us!
+            As an early supporter, you're helping shape the future of TimeBubble. We're excited to have you on board and your feedback is invaluable to us!
           </DialogDescription>
         </DialogHeader>
 

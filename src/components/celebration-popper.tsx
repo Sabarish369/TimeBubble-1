@@ -1,73 +1,95 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
+import { cn } from '@/lib/utils';
 
-const colors = ['#ff5733', '#33ff57', '#3357ff', '#ff33a1', '#a133ff', '#33fff6'];
-const confettiCount = 50;
+const confettiColors = [
+    'hsl(var(--primary))',
+    'hsl(var(--accent))',
+    'hsl(var(--bubble-mint))',
+    'hsl(var(--bubble-peach))',
+    'hsl(var(--bubble-sky-blue))',
+    'hsl(var(--bubble-rose-gold))',
+];
 
-export function CelebrationPopper() {
-  const [confetti, setConfetti] = useState<any[]>([]);
+const confettiCount = 100;
+const duration = 5000; // 5 seconds
 
-  useEffect(() => {
-    const newConfetti = Array.from({ length: confettiCount }, (_, i) => {
-      const angle = Math.random() * 360;
-      const radius = Math.random() * 50 + 50; // 50-100% of half the container width
-      
-      const x = 50 + Math.cos(angle * Math.PI / 180) * radius;
-      const y = 50 + Math.sin(angle * Math.PI / 180) * radius;
-      
-      return {
-        id: i,
-        style: {
-          left: `${x}%`,
-          top: `${y}%`,
-          backgroundColor: colors[Math.floor(Math.random() * colors.length)],
-          transform: `translate(-50%, -50%) scale(${Math.random() * 0.5 + 0.5})`,
-          animationDelay: `${Math.random() * 0.5}s`,
-          animationDuration: `${Math.random() * 0.5 + 0.5}s`
-        }
-      };
-    });
-    setConfetti(newConfetti);
-  }, []);
-
-  return (
-    <div className="absolute inset-0 pointer-events-none z-50">
-      {confetti.map((c) => (
-        <div key={c.id} className="confetti" style={c.style} />
-      ))}
-    </div>
-  );
+interface ConfettiPiece {
+    id: number;
+    color: string;
+    left: string;
+    animationDelay: string;
+    animationDuration: string;
+    transform: string;
 }
 
-// Basic animation in globals.css, more complex animation can be done with keyframes
+const generateConfetti = (): ConfettiPiece[] => {
+    return Array.from({ length: confettiCount }).map((_, i) => ({
+        id: i,
+        color: confettiColors[i % confettiColors.length],
+        left: `${Math.random() * 100}%`,
+        animationDelay: `${Math.random() * duration}ms`,
+        animationDuration: `${Math.random() * 2000 + 3000}ms`,
+        transform: `rotate(${Math.random() * 360}deg)`,
+    }));
+};
+
 const keyframes = `
-@keyframes confetti-pop {
+@keyframes confetti-fall {
   0% {
-    transform: scale(0) rotate(0deg);
+    transform: translateY(-10vh) rotateZ(0deg);
     opacity: 1;
   }
   100% {
-    transform: scale(1.5) rotate(360deg);
+    transform: translateY(110vh) rotateZ(720deg);
     opacity: 0;
   }
 }
-.confetti {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  animation-name: confetti-pop;
-  animation-timing-function: ease-out;
-  animation-fill-mode: forwards;
-}
 `;
 
-// Inject keyframes into the document head
-if (typeof window !== 'undefined') {
-  const styleSheet = document.createElement("style");
-  styleSheet.type = "text/css";
-  styleSheet.innerText = keyframes;
-  document.head.appendChild(styleSheet);
-}
+export const CelebrationPopper = memo(() => {
+    const [confetti, setConfetti] = useState<ConfettiPiece[]>([]);
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        // Inject keyframes into the document head
+        if (typeof window !== 'undefined') {
+            const styleSheet = document.createElement("style");
+            styleSheet.type = "text/css";
+            styleSheet.innerText = keyframes;
+            document.head.appendChild(styleSheet);
+            return () => {
+                document.head.removeChild(styleSheet);
+            };
+        }
+    }, []);
+
+    useEffect(() => {
+        setConfetti(generateConfetti());
+        const timer = setTimeout(() => setIsMounted(true), 100);
+        return () => clearTimeout(timer);
+    }, []);
+
+    if (!isMounted) return null;
+
+    return (
+        <div className="fixed inset-0 pointer-events-none z-[200] overflow-hidden">
+            {confetti.map(({ id, color, left, animationDelay, animationDuration, transform }) => (
+                <div
+                    key={id}
+                    className="absolute top-0 w-2 h-2 rounded-full"
+                    style={{
+                        backgroundColor: color,
+                        left,
+                        animation: `confetti-fall ${animationDuration} ${animationDelay} linear forwards`,
+                        transform,
+                    }}
+                />
+            ))}
+        </div>
+    );
+});
+
+CelebrationPopper.displayName = 'CelebrationPopper';

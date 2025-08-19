@@ -11,6 +11,7 @@ import { db } from '@/lib/firebase';
 import { useSearchParams } from 'next/navigation';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { ProWelcomeModal } from '@/components/pro-welcome-modal';
+import { CelebrationPopper } from '@/components/celebration-popper';
 
 export default function UpgradeSuccessPage() {
   const { user } = useAuth();
@@ -56,6 +57,7 @@ export default function UpgradeSuccessPage() {
 
   return (
     <>
+    {isModalOpen && <CelebrationPopper />}
     <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center p-4">
       <CheckCircle2 className="h-24 w-24 text-green-500 mb-6" />
       <h1 className="text-4xl md:text-5xl font-bold mb-4">Upgrade Successful!</h1>
