@@ -34,6 +34,11 @@ const proFeatures = [
     title: 'Long-Term Trend Analysis',
     description: 'Understand your habits with personalized weekly and monthly reports.',
   },
+  {
+    icon: Star,
+    title: 'Custom API Key',
+    description: 'Bring your own free Gemini API key for unlimited AI usage and complete control.',
+  },
 ];
 
 export function ProModal({ isOpen, onClose }: ProModalProps) {
