@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { ReactNode } from 'react';
@@ -13,8 +12,10 @@ import { addDays, format, startOfDay, isToday, isPast, subDays } from 'date-fns'
 import * as NotificationManager from '@/lib/notification-manager';
 import { useAuth } from './auth-context';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc, writeBatch, Timestamp } from 'firebase/firestore';
 import { ensureDateObject } from '@/lib/time-bubbles-utils';
+import { scheduleNotificationsForBubble, clearNotificationsForBubble } from '@/lib/notification-scheduler';
+import { startNotificationProcessor } from '@/lib/notification-processor';
 
 type Theme = 'light' | 'dark';
 
@@ -113,17 +114,19 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const { user, geminiApiKey } = useAuth();
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [history, setHistory] = useState<HistoryState>({});
-  
+  const [bubbles, setBubbles] = useState<TimeBubble[]>([]); // State for timeBubbles collection
+  const [selectedDate, setSelectedDate] = useState(startOfDay(new Date())); // State for the selected date
+
   const [templates, setTemplates] = useState<BubbleTemplate[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentDate, setCurrentDateState] = useState(startOfDay(new Date()));
-  
+
   const [dailyInsights, setDailyInsights] = useState<DailyInsights | null>(null);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
 
   const [dailyTips, setDailyTips] = useState<DailyTips | null>(null);
   const [isLoadingTips, setIsLoadingTips] = useState(false);
-  
+
   const [lastCompletedBlock, setLastCompletedBlock] = useState<TimeBlock | null>(null);
 
   const [reflectingBlock, setReflectingBlock] = useState<TimeBlock | null>(null);
@@ -162,7 +165,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         // If we are undoing, we don't want to create a new branch in history
         const newSnapshots = currentHistory.snapshots.slice(0, currentHistory.index + 1);
         newSnapshots.push(newBlocks);
-        
+
         return {
             ...prev,
             [dateKey]: {
@@ -172,7 +175,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         };
     });
   }, []);
-  
+
 const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: TimeBlock[]) => TimeBlock[]), date: Date, saveToDb: boolean = false) => {
   let finalBlocks: TimeBlock[] = [];
   setTimeBlocks(prevBlocks => {
@@ -202,7 +205,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         return [];
     }
   }, [user]);
-  
+
   const getDailyTips = useCallback(async () => {
     if (!geminiApiKey) return;
     setIsLoadingTips(true);
@@ -210,7 +213,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     try {
         const yesterday = subDays(currentDate, 1);
         const previousDayBlocks = await getBlocksForDate(yesterday);
-        
+
         if (previousDayBlocks.length === 0) {
             toast({
                 title: 'Not enough data for tips',
@@ -255,7 +258,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     if (lastCompletedBlock) {
       // The logic to trigger tips immediately after a block is completed has been removed
       // as per the new requirement to generate tips for the next day.
-      setLastCompletedBlock(null); 
+      setLastCompletedBlock(null);
     }
   }, [lastCompletedBlock]);
 
@@ -304,10 +307,10 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         const diffBelow = Math.abs(slotBelow.getTime() - requestedStartTime.getTime());
         return diffAbove <= diffBelow ? slotAboveStart : slotBelow;
     }
-    
+
     if (isBelowFree) return slotBelow;
     if (isAboveFree) return slotAboveStart;
-    
+
     // Fallback if neither adjacent slot is free
     const sortedBlocks = [...otherBlocks].sort((a,b) => ensureDateObject(a.startTime).getTime() - ensureDateObject(b.startTime).getTime());
     let lastEndTime = startOfDay(requestedStartTime);
@@ -326,7 +329,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     setTimeBlocksWithHistory(prev => {
         const blockIndex = prev.findIndex(b => b.id === id);
         if (blockIndex === -1) return prev;
-        
+
         let newBlocks = [...prev];
         let updatedBlock = { ...newBlocks[blockIndex], ...updates, startTime: ensureDateObject(updates.startTime ?? newBlocks[blockIndex].startTime) };
 
@@ -339,24 +342,26 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
             const newStartTime = findAvailableSlot(updatedBlock.startTime, updatedBlock.duration, newBlocks, id);
             updatedBlock.startTime = newStartTime;
         }
-        
+
         newBlocks[blockIndex] = updatedBlock;
         return newBlocks;
     }, currentDate, saveToDb);
   }, [currentDate, setTimeBlocksWithHistory, findAvailableSlot]);
-  
+
   const getMissedTasks = useCallback(async (): Promise<MissedTaskGroup[]> => {
     if (!user) return [];
 
-    const allDaysCollection = collection(db, 'users', user.uid, 'daily_data');
-    const querySnapshot = await getDocs(allDaysCollection);
-    
+    const allDaysCollection = collection(db, 'daily_data'); // Assuming daily_data is at the root, adjust if nested
+    const q = query(allDaysCollection, where('userId', '==', user.uid));
+    const querySnapshot = await getDocs(q);
+
     const now = new Date();
     const missedTasksByDate: Record<string, TimeBlock[]> = {};
 
     querySnapshot.forEach(docSnap => {
-        if(docSnap.data().blocks) {
-            const blocks = docSnap.data().blocks as any[];
+        const data = docSnap.data();
+        if(data.blocks) {
+            const blocks = data.blocks as any[];
             const missed = blocks.filter(block => {
                 const endTime = new Date(ensureDateObject(block.startTime).getTime() + block.duration * 60000);
                 return endTime < now && !block.completed;
@@ -410,14 +415,14 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         if (docSnap.exists() && docSnap.data().blocks) {
             blocksFromDb = docSnap.data().blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
         }
-        
+
         setTimeBlocks(blocksFromDb);
         // Reset history for the day with the new data from DB
         setHistory(prev => ({
             ...prev,
             [dateKey]: { snapshots: [blocksFromDb], index: 0 }
         }));
-        
+
         if (!isLoaded) {
             setIsLoaded(true);
         }
@@ -500,14 +505,14 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     return () => unsubscribe();
   }, [user]);
 
-  
+
   useEffect(() => {
     if(isLoaded && typeof window !== 'undefined') {
       localStorage.setItem(ZOOM_STORAGE_KEY, String(zoomLevel));
     }
   }, [zoomLevel, isLoaded]);
 
-  
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
         const root = window.document.documentElement;
@@ -521,21 +526,21 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         toast({ title: 'Not signed in', description: 'You must be signed in to add bubbles.', variant: 'destructive'});
         return;
     }
-    
+
     const isCurrentOpenDate = getDayKey(date) === getDayKey(currentDate);
     const blocksForDate = isCurrentOpenDate ? timeBlocks : await getBlocksForDate(date);
-            
+
     const newStartTime = findAvailableSlot(block.startTime, block.duration, blocksForDate);
     const newBlock: TimeBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false, notified: false, actionable: false, notificationScheduled: false };
-    
+
     const newBlocks = [...blocksForDate, newBlock];
-    
+
     if (isCurrentOpenDate) {
         setTimeBlocksWithHistory(newBlocks, date, true);
     } else {
         await saveTimeBlocksToFirestore(newBlocks, date);
     }
-    
+
     toast({
       title: 'Bubble Added',
       description: `"${block.title}" added to ${format(date, 'MMMM do')}.`
@@ -547,16 +552,28 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   }, [addBlockOnDate]);
 
 
-  const deleteBlock = useCallback((id: string) => {
+  const deleteBlock = useCallback(async (id: string) => {
+    if (!user?.uid) throw new Error('User not authenticated');
+
+    const bubbleRef = doc(db, 'timeBubbles', id);
+    await deleteDoc(bubbleRef);
+
+    // Clear any scheduled browser notifications
     NotificationManager.clearNotification(id);
-    setTimeBlocksWithHistory(prev => prev.filter(b => b.id !== id), currentDate, true);
-  }, [setTimeBlocksWithHistory, currentDate]);
-  
+
+    // Clear FCM notifications
+    try {
+      await clearNotificationsForBubble(id);
+    } catch (error) {
+      console.error('Failed to clear notifications for bubble:', error);
+    }
+  }, [user]);
+
   const deleteBlockFromDate = async (id: string, date: Date | string) => {
     if (!user) return;
     const dayKey = getDayKey(date);
     const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dayKey);
-    
+
     try {
         const docSnap = await getDoc(dayDocRef);
         if (docSnap.exists()) {
@@ -610,16 +627,16 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   const updateTemplate = useCallback((id: string, updates: Partial<Omit<BubbleTemplate, 'id' | 'isDefault'>>) => {
     const isDefaultTemplate = defaultTemplates.some(t => t.id === id);
     let newTemplates;
-    
+
     if (templates.some(t => t.id === id)) {
         newTemplates = templates.map(t => t.id === id ? { ...t, ...updates } : t);
     } else if (isDefaultTemplate) {
         const defaultTemplate = defaultTemplates.find(t => t.id === id)!;
         newTemplates = [...templates, { ...defaultTemplate, ...updates, id }];
     } else {
-        return; 
+        return;
     }
-    
+
     setTemplates(newTemplates);
     saveTemplatesToFirestore(newTemplates);
     toast({
@@ -645,12 +662,13 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     }
 
     try {
-        const allDaysCollection = collection(db, 'users', user.uid, 'daily_data');
-        const querySnapshot = await getDocs(allDaysCollection);
-        
+        const allDaysCollection = collection(db, 'daily_data'); // Assuming daily_data is at the root
+        const q = query(allDaysCollection, where('userId', '==', user.uid));
+        const querySnapshot = await getDocs(q);
+
         let blockToReschedule: TimeBlock | null = null;
         let sourceDayKey: string | null = null;
-        
+
         for (const docSnap of querySnapshot.docs) {
             const data = docSnap.data();
             const found = data.blocks.find((b: any) => b.id === id);
@@ -665,7 +683,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
             toast({ title: 'Error', description: 'Could not find the task to reschedule.', variant: 'destructive' });
             return;
         }
-        
+
         NotificationManager.clearNotification(id);
 
         const rescheduledBlockData: TimeBlock = {
@@ -683,14 +701,14 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         const blocksForNewDate = targetDocSnap.exists()
             ? targetDocSnap.data().blocks.map((b: any) => ({ ...b, startTime: ensureDateObject(b.startTime) }))
             : [];
-        
+
         const resolvedStartTime = findAvailableSlot(newStartTime, rescheduledBlockData.duration, blocksForNewDate);
         rescheduledBlockData.startTime = resolvedStartTime;
 
         const sourceDayDocRef = doc(db, 'users', user.uid, 'daily_data', sourceDayKey);
         const sourceDocSnap = await getDoc(sourceDayDocRef);
         const sourceBlocks = sourceDocSnap.exists() ? sourceDocSnap.data().blocks.filter((b: any) => b.id !== id) : [];
-        
+
         const batch = writeBatch(db);
         batch.set(targetDayDocRef, { blocks: [...blocksForNewDate.map(b => ({...b, startTime: ensureDateObject(b.startTime).toISOString()})), {...rescheduledBlockData, startTime: rescheduledBlockData.startTime.toISOString()}] }, { merge: true });
         if (sourceBlocks.length > 0) {
@@ -720,7 +738,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     return JSON.stringify(timeBlocks.map(b => ({ ...b, id: undefined })));
   }, [timeBlocks]);
 
-  
+
   const getDailyInsights = async () => {
     if (!geminiApiKey) return;
     setIsLoadingInsights(true);
@@ -747,7 +765,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     const result = await getDailySidebarTip({ ...input, apiKey: geminiApiKey });
     return result;
   }, [geminiApiKey]);
-  
+
 
   const clearAllMissedTasks = async () => {
       if (!user) return;
@@ -758,7 +776,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
               return;
           }
           const batch = writeBatch(db);
-          
+
           for (const group of missedTaskGroups) {
               const dayDocRef = doc(db, 'users', user.uid, 'daily_data', group.date);
               const docSnap = await getDoc(dayDocRef);
@@ -801,7 +819,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     const userDocRef = doc(db, 'users', user.uid);
     await setDoc(userDocRef, prefs, { merge: true });
   }, [user]);
-  
+
   const setTheme = (newTheme: Theme) => {
     if(theme !== newTheme) {
       setThemeState(newTheme);
@@ -838,23 +856,23 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
       }));
     }
   };
-  
+
   const setCurrentDate = (date: Date) => {
     saveTimeBlocksToFirestore(timeBlocks, currentDate);
-    
+
     setCurrentDateState(startOfDay(date));
-    setIsLoaded(false); 
-    setTimeBlocks([]); 
+    setIsLoaded(false);
+    setTimeBlocks([]);
   };
-  
+
   const goToToday = () => {
     setCurrentDate(new Date());
   };
-  
+
   const goToNextDay = () => {
     setCurrentDate(addDays(currentDate, 1));
   };
-  
+
   const goToPreviousDay = () => {
     setCurrentDate(addDays(currentDate, -1));
   };
