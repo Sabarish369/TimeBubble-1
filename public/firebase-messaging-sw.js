@@ -6,15 +6,14 @@
 importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js");
 
-// The Firebase config object is injected into the service worker scope by next.config.js
-// This is the most reliable way to get environment variables into the service worker.
+// Firebase configuration - these values are injected by Next.js
 const firebaseConfig = {
-  apiKey: self.FIREBASE_API_KEY,
-  authDomain: self.FIREBASE_AUTH_DOMAIN,
-  projectId: self.FIREBASE_PROJECT_ID,
-  storageBucket: self.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: self.FIREBASE_MESSAGING_SENDER_ID,
-  appId: self.FIREBASE_APP_ID,
+  apiKey: "AIzaSyAG4I-f3oGmyGBJ1Yt2mKpGlZGjqoBDVWE",
+  authDomain: "schedule-b95fe.firebaseapp.com",
+  projectId: "schedule-b95fe",
+  storageBucket: "schedule-b95fe.firebasestorage.app",
+  messagingSenderId: "378862884455",
+  appId: "1:378862884455:web:88c02590bbb78c40af26c2",
 };
 
 try {
@@ -27,7 +26,6 @@ try {
 } catch (e) {
   console.error("[firebase-messaging-sw.js] Error during initialization:", e);
 }
-
 
 // Retrieve an instance of Firebase Messaging so that it can handle background messages.
 try {

@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   experimental: {
-    allowedDevOrigins: ['*.replit.dev'],
+    allowedOrigins: ['*.replit.dev'],
   },
   images: {
     remotePatterns: [
