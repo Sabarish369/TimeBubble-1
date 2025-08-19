@@ -18,9 +18,13 @@ import { useAuth } from "@/context/auth-context";
 import { InteractiveTutorial } from "@/components/interactive-tutorial";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as NotificationManager from "@/lib/notification-manager";
+import { ProWelcomeModal } from "@/components/pro-welcome-modal";
+import { ApiKeyModal } from "@/components/api-key-modal";
 
 
 const TUTORIAL_STORAGE_KEY = 'timebubble_tutorial_completed_interactive_v2';
+const PRO_WELCOME_KEY = 'timebubble_pro_welcome_seen';
+
 
 export default function AppPage() {
   const mainRef = useRef<HTMLElement>(null);
@@ -37,11 +41,13 @@ export default function AppPage() {
     newBubbleStartTime
   } = useTimeBubbles();
   
-  const { user } = useAuth();
+  const { user, isPro } = useAuth();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
+  const [isProWelcomeModalOpen, setIsProWelcomeModalOpen] = useState(false);
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
   useEffect(() => {
     // Request permission and get token
@@ -63,8 +69,14 @@ export default function AppPage() {
       if (!tutorialCompleted) {
         setShowTutorial(true);
       }
+      
+      // Check if user is Pro and hasn't seen the welcome modal yet
+      const proWelcomeSeen = localStorage.getItem(PRO_WELCOME_KEY);
+      if (isPro && !proWelcomeSeen) {
+        setIsProWelcomeModalOpen(true);
+      }
     }
-  }, [isLoaded]);
+  }, [isLoaded, isPro]);
 
   // Find the first actionable block to show in the modal
   const blockToShow = actionableBlock ?? timeBlocks.find(b => b.actionable);
@@ -128,6 +140,14 @@ export default function AppPage() {
     }
   }
 
+  const handleCloseProWelcome = () => {
+    setIsProWelcomeModalOpen(false);
+    localStorage.setItem(PRO_WELCOME_KEY, 'true');
+    // After closing the welcome modal, open the API key modal
+    setIsApiKeyModalOpen(true);
+  };
+
+
   return (
     <div className="flex flex-col h-screen bg-background text-foreground font-body overflow-hidden">
       <Header onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
@@ -161,6 +181,14 @@ export default function AppPage() {
         onClose={() => setIsLoginModalOpen(false)}
       />
       {showTutorial && <InteractiveTutorial onFinish={handleFinishTutorial} />}
+      <ProWelcomeModal 
+        isOpen={isProWelcomeModalOpen} 
+        onClose={handleCloseProWelcome}
+      />
+       <ApiKeyModal
+        isOpen={isApiKeyModalOpen}
+        onClose={() => setIsApiKeyModalOpen(false)}
+      />
     </div>
   );
 }

@@ -11,11 +11,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { Sparkles, BarChart, Star, Lightbulb, MessageSquareQuote } from 'lucide-react';
-import Link from 'next/link';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from './ui/carousel';
 import { Card, CardContent } from './ui/card';
-import { useRouter } from 'next/navigation';
-
 
 interface ProWelcomeModalProps {
   isOpen: boolean;
@@ -46,28 +43,20 @@ const proFeatures = [
 ];
 
 export function ProWelcomeModal({ isOpen, onClose }: ProWelcomeModalProps) {
-  const router = useRouter();
-
-  const handleCloseAndRedirect = () => {
-    onClose();
-    router.push('/app');
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg p-0">
-        <DialogHeader className="text-center items-center pt-6 px-6">
+        <DialogHeader className="text-center items-center pt-8 px-6 pb-4">
           <div className='p-3 rounded-full bg-primary/10 mb-4'>
             <Star className="h-10 w-10 text-amber-500" />
           </div>
           <DialogTitle className="text-2xl md:text-3xl">Thank You for Your Support!</DialogTitle>
           <DialogDescription className="text-base">
-            As an early supporter, you're helping shape the future of TimeBubble. We're excited to have you on board and your feedback is invaluable to us!
+            As an early supporter, your feedback is invaluable in shaping the future of TimeBubble. We're excited to have you on board! Here's a quick look at what you've unlocked.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 py-4">
-            <h3 className="text-lg font-semibold text-center mb-4">Here's what you've unlocked:</h3>
+        <div className="px-12 py-4">
             <Carousel className="w-full" opts={{loop: true}}>
                 <CarouselContent>
                     {proFeatures.map((feature, index) => (
@@ -84,14 +73,14 @@ export function ProWelcomeModal({ isOpen, onClose }: ProWelcomeModalProps) {
                         </CarouselItem>
                     ))}
                 </CarouselContent>
-                <CarouselPrevious className='-left-4' />
-                <CarouselNext className='-right-4' />
+                <CarouselPrevious className='-left-2' />
+                <CarouselNext className='-right-2' />
             </Carousel>
         </div>
 
 
-        <DialogFooter className="p-6 pt-0">
-          <Button size="lg" className="w-full" onClick={handleCloseAndRedirect}>
+        <DialogFooter className="p-6 pt-2">
+          <Button size="lg" className="w-full" onClick={onClose}>
             Start Exploring
           </Button>
         </DialogFooter>
