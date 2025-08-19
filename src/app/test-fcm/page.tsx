@@ -52,7 +52,7 @@ export default function TestFCMPage() {
       }
 
       const token = await getToken(messaging, {
-        vapidKey: urlBase64ToUint8Array(vapidKey),
+        vapidKey: vapidKey,
       });
 
       if (token) {
@@ -128,7 +128,7 @@ export default function TestFCMPage() {
               <h3 className="font-semibold">Current Status</h3>
               <p>User: {user ? 'Logged in' : 'Not logged in'}</p>
               <p>Notification Permission: {permissionStatus}</p>
-              <p>Service Worker: {'serviceWorker' in navigator ? 'Supported' : 'Not supported'}</p>
+              <p>Service Worker: {typeof window !== 'undefined' && 'serviceWorker' in navigator ? 'Supported' : 'Not supported'}</p>
               <p>FCM Token: {fcmToken ? 'Available' : 'Not available'}</p>
             </div>
 

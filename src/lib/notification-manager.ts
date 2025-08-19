@@ -36,7 +36,7 @@ export async function requestPermissionAndGetToken(userId: string) {
       }
       
       const fcmToken = await getToken(messaging, {
-        vapidKey: urlBase64ToUint8Array(vapidKey),
+        vapidKey: vapidKey,
       });
 
       if (fcmToken) {
