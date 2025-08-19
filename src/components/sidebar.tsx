@@ -94,26 +94,57 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
 
     const target = e.currentTarget;
-    // Create a custom drag image
+    
+    // Add drag start animation to original element
+    target.style.transform = 'scale(0.95) rotate(-2deg)';
+    target.style.opacity = '0.7';
+    target.style.transition = 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    
+    // Create enhanced custom drag image
     const dragImage = target.cloneNode(true) as HTMLElement;
     dragImage.style.position = 'absolute';
-    dragImage.style.top = '-1000px'; // Position off-screen
+    dragImage.style.top = '-2000px';
+    dragImage.style.left = '-2000px';
     dragImage.style.width = `${target.offsetWidth}px`;
     dragImage.style.height = `${target.offsetHeight}px`;
-    dragImage.style.opacity = '0.8'; // Make it semi-transparent
+    dragImage.style.opacity = '0.9';
     dragImage.style.pointerEvents = 'none';
-    dragImage.classList.add('is-glowing');
+    dragImage.style.transform = 'scale(1.1) rotate(3deg)';
+    dragImage.style.filter = 'drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3))';
+    dragImage.style.border = '2px solid rgba(255, 255, 255, 0.5)';
+    dragImage.style.borderRadius = '12px';
+    dragImage.style.zIndex = '9999';
+    dragImage.classList.add('template-drag-ghost');
     (dragImage.style as any).setProperty('--glow-color', `hsl(var(--bubble-${template.color}))`);
+
+    // Add pulsing glow animation
+    dragImage.style.animation = 'dragGlow 1s infinite alternate ease-in-out';
 
     document.body.appendChild(dragImage);
     e.dataTransfer.setDragImage(dragImage, target.offsetWidth / 2, target.offsetHeight / 2);
 
-    // Clean up the cloned element after the drag starts
+    // Clean up the cloned element and reset original
     setTimeout(() => {
         if(document.body.contains(dragImage)) {
             document.body.removeChild(dragImage);
         }
-    }, 0);
+        // Reset original element style
+        target.style.transform = '';
+        target.style.opacity = '';
+        target.style.transition = '';
+    }, 100);
+  };
+
+  const handleDragEnd = (e: DragEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    // Smooth return animation
+    target.style.transform = 'scale(1.05)';
+    target.style.transition = 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    
+    setTimeout(() => {
+      target.style.transform = '';
+      target.style.transition = '';
+    }, 300);
   };
 
   const handleOpenCreateTemplateModal = () => {
@@ -197,7 +228,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               id={index === 0 ? 'first-template-item' : undefined}
               draggable
               onDragStart={(e) => handleDragStart(e, template)}
-              className="p-3 rounded-lg shadow-sm cursor-grab active:cursor-grabbing flex items-center gap-3 transition-shadow hover:shadow-md relative group touch-friendly drag-handle mobile-spacing"
+              onDragEnd={(e) => handleDragEnd(e)}
+              className="p-3 rounded-lg shadow-sm cursor-grab active:cursor-grabbing flex items-center gap-3 transition-all duration-300 hover:shadow-lg hover:scale-105 hover:-translate-y-1 relative group touch-friendly drag-handle mobile-spacing template-item"
               style={{ backgroundColor: `hsl(var(--bubble-${template.color}))` }}
             >
               <Icon className="h-5 w-5 shrink-0 text-slate-700 dark:text-white" />

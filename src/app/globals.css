@@ -316,6 +316,80 @@ body {
     }
   }
 
+  /* Enhanced template drag animations */
+  .template-drag-ghost {
+    animation: dragGlow 1s infinite alternate ease-in-out, floatDrag 2s infinite ease-in-out;
+  }
+
+  @keyframes dragGlow {
+    from {
+      box-shadow: 0 0 15px -5px hsl(var(--glow-color)), 
+                  0 0 30px -10px hsl(var(--glow-color)),
+                  0 0 45px -15px hsl(var(--glow-color));
+    }
+    to {
+      box-shadow: 0 0 20px 0px hsl(var(--glow-color)), 
+                  0 0 40px -5px hsl(var(--glow-color)),
+                  0 0 60px -10px hsl(var(--glow-color));
+    }
+  }
+
+  @keyframes floatDrag {
+    0%, 100% {
+      transform: scale(1.1) rotate(3deg) translateY(0px);
+    }
+    50% {
+      transform: scale(1.15) rotate(-1deg) translateY(-3px);
+    }
+  }
+
+  /* Template item hover enhancement */
+  .template-item {
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .template-item:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.2);
+  }
+
+  .template-item:active {
+    transform: translateY(0px) scale(0.98);
+    transition: all 0.1s ease;
+  }
+
+  /* Drag preview trail effect */
+  .template-item[draggable="true"]:active {
+    position: relative;
+  }
+
+  .template-item[draggable="true"]:active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(45deg, 
+      rgba(255, 255, 255, 0.3), 
+      rgba(255, 255, 255, 0.1), 
+      rgba(255, 255, 255, 0.3));
+    border-radius: inherit;
+    pointer-events: none;
+    animation: shimmerTrail 0.8s ease-out;
+  }
+
+  @keyframes shimmerTrail {
+    0% {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+  }
+
   /* AI Tips Drawer Animation */
   .pulse-glow {
     animation: pulse-glow 2.5s infinite alternate;

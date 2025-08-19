@@ -89,16 +89,27 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
+    if (timelineRef.current) {
+      timelineRef.current.classList.add('border-blue-500'); // Example: Add a visual indicator
+    }
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (timelineRef.current) {
+      timelineRef.current.classList.remove('border-blue-500'); // Remove visual indicator
+    }
   };
 
   return (
     <div
       ref={timelineRef}
-      className="relative w-full touch-friendly"
+      className="relative bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-200"
       style={{ height: `${TOTAL_HOURS * hourHeight}px` }}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDoubleClick={handleDoubleClick}
+      onDragLeave={handleDragLeave}
     >
       <TimelineGrid />
       <CurrentTimeIndicator />
