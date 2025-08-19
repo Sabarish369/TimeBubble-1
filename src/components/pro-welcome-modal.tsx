@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
-import { Sparkles, BrainCircuit, BarChart, Star, Lightbulb, MessageSquareQuote } from 'lucide-react';
+import { Sparkles, BarChart, Star, Lightbulb, MessageSquareQuote } from 'lucide-react';
 import Link from 'next/link';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from './ui/carousel';
 import { Card, CardContent } from './ui/card';
@@ -55,8 +55,8 @@ export function ProWelcomeModal({ isOpen, onClose }: ProWelcomeModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader className="text-center items-center p-4">
+      <DialogContent className="max-w-lg p-0">
+        <DialogHeader className="text-center items-center pt-6 px-6">
           <div className='p-3 rounded-full bg-primary/10 mb-4'>
             <Star className="h-10 w-10 text-amber-500" />
           </div>
@@ -66,7 +66,7 @@ export function ProWelcomeModal({ isOpen, onClose }: ProWelcomeModalProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 py-2">
+        <div className="px-6 py-4">
             <h3 className="text-lg font-semibold text-center mb-4">Here's what you've unlocked:</h3>
             <Carousel className="w-full" opts={{loop: true}}>
                 <CarouselContent>
@@ -74,7 +74,7 @@ export function ProWelcomeModal({ isOpen, onClose }: ProWelcomeModalProps) {
                         <CarouselItem key={index}>
                         <div className="p-1">
                             <Card className='bg-primary/5 border-primary/20 h-56'>
-                            <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                            <CardContent className="flex flex-col items-center justify-center p-6 text-center h-full">
                                 <feature.icon className="h-8 w-8 mb-3 text-primary" />
                                 <p className='text-xl font-semibold text-primary/90 mb-2'>{feature.title}</p>
                                 <p className="text-sm text-foreground/80">{feature.description}</p>
@@ -90,7 +90,7 @@ export function ProWelcomeModal({ isOpen, onClose }: ProWelcomeModalProps) {
         </div>
 
 
-        <DialogFooter className="p-4 pt-2">
+        <DialogFooter className="p-6 pt-0">
           <Button size="lg" className="w-full" onClick={handleCloseAndRedirect}>
             Start Exploring
           </Button>
