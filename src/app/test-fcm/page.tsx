@@ -8,6 +8,7 @@ import { useAuth } from '@/context/auth-context';
 import * as NotificationManager from '@/lib/notification-manager';
 import { getMessaging, getToken } from 'firebase/messaging';
 import { app } from '@/lib/firebase';
+import { urlBase64ToUint8Array } from '@/lib/utils';
 
 export default function TestFCMPage() {
   const { user } = useAuth();
@@ -51,7 +52,7 @@ export default function TestFCMPage() {
       }
 
       const token = await getToken(messaging, {
-        vapidKey: vapidKey,
+        vapidKey: urlBase64ToUint8Array(vapidKey),
       });
 
       if (token) {
