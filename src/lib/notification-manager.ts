@@ -35,11 +35,8 @@ export async function requestPermissionAndGetToken(userId: string) {
         return;
       }
       
-      // Convert the VAPID key to the proper format
-      const vapidKeyUint8Array = urlBase64ToUint8Array(vapidKey);
-      
       const fcmToken = await getToken(messaging, {
-        vapidKey: vapidKeyUint8Array,
+        vapidKey: vapidKey,
       });
 
       if (fcmToken) {
