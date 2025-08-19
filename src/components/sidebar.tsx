@@ -96,8 +96,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const target = e.currentTarget;
     
     // Add drag start animation to original element
-    target.style.transform = 'scale(0.95) rotate(-2deg)';
-    target.style.opacity = '0.7';
+    target.style.transform = 'scale(0.98) rotate(-1deg)';
+    target.style.opacity = '0.8';
     target.style.transition = 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)';
     
     // Create enhanced custom drag image
@@ -109,9 +109,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     dragImage.style.height = `${target.offsetHeight}px`;
     dragImage.style.opacity = '0.9';
     dragImage.style.pointerEvents = 'none';
-    dragImage.style.transform = 'scale(1.1) rotate(3deg)';
-    dragImage.style.filter = 'drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3))';
-    dragImage.style.border = '2px solid rgba(255, 255, 255, 0.5)';
+    dragImage.style.transform = 'scale(1.05) rotate(2deg)';
+    dragImage.style.filter = 'drop-shadow(0 6px 12px rgba(0, 0, 0, 0.25))';
+    dragImage.style.border = '1px solid rgba(255, 255, 255, 0.4)';
     dragImage.style.borderRadius = '12px';
     dragImage.style.zIndex = '9999';
     dragImage.classList.add('template-drag-ghost');
@@ -138,7 +138,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const handleDragEnd = (e: DragEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     // Smooth return animation
-    target.style.transform = 'scale(1.05)';
+    target.style.transform = 'scale(1.02)';
     target.style.transition = 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
     
     setTimeout(() => {
@@ -217,7 +217,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </TooltipProvider>
       </div>
       
-      <div id="templates-list" className={cn("space-y-3 overflow-y-auto flex-1 no-scrollbar")}>
+      <div id="templates-list" className={cn("space-y-3 overflow-y-auto flex-1 no-scrollbar px-1")}>
         {allTemplates.map((template, index) => {
           const Icon = categoryIcons[template.category];
           const isUserCreated = !template.isDefault || templates.some(t => t.id === template.id && !t.isDefault);
