@@ -226,6 +226,96 @@ body {
     }
   }
 
+  /* Enhanced drag and drop animations */
+  .drag-active {
+    animation: dragFloat 2s infinite ease-in-out;
+  }
+
+  .resize-active {
+    animation: resizePulse 1.5s infinite ease-in-out;
+  }
+
+  .hover-active {
+    animation: subtleFloat 3s infinite ease-in-out;
+  }
+
+  @keyframes dragFloat {
+    0%, 100% {
+      transform: scale(1.02) translateY(0px) rotate(-0.5deg);
+    }
+    50% {
+      transform: scale(1.03) translateY(-2px) rotate(0.5deg);
+    }
+  }
+
+  @keyframes resizePulse {
+    0%, 100% {
+      outline-width: 1px;
+      outline-color: rgba(59, 130, 246, 0.3);
+    }
+    50% {
+      outline-width: 2px;
+      outline-color: rgba(59, 130, 246, 0.6);
+    }
+  }
+
+  @keyframes subtleFloat {
+    0%, 100% {
+      transform: scale(1.01) translateY(0px);
+    }
+    50% {
+      transform: scale(1.01) translateY(-1px);
+    }
+  }
+
+  /* Drag preview effect */
+  .time-bubble-dragging::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(45deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
+    border-radius: inherit;
+    z-index: -1;
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  /* Smooth resize handles */
+  .resize-handle {
+    transition: all 0.2s ease;
+    opacity: 0;
+  }
+
+  .time-bubble:hover .resize-handle {
+    opacity: 1;
+  }
+
+  .resize-handle:hover {
+    background: rgba(59, 130, 246, 0.2);
+    backdrop-filter: blur(4px);
+  }
+
+  /* Snap animation for when dragging ends */
+  @keyframes snapInPlace {
+    0% {
+      transform: scale(1.02);
+    }
+    50% {
+      transform: scale(0.98);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
   /* AI Tips Drawer Animation */
   .pulse-glow {
     animation: pulse-glow 2.5s infinite alternate;
