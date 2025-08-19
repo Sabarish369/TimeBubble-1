@@ -1,5 +1,5 @@
 
-import { type ClassValue, clsx } from "clsx"
+import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Converts a base64 URL-safe string to a Uint8Array.
- * This is required for Firebase Cloud Messaging VAPID keys.
+ * This is used for VAPID keys in Firebase Cloud Messaging.
  */
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
