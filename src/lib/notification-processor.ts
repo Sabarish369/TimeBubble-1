@@ -1,5 +1,6 @@
 
 import { getPendingNotifications, markNotificationAsSent, ScheduledNotification } from './notification-scheduler';
+import { showGetReadyNotification, canShowBrowserNotifications } from './browser-notification';
 
 /**
  * Process and send pending notifications
@@ -42,29 +43,44 @@ export async function processPendingNotifications() {
 async function sendNotification(notification: ScheduledNotification) {
   const { bubbleTitle, notificationType, userId, bubbleId } = notification;
   
-  const title = getNotificationTitle(notificationType);
-  const body = getNotificationBody(bubbleTitle, notificationType);
+  try {
+    // Try FCM first
+    const title = getNotificationTitle(notificationType);
+    const body = getNotificationBody(bubbleTitle, notificationType);
 
-  const response = await fetch('/api/send-notification', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      userId,
-      title,
-      body,
-      bubbleId,
-      notificationType,
-    }),
-  });
+    const response = await fetch('/api/send-notification', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId,
+        title,
+        body,
+        bubbleId,
+        notificationType,
+      }),
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Failed to send notification: ${error.message || response.statusText}`);
+    if (response.ok) {
+      return response.json();
+    }
+  } catch (error) {
+    console.warn('FCM notification failed, trying browser notification:', error);
   }
 
-  return response.json();
+  // Fallback to browser notification
+  if (canShowBrowserNotifications()) {
+    const minutes = notificationType === '15min' ? 15 : 1;
+    const success = await showGetReadyNotification(bubbleTitle, minutes);
+    
+    if (success) {
+      console.log(`Sent browser notification for "${bubbleTitle}" (${notificationType})`);
+      return { success: true, method: 'browser' };
+    }
+  }
+
+  throw new Error('Both FCM and browser notifications failed');
 }
 
 /**

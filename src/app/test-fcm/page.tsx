@@ -9,6 +9,7 @@ import * as NotificationManager from '@/lib/notification-manager';
 import { getMessaging, getToken } from 'firebase/messaging';
 import { app } from '@/lib/firebase';
 import { urlBase64ToUint8Array } from '@/lib/utils';
+import { showGetReadyNotification, requestNotificationPermission, canShowBrowserNotifications } from '@/lib/browser-notification';
 
 export default function TestFCMPage() {
   const { user } = useAuth();
@@ -154,6 +155,50 @@ export default function TestFCMPage() {
     }
   };
 
+  const testBrowserGetReadyNotification = async () => {
+    try {
+      const hasPermission = canShowBrowserNotifications();
+      if (!hasPermission) {
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+          addTestResult('❌ Browser notification permission denied');
+          return;
+        }
+      }
+
+      const success = await showGetReadyNotification('Test Task', 15);
+      if (success) {
+        addTestResult('✅ Browser "Get Ready" notification sent (15 min warning)');
+      } else {
+        addTestResult('❌ Failed to send browser notification');
+      }
+    } catch (error) {
+      addTestResult(`Browser notification error: ${error}`);
+    }
+  };
+
+  const testBrowserUrgentNotification = async () => {
+    try {
+      const hasPermission = canShowBrowserNotifications();
+      if (!hasPermission) {
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+          addTestResult('❌ Browser notification permission denied');
+          return;
+        }
+      }
+
+      const success = await showGetReadyNotification('Test Urgent Task', 1);
+      if (success) {
+        addTestResult('✅ Browser urgent notification sent (1 min warning)');
+      } else {
+        addTestResult('❌ Failed to send urgent browser notification');
+      }
+    } catch (error) {
+      addTestResult(`Browser urgent notification error: ${error}`);
+    }
+  };
+
   const clearResults = () => {
     setTestResults([]);
   };
@@ -191,6 +236,12 @@ export default function TestFCMPage() {
                 </Button>
                 <Button onClick={testBrowserNotification} variant="outline">
                   Send Test Browser Notification
+                </Button>
+                <Button onClick={testBrowserGetReadyNotification} variant="outline">
+                  Test "Get Ready" Notification (15 min)
+                </Button>
+                <Button onClick={testBrowserUrgentNotification} variant="outline">
+                  Test Urgent Notification (1 min)
                 </Button>
                 <Button onClick={sendTestFCMMessage} variant="outline">
                   Send Test FCM Message

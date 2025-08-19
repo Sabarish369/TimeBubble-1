@@ -1,6 +1,6 @@
-
 import { doc, collection, addDoc, query, where, getDocs, deleteDoc, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
+import { showGetReadyNotification, canShowBrowserNotifications } from './browser-notification';
 
 export interface ScheduledNotification {
   id?: string;
@@ -20,55 +20,65 @@ export async function scheduleNotificationsForBubble(
   bubbleId: string,
   bubbleTitle: string,
   startTime: Date
-) {
-  try {
-    // Clear existing notifications for this bubble
-    await clearNotificationsForBubble(bubbleId);
+): Promise<number> {
+  const notifications: Omit<ScheduledNotification, 'id'>[] = [];
+  let scheduledCount = 0;
 
-    const now = new Date();
-    const notifications: Omit<ScheduledNotification, 'id'>[] = [];
+  // 15-minute warning
+  const fifteenMinBefore = new Date(startTime.getTime() - 15 * 60 * 1000);
+  if (fifteenMinBefore > new Date()) {
+    notifications.push({
+      userId,
+      bubbleId,
+      bubbleTitle,
+      notificationType: '15min',
+      scheduledTime: Timestamp.fromDate(fifteenMinBefore),
+      sent: false,
+    });
 
-    // Schedule 15-minute notification
-    const fifteenMinBefore = new Date(startTime.getTime() - 15 * 60 * 1000);
-    if (fifteenMinBefore > now) {
-      notifications.push({
-        userId,
-        bubbleId,
-        bubbleTitle,
-        scheduledTime: fifteenMinBefore,
-        notificationType: '15min',
-        sent: false
-      });
+    // Schedule immediate browser notification for 15-min warning
+    if (canShowBrowserNotifications()) {
+      const timeUntilNotification = fifteenMinBefore.getTime() - Date.now();
+      if (timeUntilNotification > 0) {
+        setTimeout(() => {
+          showGetReadyNotification(bubbleTitle, 15);
+        }, timeUntilNotification);
+        scheduledCount++;
+      }
     }
-
-    // Schedule 1-minute notification
-    const oneMinBefore = new Date(startTime.getTime() - 1 * 60 * 1000);
-    if (oneMinBefore > now) {
-      notifications.push({
-        userId,
-        bubbleId,
-        bubbleTitle,
-        scheduledTime: oneMinBefore,
-        notificationType: '1min',
-        sent: false
-      });
-    }
-
-    // Save notifications to Firestore
-    const notificationsRef = collection(db, 'scheduledNotifications');
-    for (const notification of notifications) {
-      await addDoc(notificationsRef, {
-        ...notification,
-        scheduledTime: Timestamp.fromDate(notification.scheduledTime)
-      });
-    }
-
-    console.log(`Scheduled ${notifications.length} notifications for bubble: ${bubbleTitle}`);
-    return notifications.length;
-  } catch (error) {
-    console.error('Error scheduling notifications:', error);
-    throw error;
   }
+
+  // 1-minute warning
+  const oneMinBefore = new Date(startTime.getTime() - 1 * 60 * 1000);
+  if (oneMinBefore > new Date()) {
+    notifications.push({
+      userId,
+      bubbleId,
+      bubbleTitle,
+      notificationType: '1min',
+      scheduledTime: Timestamp.fromDate(oneMinBefore),
+      sent: false,
+    });
+
+    // Schedule immediate browser notification for 1-min warning
+    if (canShowBrowserNotifications()) {
+      const timeUntilNotification = oneMinBefore.getTime() - Date.now();
+      if (timeUntilNotification > 0) {
+        setTimeout(() => {
+          showGetReadyNotification(bubbleTitle, 1);
+        }, timeUntilNotification);
+        scheduledCount++;
+      }
+    }
+  }
+
+  // Save to Firestore (as backup/for other devices)
+  for (const notification of notifications) {
+    await addDoc(collection(db, 'scheduledNotifications'), notification);
+  }
+
+  console.log(`Scheduled ${scheduledCount} immediate browser notifications for "${bubbleTitle}"`);
+  return notifications.length;
 }
 
 /**
