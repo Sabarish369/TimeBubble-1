@@ -19,6 +19,8 @@ import { UserProfile } from './user-profile';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DailyTipsDrawer } from './daily-tips-drawer';
 import { AiQuotaIndicator } from './ai-quota-indicator';
+import { useAuth } from '@/context/auth-context';
+import { Crown } from 'lucide-react';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -32,6 +34,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
     goToNextDay,
     goToPreviousDay,
   } = useTimeBubbles();
+  const { user } = useAuth();
   const isMobile = useIsMobile();
 
   return (
@@ -43,7 +46,15 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             <span className="sr-only">Toggle Sidebar</span>
           </Button>
         )}
-        <TimeBubbleLogo className="h-6 w-auto" />
+        <div className="flex items-center gap-2">
+          <TimeBubbleLogo className="h-6 w-auto" />
+          {user?.isPro && (
+            <div className="flex items-center gap-1 bg-gradient-to-r from-primary to-accent px-2 py-1 rounded-full text-xs font-bold text-white shadow-lg">
+              <Crown className="h-3 w-3" />
+              <span>PRO</span>
+            </div>
+          )}
+        </div>
       </div>
       <div id="date-navigation" className="flex-1 flex justify-center items-center gap-1 md:gap-2">
         <Button variant="outline" size={isMobile ? 'sm' : 'default'} onClick={goToToday}>

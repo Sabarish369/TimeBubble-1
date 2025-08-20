@@ -19,28 +19,34 @@ export function ProUpgradeAnimation({ isVisible, onComplete }: ProUpgradeAnimati
     useEffect(() => {
         if (!isVisible) return;
 
-        if (stage === 'rising') {
-            // Animate bubble rising from bottom
+        const animationSequence = async () => {
+            // Stage 1: Rising
             setTimeout(() => {
                 setBubblePosition({ x: 50, y: 50 });
-                setTimeout(() => setShowContinueButton(true), 1500);
             }, 100);
-        }
-    }, [isVisible, stage]);
+
+            // Stage 2: Unlocking (after 3 seconds)
+            setTimeout(() => {
+                setStage('unlocking');
+            }, 3000);
+
+            // Stage 3: Celebration (after 6 seconds)
+            setTimeout(() => {
+                setStage('celebration');
+            }, 6000);
+
+            // Stage 4: Show continue button (after 9 seconds)
+            setTimeout(() => {
+                setShowContinueButton(true);
+            }, 9000);
+        };
+
+        animationSequence();
+    }, [isVisible]);
 
     const handleContinue = () => {
-        setShowContinueButton(false);
-        
-        if (stage === 'rising') {
-            setStage('unlocking');
-            setTimeout(() => setShowContinueButton(true), 2000);
-        } else if (stage === 'unlocking') {
-            setStage('celebration');
-            setTimeout(() => setShowContinueButton(true), 2500);
-        } else if (stage === 'celebration') {
-            setStage('complete');
-            setTimeout(() => onComplete(), 500);
-        }
+        setStage('complete');
+        onComplete();
     };
 
     if (!isVisible) return null;
@@ -196,7 +202,7 @@ export function ProUpgradeAnimation({ isVisible, onComplete }: ProUpgradeAnimati
 
                 {stage === 'celebration' && (
                     <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-1000">
-                        <h2 className="text-4xl font-bold text-white mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                        <h2 className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
                             🎉 Welcome to Pro!
                         </h2>
                         <p className="text-white/80 text-lg">
