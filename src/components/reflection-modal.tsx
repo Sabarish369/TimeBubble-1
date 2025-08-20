@@ -15,6 +15,7 @@ import { Smile, Meh, Frown, Flame, Coffee, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Slider } from './ui/slider';
 import { useEffect, useState } from 'react';
+import { ScrollArea } from './ui/scroll-area';
 
 const reflectionSchema = z.object({
   productivity: z.number().min(1).max(5),
@@ -99,7 +100,7 @@ export function ReflectionModal() {
 
   return (
     <Dialog open={!!reflectingBlock} onOpenChange={() => setReflectingBlock(null)}>
-      <DialogContent className="relative overflow-hidden max-h-[90vh] overflow-y-auto">
+      <DialogContent className="relative overflow-hidden max-h-[90vh] flex flex-col">
         {/* Confetti Animation */}
         {showConfetti && (
           <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden rounded-lg">
@@ -150,78 +151,82 @@ export function ReflectionModal() {
             Take a moment to reflect. Your insights help improve future planning.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="productivity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Productivity: {field.value}</FormLabel>
-                  <FormControl>
-                    <Slider
-                      min={1}
-                      max={5}
-                      step={1}
-                      defaultValue={[field.value]}
-                      onValueChange={(value) => field.onChange(value[0])}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="mood"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mood</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="flex gap-2"
-                    >
-                      {moodOptions.map(({ value, icon: Icon, label }) => (
-                        <FormItem key={value} className="flex-1">
-                          <FormControl>
-                            <RadioGroupItem value={value} className="sr-only" />
-                          </FormControl>
-                          <FormLabel
-                            className={cn(
-                              'flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer',
-                              field.value === value && 'border-primary'
-                            )}
-                          >
-                            <Icon className="mb-2 h-6 w-6" />
-                            {label}
-                          </FormLabel>
-                        </FormItem>
-                      ))}
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Any thoughts or notes?" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button type="submit">Save Reflection</Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        <div className="flex-1 overflow-hidden -mr-6 pr-6">
+        <ScrollArea className="h-full">
+            <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} id="reflection-form" className="space-y-4">
+                <FormField
+                control={form.control}
+                name="productivity"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Productivity: {field.value}</FormLabel>
+                    <FormControl>
+                        <Slider
+                        min={1}
+                        max={5}
+                        step={1}
+                        defaultValue={[field.value]}
+                        onValueChange={(value) => field.onChange(value[0])}
+                        />
+                    </FormControl>
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="mood"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Mood</FormLabel>
+                    <FormControl>
+                        <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="flex gap-2"
+                        >
+                        {moodOptions.map(({ value, icon: Icon, label }) => (
+                            <FormItem key={value} className="flex-1">
+                            <FormControl>
+                                <RadioGroupItem value={value} className="sr-only" />
+                            </FormControl>
+                            <FormLabel
+                                className={cn(
+                                'flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer',
+                                field.value === value && 'border-primary'
+                                )}
+                            >
+                                <Icon className="mb-2 h-6 w-6" />
+                                {label}
+                            </FormLabel>
+                            </FormItem>
+                        ))}
+                        </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                        <Textarea placeholder="Any thoughts or notes?" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </form>
+            </Form>
+        </ScrollArea>
+        </div>
+        <DialogFooter>
+            <Button type="submit" form="reflection-form">Save Reflection</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
