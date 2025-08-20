@@ -99,42 +99,42 @@ export function ReflectionModal() {
 
   return (
     <Dialog open={!!reflectingBlock} onOpenChange={() => setReflectingBlock(null)}>
-      <DialogContent className="relative overflow-hidden">
+      <DialogContent className="relative overflow-hidden max-h-[90vh] overflow-y-auto">
         {/* Confetti Animation */}
         {showConfetti && (
-          <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden rounded-lg">
             {confettiParticles.map((particle) => (
               <div
                 key={particle.id}
                 className="absolute animate-bounce"
                 style={{
-                  left: `${particle.x}%`,
-                  top: `${particle.y}%`,
+                  left: `${Math.max(10, Math.min(90, particle.x))}%`,
+                  top: `${Math.max(10, Math.min(80, particle.y))}%`,
                   transform: `rotate(${particle.rotation}deg) scale(${particle.scale})`,
                   animationDelay: `${particle.delay}ms`,
                   animationDuration: '1.5s',
                 }}
               >
                 <Sparkles 
-                  className="w-4 h-4 text-primary animate-pulse" 
+                  className="w-3 h-3 text-primary animate-pulse" 
                   style={{ animationDuration: '0.8s' }}
                 />
               </div>
             ))}
             
             {/* Center celebration burst */}
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <div className="relative w-20 h-20 rounded-full border-4 border-primary/30 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center animate-pulse">
-                <Sparkles className="w-8 h-8 text-primary animate-spin" style={{ animationDuration: '2s' }} />
+            <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+              <div className="relative w-16 h-16 rounded-full border-2 border-primary/30 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center animate-pulse">
+                <Sparkles className="w-6 h-6 text-primary animate-spin" style={{ animationDuration: '2s' }} />
                 
                 {/* Orbiting particles */}
                 {[0, 1, 2, 3].map((i) => (
                   <div
                     key={`orbit-${i}`}
-                    className="absolute w-2 h-2 bg-primary rounded-full animate-ping"
+                    className="absolute w-1.5 h-1.5 bg-primary rounded-full animate-ping"
                     style={{
-                      top: `${50 + Math.sin((i * Math.PI) / 2) * 40}px`,
-                      left: `${50 + Math.cos((i * Math.PI) / 2) * 40}px`,
+                      top: `${32 + Math.sin((i * Math.PI) / 2) * 24}px`,
+                      left: `${32 + Math.cos((i * Math.PI) / 2) * 24}px`,
                       animationDelay: `${i * 0.2}s`,
                     }}
                   />

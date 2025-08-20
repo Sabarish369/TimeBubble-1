@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -31,12 +30,12 @@ export function ProUpgradeAnimation({ isVisible, onComplete }: ProUpgradeAnimati
             if (currentIndex < timeline.length) {
                 const { stage: nextStage, duration } = timeline[currentIndex];
                 setStage(nextStage);
-                
+
                 if (nextStage === 'rising') {
                     // Animate bubble rising from bottom
                     setTimeout(() => setBubblePosition({ x: 50, y: 50 }), 100);
                 }
-                
+
                 currentTimeout = setTimeout(() => {
                     currentIndex++;
                     runStage();
@@ -92,7 +91,7 @@ export function ProUpgradeAnimation({ isVisible, onComplete }: ProUpgradeAnimati
                     stage === 'unlocking' && "bg-gradient-to-br from-primary/40 to-accent/40 border-4 border-primary/60",
                     stage === 'celebration' && "bg-gradient-to-br from-primary to-accent border-4 border-white/50"
                 )}>
-                    
+
                     {/* Lock/Unlock animation */}
                     {stage === 'rising' && (
                         <div className="relative">
@@ -130,27 +129,29 @@ export function ProUpgradeAnimation({ isVisible, onComplete }: ProUpgradeAnimati
                             <div className="text-white/80 text-sm mt-1">
                                 Unlocked!
                             </div>
-                            
+
                             {/* Celebration particles */}
                             {[...Array(8)].map((_, i) => (
-                                <Star
+                                <div
                                     key={i}
-                                    className="absolute w-4 h-4 text-yellow-400 animate-ping"
+                                    className="absolute w-4 h-4 text-yellow-300 animate-pulse flex items-center justify-center"
                                     style={{
-                                        top: `${50 + Math.sin((i * Math.PI) / 4) * 80}%`,
-                                        left: `${50 + Math.cos((i * Math.PI) / 4) * 80}%`,
+                                        top: `${50 + 35 * Math.cos((i * Math.PI * 2) / 8)}%`,
+                                        left: `${50 + 35 * Math.sin((i * Math.PI * 2) / 8)}%`,
                                         transform: 'translate(-50%, -50%)',
                                         animationDelay: `${i * 0.15}s`,
-                                        animationDuration: '1.2s',
+                                        animationDuration: '1.5s',
                                     }}
-                                />
+                                >
+                                    <span className="text-sm">⭐</span>
+                                </div>
                             ))}
                         </div>
                     )}
 
                     {/* Bubble shine effect */}
                     <div className="absolute inset-4 rounded-full bg-gradient-to-tr from-white/30 to-transparent opacity-60" />
-                    
+
                     {/* Bubble reflection */}
                     <div className="absolute top-8 left-8 w-8 h-8 rounded-full bg-white/40 blur-sm" />
                 </div>

@@ -19,6 +19,7 @@ import { UserProfile } from './user-profile';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { DailyTipsDrawer } from './daily-tips-drawer';
 import { AiQuotaIndicator } from './ai-quota-indicator';
+import { UpgradeBadge } from './upgrade-badge';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -85,6 +86,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
       <div id="header-actions" className="flex items-center gap-2 md:gap-4">
         <SmartSuggestions />
         <AiQuotaIndicator />
+          <UpgradeBadge />
         <ThemeToggle />
         <UserProfile />
         <DailyTipsDrawer />
