@@ -1,4 +1,6 @@
 
+'use client';
+
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
@@ -6,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { MessageSquare, Star, Send, Heart, ThumbsUp, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth-context';
 
 const feedbackTypes = [
     { id: 'feature', icon: Lightbulb, label: 'Feature Request', color: 'text-yellow-500' },
@@ -20,8 +23,18 @@ export function FeedbackSection() {
     const [feedback, setFeedback] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { toast } = useToast();
+    const { user } = useAuth();
 
     const handleSubmit = async () => {
+        if (!user) {
+            toast({
+                title: "Authentication required",
+                description: "You must be signed in to submit feedback.",
+                variant: "destructive",
+            });
+            return;
+        }
+
         if (!feedback.trim() || !selectedType) {
             toast({
                 title: "Please fill in all fields",
@@ -33,8 +46,23 @@ export function FeedbackSection() {
 
         setIsSubmitting(true);
         
-        // Simulate API call - replace with actual implementation
-        setTimeout(() => {
+        try {
+            const response = await fetch('/api/submit-feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    feedbackType: selectedType,
+                    message: feedback,
+                    userId: user.uid,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to submit feedback');
+            }
+
             toast({
                 title: "Thank you for your feedback! 🎉",
                 description: "Your input helps us make TimeBubble better for everyone.",
@@ -43,8 +71,16 @@ export function FeedbackSection() {
             setFeedback('');
             setSelectedType(null);
             setIsExpanded(false);
+
+        } catch (error) {
+             toast({
+                title: "Something went wrong",
+                description: "Could not submit your feedback. Please try again later.",
+                variant: "destructive",
+            });
+        } finally {
             setIsSubmitting(false);
-        }, 1000);
+        }
     };
 
     return (
