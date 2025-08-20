@@ -1,10 +1,16 @@
 
 'use client';
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Button } from './ui/button';
+import { Sparkles, Crown, Zap, BrainCircuit, BarChart, Star, CheckCircle, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Crown, Sparkles, BrainCircuit, BarChart, Star, ChevronRight, ChevronLeft, CheckCircle } from 'lucide-react';
 
 interface EnhancedProWelcomeModalProps {
   isOpen: boolean;
@@ -39,176 +45,119 @@ const proFeatures = [
 ];
 
 export function EnhancedProWelcomeModal({ isOpen, onClose }: EnhancedProWelcomeModalProps) {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentFeature, setCurrentFeature] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true);
 
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => setIsVisible(true), 100);
+      const interval = setInterval(() => {
+        setCurrentFeature((prev) => (prev + 1) % proFeatures.length);
+      }, 3000);
+      return () => clearInterval(interval);
     } else {
       setIsVisible(false);
-      setCurrentStep(0);
-      setShowWelcome(true);
     }
   }, [isOpen]);
 
-  const nextStep = () => {
-    if (showWelcome) {
-      setShowWelcome(false);
-      setCurrentStep(0);
-    } else if (currentStep < proFeatures.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      onClose();
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    } else if (!showWelcome) {
-      setShowWelcome(true);
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg mx-auto bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/20 dark:via-emerald-950/20 dark:to-teal-950/20 border-green-200 dark:border-green-800 backdrop-blur-xl relative overflow-hidden">
-        {/* Celebration background */}
+      <DialogContent className="max-w-2xl border-0 bg-gradient-to-br from-background via-background/95 to-primary/10 backdrop-blur-xl shadow-2xl overflow-hidden">
+        {/* Animated background */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-green-400/20 to-emerald-500/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-gradient-to-tr from-emerald-400/20 to-teal-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-          
-          {/* Floating celebration particles */}
-          {[...Array(20)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full animate-ping"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 3}s`,
-                animationDuration: `${1 + Math.random() * 2}s`,
-              }}
-            />
-          ))}
+          <div className="absolute -top-8 -right-8 w-32 h-32 bg-gradient-to-br from-primary/30 to-accent/30 rounded-full blur-2xl animate-pulse" />
+          <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-gradient-to-tr from-accent/30 to-primary/30 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
         </div>
 
-        {showWelcome ? (
-          // Welcome screen
-          <div className="relative z-10">
-            <DialogHeader className={`text-center space-y-6 transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}`}>
-              <div className="flex justify-center mb-4">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full blur-lg opacity-50 animate-pulse" />
-                  <CheckCircle className="h-20 w-20 text-green-500 relative z-10 drop-shadow-lg animate-bounce" />
-                </div>
-              </div>
-              
-              <DialogTitle className="text-4xl font-bold bg-gradient-to-r from-green-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent">
-                🎉 Welcome to Pro!
-              </DialogTitle>
-              
-              <DialogDescription className="text-lg text-muted-foreground">
-                Congratulations! You've successfully upgraded to TimeBubble Pro. 
-                Let's explore what amazing features you now have access to.
-              </DialogDescription>
-            </DialogHeader>
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-20 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-200"
+        >
+          <X className="h-5 w-5" />
+        </button>
 
-            <div className="mt-8 text-center">
-              <Button
-                onClick={nextStep}
-                size="lg"
-                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-              >
-                Explore Pro Features
-                <ChevronRight className="w-5 h-5 ml-2" />
-              </Button>
+        <div className="relative z-10 p-8">
+          {/* Header */}
+          <DialogHeader className="text-center items-center mb-8">
+            <div className={`p-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 mb-6 transform transition-all duration-1000 ${isVisible ? 'scale-100 rotate-0' : 'scale-0 rotate-180'}`}>
+              <Crown className="h-12 w-12 text-white drop-shadow-lg" />
             </div>
-          </div>
-        ) : (
-          // Feature showcase
-          <div className="relative z-10">
-            <DialogHeader className="text-center mb-6">
-              <DialogTitle className="text-2xl font-bold text-foreground">
-                Pro Features Tour
-              </DialogTitle>
-              <div className="text-sm text-muted-foreground mt-2">
-                Feature {currentStep + 1} of {proFeatures.length}
-              </div>
-              <div className="flex justify-center gap-2 mt-3">
-                {proFeatures.map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      i === currentStep ? 'bg-green-500 scale-125' : 'bg-muted-foreground/30'
-                    }`}
-                  />
-                ))}
-              </div>
-            </DialogHeader>
+            <DialogTitle className={`text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
+              Welcome to TimeBubble Pro! 🎉
+            </DialogTitle>
+            <DialogDescription className={`text-lg text-muted-foreground max-w-md mx-auto transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionDelay: '200ms' }}>
+              You now have access to powerful AI features that will supercharge your productivity.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="min-h-[250px] flex items-center justify-center">
+          {/* Feature showcase */}
+          <div className="mb-8">
+            <div className="relative h-64 overflow-hidden rounded-2xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border border-white/20">
               {proFeatures.map((feature, index) => {
                 const Icon = feature.icon;
+                const isActive = index === currentFeature;
                 return (
                   <div
                     key={index}
-                    className={`absolute inset-x-0 transition-all duration-500 transform ${
-                      index === currentStep
-                        ? 'translate-x-0 opacity-100'
-                        : index < currentStep
-                        ? '-translate-x-full opacity-0'
-                        : 'translate-x-full opacity-0'
+                    className={`absolute inset-0 p-8 flex flex-col items-center justify-center text-center transition-all duration-700 transform ${
+                      isActive ? 'translate-x-0 opacity-100 scale-100' : index < currentFeature ? 'translate-x-[-100%] opacity-0 scale-95' : 'translate-x-[100%] opacity-0 scale-95'
                     }`}
                   >
-                    <div className="p-6 text-center">
-                      <div className={`w-24 h-24 mx-auto mb-6 flex items-center justify-center rounded-2xl bg-gradient-to-br ${feature.gradient} shadow-xl transform hover:scale-110 transition-transform duration-300`}>
-                        <Icon className="h-12 w-12 text-white drop-shadow-sm" />
-                      </div>
-                      <h3 className="text-xl font-bold text-foreground mb-4">{feature.title}</h3>
-                      <p className="text-muted-foreground leading-relaxed text-sm">{feature.description}</p>
+                    <div className={`p-4 rounded-2xl bg-gradient-to-br ${feature.gradient} shadow-xl mb-4 transform transition-transform duration-300 ${isActive ? 'scale-100' : 'scale-90'}`}>
+                      <Icon className="h-8 w-8 text-white" />
                     </div>
+                    <h3 className="text-2xl font-bold mb-3">{feature.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed max-w-sm">{feature.description}</p>
                   </div>
                 );
               })}
             </div>
 
-            {/* Navigation buttons */}
-            <div className="flex justify-between items-center mt-6">
-              <Button
-                variant="ghost"
-                onClick={prevStep}
-                className="flex items-center gap-2"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Back
-              </Button>
-
-              <Button
-                onClick={nextStep}
-                className={`font-semibold px-6 py-2 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2 ${
-                  currentStep === proFeatures.length - 1
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white'
-                    : 'bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white'
-                }`}
-              >
-                {currentStep === proFeatures.length - 1 ? (
-                  <>
-                    Start Using Pro
-                    <CheckCircle className="w-4 h-4" />
-                  </>
-                ) : (
-                  <>
-                    Next Feature
-                    <ChevronRight className="w-4 h-4" />
-                  </>
-                )}
-              </Button>
+            {/* Feature indicators */}
+            <div className="flex justify-center gap-2 mt-6">
+              {proFeatures.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentFeature(index)}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    index === currentFeature ? 'bg-primary scale-125' : 'bg-primary/30 hover:bg-primary/50'
+                  }`}
+                />
+              ))}
             </div>
           </div>
-        )}
+
+          {/* Quick tips */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            {[
+              { icon: Sparkles, text: 'Click the sparkles icon in the header for daily insights' },
+              { icon: BrainCircuit, text: 'Open the AI tips drawer for real-time suggestions' },
+            ].map((tip, index) => (
+              <div
+                key={index}
+                className={`flex items-center gap-3 p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 transform transition-all duration-500 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}
+                style={{ transitionDelay: `${600 + index * 100}ms` }}
+              >
+                <tip.icon className="h-5 w-5 text-primary flex-shrink-0" />
+                <p className="text-sm text-muted-foreground">{tip.text}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Action button */}
+          <div className={`text-center transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionDelay: '800ms' }}>
+            <Button
+              onClick={onClose}
+              size="lg"
+              className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 relative overflow-hidden group"
+            >
+              <CheckCircle className="h-5 w-5 mr-2 group-hover:animate-spin" />
+              Got it! Let's start
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-700" />
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

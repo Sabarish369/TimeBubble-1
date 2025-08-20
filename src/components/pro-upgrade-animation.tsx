@@ -2,9 +2,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Crown, Unlock, Sparkles, Star, ChevronRight } from 'lucide-react';
+import { Crown, Unlock, Sparkles, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 
 interface ProUpgradeAnimationProps {
     isVisible: boolean;
@@ -14,34 +13,45 @@ interface ProUpgradeAnimationProps {
 export function ProUpgradeAnimation({ isVisible, onComplete }: ProUpgradeAnimationProps) {
     const [stage, setStage] = useState<'rising' | 'unlocking' | 'celebration' | 'complete'>('rising');
     const [bubblePosition, setBubblePosition] = useState({ x: 50, y: 100 });
-    const [showContinueButton, setShowContinueButton] = useState(false);
 
     useEffect(() => {
         if (!isVisible) return;
 
-        if (stage === 'rising') {
-            // Animate bubble rising from bottom
-            setTimeout(() => {
-                setBubblePosition({ x: 50, y: 50 });
-                setTimeout(() => setShowContinueButton(true), 1500);
-            }, 100);
-        }
-    }, [isVisible, stage]);
+        const timeline = [
+            { stage: 'rising' as const, duration: 2000 },
+            { stage: 'unlocking' as const, duration: 1500 },
+            { stage: 'celebration' as const, duration: 2000 },
+            { stage: 'complete' as const, duration: 500 },
+        ];
 
-    const handleContinue = () => {
-        setShowContinueButton(false);
-        
-        if (stage === 'rising') {
-            setStage('unlocking');
-            setTimeout(() => setShowContinueButton(true), 2000);
-        } else if (stage === 'unlocking') {
-            setStage('celebration');
-            setTimeout(() => setShowContinueButton(true), 2500);
-        } else if (stage === 'celebration') {
-            setStage('complete');
-            setTimeout(() => onComplete(), 500);
-        }
-    };
+        let currentTimeout: NodeJS.Timeout;
+        let currentIndex = 0;
+
+        const runStage = () => {
+            if (currentIndex < timeline.length) {
+                const { stage: nextStage, duration } = timeline[currentIndex];
+                setStage(nextStage);
+                
+                if (nextStage === 'rising') {
+                    // Animate bubble rising from bottom
+                    setTimeout(() => setBubblePosition({ x: 50, y: 50 }), 100);
+                }
+                
+                currentTimeout = setTimeout(() => {
+                    currentIndex++;
+                    runStage();
+                }, duration);
+            } else {
+                onComplete();
+            }
+        };
+
+        runStage();
+
+        return () => {
+            if (currentTimeout) clearTimeout(currentTimeout);
+        };
+    }, [isVisible, onComplete]);
 
     if (!isVisible) return null;
 
@@ -69,7 +79,7 @@ export function ProUpgradeAnimation({ isVisible, onComplete }: ProUpgradeAnimati
                     "relative transition-all duration-2000 ease-out",
                     stage === 'rising' && "transform translate-y-0 scale-100",
                     stage === 'unlocking' && "transform scale-110",
-                    stage === 'celebration' && "transform scale-100"
+                    stage === 'celebration' && "transform scale-100 animate-pulse"
                 )}
                 style={{
                     transform: `translate(${bubblePosition.x - 50}vw, ${bubblePosition.y - 50}vh)`,
@@ -96,32 +106,24 @@ export function ProUpgradeAnimation({ isVisible, onComplete }: ProUpgradeAnimati
                     {stage === 'unlocking' && (
                         <div className="relative animate-bounce">
                             <Unlock className="w-20 h-20 text-white drop-shadow-lg animate-pulse" />
-                            {/* Sparkles around unlock - properly positioned */}
-                            {[...Array(6)].map((_, i) => {
-                                const angle = (i * Math.PI * 2) / 6;
-                                const radius = 50;
-                                const x = Math.cos(angle) * radius;
-                                const y = Math.sin(angle) * radius;
-                                
-                                return (
-                                    <Sparkles
-                                        key={i}
-                                        className="absolute w-6 h-6 text-yellow-400 animate-ping"
-                                        style={{
-                                            left: `calc(50% + ${x}px)`,
-                                            top: `calc(50% + ${y}px)`,
-                                            transform: 'translate(-50%, -50%)',
-                                            animationDelay: `${i * 0.2}s`,
-                                        }}
-                                    />
-                                );
-                            })}
+                            {/* Sparkles around unlock */}
+                            {[...Array(6)].map((_, i) => (
+                                <Sparkles
+                                    key={i}
+                                    className="absolute w-6 h-6 text-yellow-400 animate-ping"
+                                    style={{
+                                        top: `${10 + Math.sin((i * Math.PI) / 3) * 40}px`,
+                                        left: `${10 + Math.cos((i * Math.PI) / 3) * 40}px`,
+                                        animationDelay: `${i * 0.2}s`,
+                                    }}
+                                />
+                            ))}
                         </div>
                     )}
 
                     {stage === 'celebration' && (
-                        <div className="relative text-center">
-                            <Crown className="w-20 h-20 text-white drop-shadow-lg mx-auto mb-2 animate-bounce" />
+                        <div className="relative text-center animate-bounce">
+                            <Crown className="w-20 h-20 text-white drop-shadow-lg mx-auto mb-2" />
                             <div className="text-white font-bold text-xl drop-shadow-lg">
                                 TimeBubble Pro
                             </div>
@@ -129,27 +131,19 @@ export function ProUpgradeAnimation({ isVisible, onComplete }: ProUpgradeAnimati
                                 Unlocked!
                             </div>
                             
-                            {/* Celebration particles - properly aligned in circle */}
-                            {[...Array(12)].map((_, i) => {
-                                const angle = (i * Math.PI * 2) / 12;
-                                const radius = 80;
-                                const x = Math.cos(angle) * radius;
-                                const y = Math.sin(angle) * radius;
-                                
-                                return (
-                                    <Star
-                                        key={i}
-                                        className="absolute w-4 h-4 text-yellow-400 animate-ping"
-                                        style={{
-                                            left: `calc(50% + ${x}px)`,
-                                            top: `calc(50% + ${y}px)`,
-                                            transform: 'translate(-50%, -50%)',
-                                            animationDelay: `${i * 0.1}s`,
-                                            animationDuration: '1.5s',
-                                        }}
-                                    />
-                                );
-                            })}
+                            {/* Celebration particles */}
+                            {[...Array(12)].map((_, i) => (
+                                <Star
+                                    key={i}
+                                    className="absolute w-4 h-4 text-yellow-400 animate-ping"
+                                    style={{
+                                        top: `${20 + Math.sin((i * Math.PI) / 6) * 60}px`,
+                                        left: `${20 + Math.cos((i * Math.PI) / 6) * 60}px`,
+                                        animationDelay: `${i * 0.1}s`,
+                                        animationDuration: '1s',
+                                    }}
+                                />
+                            ))}
                         </div>
                     )}
 
@@ -160,63 +154,25 @@ export function ProUpgradeAnimation({ isVisible, onComplete }: ProUpgradeAnimati
                     <div className="absolute top-8 left-8 w-8 h-8 rounded-full bg-white/40 blur-sm" />
                 </div>
 
-                {/* Ripple effects - smoother animation */}
+                {/* Ripple effects */}
                 {(stage === 'unlocking' || stage === 'celebration') && (
                     <>
-                        <div className="absolute inset-0 rounded-full border-2 border-primary/50 animate-ping" style={{ animationDuration: '3s' }} />
-                        <div className="absolute inset-0 rounded-full border-2 border-accent/50 animate-ping" style={{ animationDuration: '3s', animationDelay: '1s' }} />
-                        <div className="absolute inset-0 rounded-full border-2 border-white/50 animate-ping" style={{ animationDuration: '3s', animationDelay: '2s' }} />
+                        <div className="absolute inset-0 rounded-full border-2 border-primary/50 animate-ping" style={{ animationDuration: '2s' }} />
+                        <div className="absolute inset-0 rounded-full border-2 border-accent/50 animate-ping" style={{ animationDuration: '2s', animationDelay: '0.5s' }} />
+                        <div className="absolute inset-0 rounded-full border-2 border-white/50 animate-ping" style={{ animationDuration: '2s', animationDelay: '1s' }} />
                     </>
                 )}
             </div>
 
-            {/* Stage descriptions */}
-            <div className="absolute bottom-1/3 left-1/2 transform -translate-x-1/2 text-center">
-                {stage === 'rising' && (
-                    <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-1000">
-                        <h2 className="text-3xl font-bold text-white mb-2">
-                            Activating TimeBubble Pro...
-                        </h2>
-                        <p className="text-white/80 text-lg">
-                            Your productivity upgrade is rising!
-                        </p>
-                    </div>
-                )}
-                
-                {stage === 'unlocking' && (
-                    <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-1000">
-                        <h2 className="text-3xl font-bold text-white mb-2">
-                            Unlocking Pro Features...
-                        </h2>
-                        <p className="text-white/80 text-lg">
-                            Breaking the limits of productivity!
-                        </p>
-                    </div>
-                )}
-
-                {stage === 'celebration' && (
-                    <div className="animate-in fade-in-0 slide-in-from-bottom-4 duration-1000">
-                        <h2 className="text-4xl font-bold text-white mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                            🎉 Welcome to Pro!
-                        </h2>
-                        <p className="text-white/80 text-lg">
-                            Your productivity just got supercharged!
-                        </p>
-                    </div>
-                )}
-            </div>
-
-            {/* Continue button */}
-            {showContinueButton && (
-                <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
-                    <Button 
-                        onClick={handleContinue}
-                        size="lg"
-                        className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-                    >
-                        Continue
-                        <ChevronRight className="w-5 h-5 ml-2" />
-                    </Button>
+            {/* Text animation */}
+            {stage === 'celebration' && (
+                <div className="absolute bottom-1/4 left-1/2 transform -translate-x-1/2 text-center animate-in fade-in-0 slide-in-from-bottom-4 duration-1000">
+                    <h2 className="text-4xl font-bold text-white mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                        🎉 Welcome to Pro!
+                    </h2>
+                    <p className="text-white/80 text-lg">
+                        Your productivity just got supercharged!
+                    </p>
                 </div>
             )}
         </div>
