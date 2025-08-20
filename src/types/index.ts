@@ -9,8 +9,6 @@ export type BubbleColor = keyof typeof BUBBLE_COLORS;
 
 export type Mood = 'happy' | 'neutral' | 'stressed' | 'tired' | 'focused';
 
-export type EnergyLevel = 1 | 2 | 3 | 4 | 5; // 1 = very low, 5 = very high
-
 export interface HabitSuggestion {
   id: string;
   habitTitle: string;
@@ -20,19 +18,12 @@ export interface HabitSuggestion {
   stackBefore?: boolean; // true = before the bubble, false = after
 }
 
-export interface EnergyTracking {
-  level: EnergyLevel;
-  timestamp: Date;
-  context?: string; // optional note about what's affecting energy
-}
-
 export interface ReflectionData {
   completed: boolean;
   productivity: 1 | 2 | 3 | 4 | 5;
   mood: Mood;
   notes: string;
   timestamp: Date;
-  energyLevel?: EnergyLevel;
 }
 
 export interface TimeBlock {

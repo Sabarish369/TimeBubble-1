@@ -114,23 +114,22 @@ export const HabitStackingOutputSchema = z.object({
 // Energy Level AI Types
 export const EnergyOptimizationInputSchema = z.object({
   apiKey: z.string(),
-  energyHistory: z.string().describe('JSON string of energy level history'),
-  upcomingTasks: z.string().describe('JSON string of planned tasks'),
-  currentTime: z.string().describe('Current time of day'),
+  dailyData: z.string().describe("JSON string of the user's completed tasks for the day, including reflection data (mood, productivity)."),
+  upcomingTasks: z.string().describe('JSON string of planned, incomplete tasks for the day.'),
+  currentTime: z.string().describe('Current time of day, e.g., "14:30".'),
 });
 
 export const EnergyOptimizationOutputSchema = z.object({
   recommendations: z.array(z.object({
-    taskId: z.string(),
-    suggestedTime: z.string(),
-    energyMatch: z.string(),
-    reasoning: z.string(),
-    priority: z.enum(['high', 'medium', 'low']),
+    taskId: z.string().describe("The title of the upcoming task to be rescheduled."),
+    suggestedTime: z.string().describe("The suggested optimal start time for the task, e.g., '3:00 PM'."),
+    reasoning: z.string().describe("Explanation for why this time is suggested based on inferred energy levels."),
+    priority: z.enum(['high', 'medium', 'low']).describe("The priority of the recommendation."),
   })),
   energyForecast: z.object({
-    nextHour: z.number(),
-    nextThreeHours: z.number(),
-    evening: z.number(),
+    nextHour: z.number().describe("Predicted energy level (1-5) for the next hour."),
+    nextThreeHours: z.number().describe("Predicted energy level (1-5) for the next three hours."),
+    evening: z.number().describe("Predicted energy level (1-5) for the evening."),
   }),
 });
 

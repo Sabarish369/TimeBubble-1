@@ -7,8 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Textarea } from '@/components/ui/textarea';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
+import { Textarea } from './ui/textarea';
 import type { Mood } from '@/types';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Smile, Meh, Frown, Flame, Coffee, Sparkles } from 'lucide-react';

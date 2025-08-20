@@ -1,9 +1,9 @@
 
 'use server';
 /**
- * @fileOverview AI flow for energy optimization and scheduling recommendations.
+ * @fileOverview AI flow for energy optimization and scheduling recommendations based on reflections.
  *
- * - getEnergyOptimizationSuggestions - Suggests optimal timing based on energy patterns
+ * - getEnergyOptimizationSuggestions - Suggests optimal timing based on inferred energy patterns from reflections
  */
 
 import { ai } from '@/ai/genkit';
@@ -18,36 +18,33 @@ const prompt = ai.definePrompt({
   name: 'energyOptimizationPrompt',
   input: { schema: EnergyOptimizationInputSchema },
   output: { schema: EnergyOptimizationOutputSchema },
-  prompt: `You are an expert in chronobiology and productivity optimization. Analyze energy patterns to suggest optimal task scheduling.
+  prompt: `You are an expert in chronobiology and productivity optimization. Analyze the user's completed tasks and reflections to infer their energy patterns and suggest optimal scheduling for upcoming tasks.
 
-Energy history data: {{{energyHistory}}}
-Upcoming tasks: {{{upcomingTasks}}}
+Completed tasks with reflections: {{{dailyData}}}
+Upcoming tasks to schedule: {{{upcomingTasks}}}
 Current time: {{{currentTime}}}
 
-Based on the user's energy patterns, provide:
+1.  **Infer Energy Levels**: Analyze the 'reflection' object for each completed task. A 'focused' or 'happy' mood with high productivity (4-5) indicates HIGH energy. A 'tired' or 'stressed' mood with low productivity (1-2) indicates LOW energy. 'Neutral' mood and moderate productivity (3) suggests MEDIUM energy. Note the time of day these patterns occur.
 
-1. **Task-Time Matching Recommendations**: Match high-energy tasks with peak energy periods and low-energy tasks with recovery periods.
-
-2. **Energy Level Forecasting**: Predict energy levels for upcoming time periods based on historical patterns.
+2.  **Provide Task-Time Matching Recommendations**: Based on the inferred energy patterns, match high-energy upcoming tasks with predicted peak energy periods and low-energy tasks with predicted lulls.
 
 Task-Energy Matching Guidelines:
-- **High Energy (4-5)**: Creative work, problem-solving, learning, important meetings, physical exercise
-- **Medium Energy (3)**: Routine tasks, email processing, planning, light administrative work
-- **Low Energy (1-2)**: Rest, meditation, easy reading, simple organizing, passive activities
+- **High Energy**: Creative work, problem-solving, learning, important meetings.
+- **Medium Energy**: Routine tasks, email processing, planning.
+- **Low Energy**: Rest, meditation, easy reading, simple organizing.
 
 For each recommendation:
-- taskId: ID of the task to reschedule
-- suggestedTime: Optimal time slot (e.g., "9:00 AM" or "2:00 PM")
-- energyMatch: Description of energy-task alignment
-- reasoning: Why this timing optimizes productivity
-- priority: Urgency of the scheduling change
+- taskId: ID of the task to reschedule.
+- suggestedTime: An optimal time slot (e.g., "9:00 AM" or "2:00 PM").
+- reasoning: Why this timing optimizes productivity based on inferred energy patterns from their reflections.
+- priority: Urgency of the scheduling change.
 
-For energy forecast:
-- Predict energy levels for next hour, next 3 hours, and evening
-- Base predictions on historical patterns and current trajectory
-- Use scale 1-5 (1=very low, 5=very high)
+For the energy forecast:
+- Predict energy levels for the next hour, next 3 hours, and evening.
+- Base predictions on historical patterns from reflections and the current time.
+- Use a scale of 1-5 (1=very low, 5=very high).
 
-Focus on maximizing productivity while respecting natural energy rhythms and avoiding burnout.`,
+Focus on maximizing productivity while respecting natural energy rhythms and avoiding burnout. Your analysis MUST be based on the provided reflection data.`,
 });
 
 const energyOptimizationFlow = ai.defineFlow(
