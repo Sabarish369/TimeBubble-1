@@ -15,11 +15,12 @@ import Link from 'next/link';
 
 export function AiQuotaIndicator() {
   const { isPro } = useAuth();
-  const [usage, setUsage] = useState(0);
+  const [usage, setUsage] = useState<number | null>(null);
 
   useEffect(() => {
     // This is a simulation. In a real scenario, you might try to estimate
     // usage based on local actions, but it wouldn't be accurate.
+    // We run this in useEffect to avoid server/client mismatch (hydration error).
     setUsage(15 + Math.random() * 10);
   }, []);
 
@@ -34,7 +35,11 @@ export function AiQuotaIndicator() {
           <div className="flex items-center gap-2 cursor-help">
             <BrainCircuit className="h-5 w-5 text-primary/80" />
             <div className="w-24">
-              <Progress value={usage} className="h-2" />
+              {usage !== null ? (
+                <Progress value={usage} className="h-2" />
+              ) : (
+                <div className="h-2 w-full rounded-full bg-secondary" /> 
+              )}
             </div>
           </div>
         </TooltipTrigger>
