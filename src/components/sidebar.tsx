@@ -2,7 +2,7 @@
 'use client';
 
 import type { DragEvent } from 'react';
-import { Briefcase, BookOpen, Coffee, User, Heart, Plus, Trash2, Pencil, type LucideIcon, CalendarPlus, History, Lightbulb, Target, Battery } from 'lucide-react';
+import { Briefcase, BookOpen, Coffee, User, Heart, Plus, Trash2, Pencil, type LucideIcon, CalendarPlus, History } from 'lucide-react';
 import { BUBBLE_COLORS, SIDEBAR_WIDTH } from '@/lib/constants';
 import type { BubbleCategory, BubbleTemplate } from '@/types';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
@@ -29,10 +29,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 import { ProModal } from './pro-modal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
-import { DailyTipsDrawer } from './daily-tips-drawer';
-import { SmartSuggestions } from './smart-suggestions';
-import { HabitStackingModal } from './habit-stacking-modal';
-import { EnergyTrackingPanel } from './energy-tracking-panel';
 
 const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   work: Briefcase,
@@ -64,10 +60,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [editingTemplate, setEditingTemplate] = useState<BubbleTemplate | undefined>(undefined);
   const isMobile = useIsMobile();
   const { toast } = useToast();
-  const [isDailyTipsOpen, setIsDailyTipsOpen] = useState(false);
-  const [isMissedTasksOpen, setIsMissedTasksOpen] = useState(false);
-  const [isHabitStackingOpen, setIsHabitStackingOpen] = useState(false);
-  const [showEnergyTracking, setShowEnergyTracking] = useState(false);
 
   const allTemplates = [...defaultTemplates.map(t => {
     const userOverride = templates.find(ut => ut.id === t.id);
@@ -312,53 +304,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         })}
       </div>
 
-      {/* New Feature Buttons */}
-      <div className="space-y-2">
-        <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsDailyTipsOpen(true)}
-            className="w-full justify-start gap-2"
-          >
-            <Lightbulb className="h-4 w-4" />
-            Daily Tips
-          </Button>
-
-          {isPro && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsHabitStackingOpen(true)}
-                className="w-full justify-start gap-2"
-              >
-                <Target className="h-4 w-4" />
-                Habit Stacking
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowEnergyTracking(!showEnergyTracking)}
-                className="w-full justify-start gap-2"
-              >
-                <Battery className="h-4 w-4" />
-                Energy Tracking
-              </Button>
-            </>
-          )}
-      </div>
-
-      {/* Smart Suggestions and Energy Tracking Panel */}
-      {isPro && (
-          <div className="space-y-4">
-            <SmartSuggestions />
-            {showEnergyTracking && <EnergyTrackingPanel />}
-          </div>
-        )}
-
-
-      {/* Feedback Section */}
       <FeedbackSection />
     </aside>
     {isMobile && isOpen && (
@@ -373,22 +318,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       template={editingTemplate}
     />
     <MissedTasksDrawer
-      isOpen={isMissedTasksOpen}
-      onClose={() => setIsMissedTasksOpen(false)}
+      isOpen={isMissedTasksDrawerOpen}
+      onClose={() => setIsMissedTasksDrawerOpen(false)}
     />
     <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
-
-    {/* New Modals for Features */}
-    <DailyTipsDrawer isOpen={isDailyTipsOpen} onClose={() => setIsDailyTipsOpen(false)} />
-      <MissedTasksDrawer isOpen={isMissedTasksOpen} onClose={() => setIsMissedTasksOpen(false)} />
-
-      {isPro && (
-        <HabitStackingModal 
-          isOpen={isHabitStackingOpen} 
-          onClose={() => setIsHabitStackingOpen(false)}
-          routineBubbles={timeBlocks.filter(b => b.category === 'personal' || b.title.toLowerCase().includes('routine'))}
-        />
-      )}
-  </>
+    </>
   );
 }

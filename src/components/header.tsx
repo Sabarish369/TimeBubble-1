@@ -12,12 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { TimeBubbleLogo } from '@/components/timebubble-logo';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { SmartSuggestions } from '@/components/smart-suggestions';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { cn } from '@/lib/utils';
 import { UserProfile } from './user-profile';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { DailyTipsDrawer } from './daily-tips-drawer';
+import { AIOptimizerDrawer } from './ai-optimizer-drawer';
 import { AiQuotaIndicator } from './ai-quota-indicator';
 import { UpgradeBadge } from './upgrade-badge';
 
@@ -84,12 +83,11 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         </div>
       </div>
       <div id="header-actions" className="flex items-center gap-2 md:gap-4">
-        <SmartSuggestions />
         <AiQuotaIndicator />
           <UpgradeBadge />
         <ThemeToggle />
         <UserProfile />
-        <DailyTipsDrawer />
+        <AIOptimizerDrawer />
       </div>
     </header>
   );
