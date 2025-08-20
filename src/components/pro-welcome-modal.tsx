@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -10,9 +9,10 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
-import { Sparkles, BarChart, Star, Lightbulb, MessageSquareQuote } from 'lucide-react';
+import { Sparkles, BarChart, Star, Lightbulb, MessageSquareQuote, Crown, CheckCircle } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from './ui/carousel';
 import { Card, CardContent } from './ui/card';
+import { useState, useEffect } from 'react';
 
 interface ProWelcomeModalProps {
   isOpen: boolean;
@@ -43,45 +43,65 @@ const proFeatures = [
 ];
 
 export function ProWelcomeModal({ isOpen, onClose }: ProWelcomeModalProps) {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => setIsVisible(true), 100);
+    } else {
+      setIsVisible(false);
+    }
+  }, [isOpen]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg p-0">
-        <DialogHeader className="items-center text-center p-6 pb-2">
-          <div className='p-3 rounded-full bg-primary/10 mb-4'>
-            <Star className="h-10 w-10 text-amber-500" />
+      <DialogContent className="max-w-lg border-0 bg-gradient-to-br from-background via-background/95 to-primary/5 backdrop-blur-xl shadow-2xl">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden rounded-lg">
+          <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full blur-xl animate-pulse" />
+          <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-gradient-to-tr from-accent/20 to-primary/20 rounded-full blur-xl animate-pulse" style={{ animationDelay: '1s' }} />
+        </div>
+
+        <DialogHeader className="text-center items-center relative z-10">
+          <div className={`p-4 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 mb-6 shadow-xl transform transition-all duration-700 ${isVisible ? 'scale-100 rotate-0' : 'scale-0 rotate-180'}`}>
+            <Crown className="h-10 w-10 text-white drop-shadow-lg" />
           </div>
-          <DialogTitle className="text-2xl md:text-3xl">Thank You for Your Support!</DialogTitle>
-          <DialogDescription className="text-base">
-            As an early supporter, your feedback is invaluable in shaping the future of TimeBubble. We're excited to have you on board! Here's a quick look at what you've unlocked.
+          <DialogTitle className={`text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent transform transition-all duration-500 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
+            Welcome to TimeBubble Pro! 🎉
+          </DialogTitle>
+          <DialogDescription className={`max-w-md mx-auto text-lg text-muted-foreground transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionDelay: '200ms' }}>
+            You now have access to powerful AI features. Here's how to get the most out of your upgrade:
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-12 py-4">
-            <Carousel className="w-full" opts={{loop: true}}>
-                <CarouselContent>
-                    {proFeatures.map((feature, index) => (
-                        <CarouselItem key={index}>
-                        <div className="p-1">
-                            <Card className='bg-primary/5 border-primary/20 h-56'>
-                            <CardContent className="flex flex-col items-center justify-center p-6 text-center h-full">
-                                <feature.icon className="h-8 w-8 mb-3 text-primary" />
-                                <p className='text-xl font-semibold text-primary/90 mb-2'>{feature.title}</p>
-                                <p className="text-sm text-foreground/80">{feature.description}</p>
-                            </CardContent>
-                            </Card>
-                        </div>
-                        </CarouselItem>
-                    ))}
-                </CarouselContent>
-                <CarouselPrevious className='-left-2' />
-                <CarouselNext className='-right-2' />
-            </Carousel>
+        <div className="space-y-4 py-6 relative z-10">
+          {proFeatures.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <div 
+                key={index} 
+                className={`flex items-start gap-4 p-4 rounded-xl bg-white/50 dark:bg-white/5 backdrop-blur-sm border border-white/20 hover:bg-white/70 dark:hover:bg-white/10 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg magical-hover transform ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-8 opacity-0'}`}
+                style={{ transitionDelay: `${300 + index * 100}ms` }}
+              >
+                <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-md text-white mt-1 transform hover:scale-110 transition-transform duration-200">
+                  <Icon className="h-5 w-5 drop-shadow-sm" />
+                </div>
+                <div>
+                  <p className="font-bold text-foreground mb-1">{feature.title}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-
-        <DialogFooter className="p-6 pt-2">
-          <Button size="lg" className="w-full" onClick={onClose}>
-            Start Exploring
+        <DialogFooter className={`relative z-10 transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionDelay: '700ms' }}>
+          <Button 
+            onClick={onClose} 
+            className="w-full py-3 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 btn-magic relative overflow-hidden"
+          >
+            <CheckCircle className="h-5 w-5 mr-2" />
+            Got it, thanks!
           </Button>
         </DialogFooter>
       </DialogContent>
