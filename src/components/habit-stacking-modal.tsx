@@ -23,7 +23,7 @@ export function HabitStackingModal({ isOpen, onClose, routineBubbles }: HabitSta
   const [suggestions, setSuggestions] = useState<HabitSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
-  const { createTimeBlock, currentDate } = useTimeBubbles();
+  const { addBlockOnDate, currentDate } = useTimeBubbles();
   const { geminiApiKey } = useAuth();
 
   useEffect(() => {
@@ -90,15 +90,15 @@ export function HabitStackingModal({ isOpen, onClose, routineBubbles }: HabitSta
         ? new Date(targetBubble.startTime.getTime() - suggestion.estimatedDuration * 60000)
         : new Date(targetBubble.startTime.getTime() + targetBubble.duration * 60000);
 
-      await createTimeBlock({
+      await addBlockOnDate({
         title: suggestion.habitTitle,
         startTime: stackTime,
         duration: suggestion.estimatedDuration,
         category: suggestion.category,
-        color: 'blue',
+        color: 'canary',
         description: suggestion.description,
         actionable: true
-      });
+      }, stackTime);
     }
 
     setSelectedSuggestions(new Set());
