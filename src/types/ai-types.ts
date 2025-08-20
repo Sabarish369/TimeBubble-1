@@ -82,6 +82,11 @@ export const DailyTipsOutputSchema = z.object({
 export type DailyTips = z.infer<typeof DailyTipsOutputSchema>;
 
 // Types for daily-sidebar-tip.ts
+export const DailySidebarTipInputSchema = z.object({
+  scheduleData: z.string().describe('JSON string of the user\'s schedule data for the day'),
+  ...ApiKeySchema,
+});
+
 export const DailySidebarTipOutputSchema = z.object({
   tip: z.string().describe('A short, inspiring tip for the day'),
 });
