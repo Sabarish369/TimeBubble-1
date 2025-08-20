@@ -219,15 +219,17 @@ export function AIOptimizerDrawer() {
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetContent className="w-[400px] sm:w-[400px] sm:max-w-none bg-background/80 backdrop-blur-lg border-l border-border/50">
           <SheetHeader className='mb-4'>
-            {view !== 'main' && (
-              <Button variant="ghost" size="sm" onClick={() => setView('main')} className="absolute top-4 left-4 h-auto p-1.5">
-                  <ChevronLeft className="h-5 w-5" />
-              </Button>
-            )}
-            <SheetTitle className="flex items-center justify-center text-2xl">
-                <Sparkles className="h-7 w-7 mr-3 text-amber-400"/>
-                AI Optimizer
-            </SheetTitle>
+            <div className='relative flex items-center justify-center'>
+                 {view !== 'main' && (
+                    <Button variant="ghost" size="sm" onClick={() => setView('main')} className="absolute left-0 h-auto p-1.5">
+                        <ChevronLeft className="h-5 w-5" />
+                    </Button>
+                )}
+                <SheetTitle className="flex items-center justify-center text-2xl">
+                    <Sparkles className="h-7 w-7 mr-3 text-amber-400"/>
+                    AI Optimizer
+                </SheetTitle>
+            </div>
             <SheetDescription className='text-center'>
                 Your hub for AI-powered productivity features.
             </SheetDescription>
