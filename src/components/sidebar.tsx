@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { DragEvent } from 'react';
@@ -55,7 +56,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { templates, updateTemplate, deleteTemplate, setIsBubbleCreateModalOpen, blocks } = useTimeBubbles();
+  const { templates, updateTemplate, deleteTemplate, setIsBubbleCreateModalOpen, timeBlocks } = useTimeBubbles();
   const { user, isPro } = useAuth();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isMissedTasksDrawerOpen, setIsMissedTasksDrawerOpen] = useState(false);
@@ -385,7 +386,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <HabitStackingModal 
           isOpen={isHabitStackingOpen} 
           onClose={() => setIsHabitStackingOpen(false)}
-          routineBubbles={blocks.filter(b => b.category === 'personal' || b.title.toLowerCase().includes('routine'))}
+          routineBubbles={timeBlocks.filter(b => b.category === 'personal' || b.title.toLowerCase().includes('routine'))}
         />
       )}
   </>
