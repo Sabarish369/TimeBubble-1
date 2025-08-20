@@ -1,4 +1,3 @@
-
 import {z} from 'genkit';
 
 /**
@@ -83,13 +82,56 @@ export const DailyTipsOutputSchema = z.object({
 export type DailyTips = z.infer<typeof DailyTipsOutputSchema>;
 
 // Types for daily-sidebar-tip.ts
-export const DailySidebarTipInputSchema = z.object({
-  scheduleData: z.string().describe("A JSON string of the user's schedule for the day. Includes titles, categories, and durations."),
-  ...ApiKeySchema,
-});
-export type DailySidebarTipInput = z.infer<typeof DailySidebarTipInputSchema>;
-
 export const DailySidebarTipOutputSchema = z.object({
-  tip: z.string().describe('A single, insightful, and inspiring tip for the day, based on the schedule, with a maximum of 20 words.'),
+  tip: z.string().describe('A short, inspiring tip for the day'),
 });
+
+// Habit Stacking AI Types
+export const HabitStackingInputSchema = z.object({
+  apiKey: z.string(),
+  routineBubbles: z.string().describe('JSON string of routine bubbles'),
+  userHabits: z.string().describe('JSON string of existing user habits'),
+  timeOfDay: z.string().describe('Morning, afternoon, or evening'),
+});
+
+export const HabitStackingOutputSchema = z.object({
+  suggestions: z.array(z.object({
+    habitTitle: z.string(),
+    description: z.string(),
+    estimatedDuration: z.number(),
+    category: z.enum(['work', 'study', 'break', 'personal', 'health']),
+    stackBefore: z.boolean(),
+    targetBubbleId: z.string(),
+    reasoning: z.string(),
+  })),
+});
+
+// Energy Level AI Types
+export const EnergyOptimizationInputSchema = z.object({
+  apiKey: z.string(),
+  energyHistory: z.string().describe('JSON string of energy level history'),
+  upcomingTasks: z.string().describe('JSON string of planned tasks'),
+  currentTime: z.string().describe('Current time of day'),
+});
+
+export const EnergyOptimizationOutputSchema = z.object({
+  recommendations: z.array(z.object({
+    taskId: z.string(),
+    suggestedTime: z.string(),
+    energyMatch: z.string(),
+    reasoning: z.string(),
+    priority: z.enum(['high', 'medium', 'low']),
+  })),
+  energyForecast: z.object({
+    nextHour: z.number(),
+    nextThreeHours: z.number(),
+    evening: z.number(),
+  }),
+});
+
 export type DailySidebarTip = z.infer<typeof DailySidebarTipOutputSchema>;
+export type DailySidebarTipInput = z.infer<typeof DailySidebarTipInputSchema>;
+export type HabitStackingInput = z.infer<typeof HabitStackingInputSchema>;
+export type HabitStackingOutput = z.infer<typeof HabitStackingOutputSchema>;
+export type EnergyOptimizationInput = z.infer<typeof EnergyOptimizationInputSchema>;
+export type EnergyOptimizationOutput = z.infer<typeof EnergyOptimizationOutputSchema>;
