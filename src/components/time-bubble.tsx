@@ -23,7 +23,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { CelebrationPopper } from './celebration-popper';
 import { ActiveBubbleAnimation } from './active-bubble-animation';
 import { ensureDateObject } from '@/lib/time-bubbles-utils';
 
@@ -331,7 +330,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
       />
       
       {showAsCurrent && <ActiveBubbleAnimation />}
-      {showCelebration && <CelebrationPopper />}
+      {showCelebration && <ActiveBubbleAnimation />}
       
       <div className="absolute top-1 right-1 z-20 flex items-center" style={{ opacity: isOverdue ? 0 : 1}}>
         <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer" onClick={(e) => {e.stopPropagation(); setReflectingBlock(block)}}>

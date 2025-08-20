@@ -35,15 +35,6 @@ const moodOptions: { value: Mood; icon: React.ElementType, label: string }[] = [
 
 export function ReflectionModal() {
   const { reflectingBlock, setReflectingBlock, updateBlock } = useTimeBubbles();
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [confettiParticles, setConfettiParticles] = useState<Array<{
-    id: number;
-    x: number;
-    y: number;
-    rotation: number;
-    scale: number;
-    delay: number;
-  }>>([]);
 
   const form = useForm<ReflectionFormValues>({
     resolver: zodResolver(reflectionSchema),
@@ -68,19 +59,6 @@ export function ReflectionModal() {
   const onSubmit = (data: ReflectionFormValues) => {
     if (!reflectingBlock) return;
     
-    // Generate confetti particles
-    const particles = Array.from({ length: 20 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      rotation: Math.random() * 360,
-      scale: 0.5 + Math.random() * 0.5,
-      delay: Math.random() * 500,
-    }));
-    
-    setConfettiParticles(particles);
-    setShowConfetti(true);
-    
     // Update the block
     updateBlock(reflectingBlock.id, {
       completed: true,
@@ -91,60 +69,12 @@ export function ReflectionModal() {
       },
     });
     
-    // Hide confetti and close modal after animation
-    setTimeout(() => {
-      setShowConfetti(false);
-      setTimeout(() => setReflectingBlock(null), 300);
-    }, 2000);
+    setReflectingBlock(null);
   };
 
   return (
     <Dialog open={!!reflectingBlock} onOpenChange={() => setReflectingBlock(null)}>
       <DialogContent className="max-h-[90vh] flex flex-col">
-        {/* Confetti Animation */}
-        {showConfetti && (
-          <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden rounded-lg">
-            {confettiParticles.map((particle) => (
-              <div
-                key={particle.id}
-                className="absolute animate-bounce"
-                style={{
-                  left: `${Math.max(10, Math.min(90, particle.x))}%`,
-                  top: `${Math.max(10, Math.min(80, particle.y))}%`,
-                  transform: `rotate(${particle.rotation}deg) scale(${particle.scale})`,
-                  animationDelay: `${particle.delay}ms`,
-                  animationDuration: '1.5s',
-                }}
-              >
-                <Sparkles 
-                  className="w-3 h-3 text-primary animate-pulse" 
-                  style={{ animationDuration: '0.8s' }}
-                />
-              </div>
-            ))}
-            
-            {/* Center celebration burst */}
-            <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <div className="relative w-16 h-16 rounded-full border-2 border-primary/30 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center animate-pulse">
-                <Sparkles className="w-6 h-6 text-primary animate-spin" style={{ animationDuration: '2s' }} />
-                
-                {/* Orbiting particles */}
-                {[0, 1, 2, 3].map((i) => (
-                  <div
-                    key={`orbit-${i}`}
-                    className="absolute w-1.5 h-1.5 bg-primary rounded-full animate-ping"
-                    style={{
-                      top: `${32 + Math.sin((i * Math.PI) / 2) * 24}px`,
-                      left: `${32 + Math.cos((i * Math.PI) / 2) * 24}px`,
-                      animationDelay: `${i * 0.2}s`,
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-        
         <DialogHeader>
           <DialogTitle>How did "{reflectingBlock?.title}" go?</DialogTitle>
           <DialogDescription>
