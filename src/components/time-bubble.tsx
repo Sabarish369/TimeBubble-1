@@ -295,6 +295,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
     '--glow-color': `var(--bubble-${block.color})`,
     zIndex: isDragging ? 40 : isHovering ? 20 : 'auto',
     filter: isDragging ? 'drop-shadow(0 10px 25px rgba(0, 0, 0, 0.3))' : 'none',
+    overflow: 'hidden'
   };
   
   const handleUndoComplete = () => {

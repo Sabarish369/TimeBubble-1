@@ -24,7 +24,7 @@ export function CelebrationPopper() {
   }, []);
 
   return (
-    <div className="celebration-popper">
+    <div className="celebration-popper" style={{ zIndex: 100 }}>
       {confetti.map((c) => (
         <div key={c.id} className="confetti" style={c.style}></div>
       ))}
