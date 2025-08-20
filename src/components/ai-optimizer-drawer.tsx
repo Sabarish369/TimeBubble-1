@@ -160,25 +160,27 @@ export function AIOptimizerDrawer() {
         </div>
       )}
       {!isLoadingTips && dailyTips && dailyTips.tips.length > 0 && (
-        <Carousel className="w-full" opts={{ loop: true }}>
-          <CarouselContent>
-            {dailyTips.tips.map((tip, index) => (
-              <CarouselItem key={index}>
-                <div className="p-1">
-                  <Card className='bg-secondary/40 border-none'>
-                    <CardContent className="flex flex-col items-center justify-center p-6 aspect-square">
-                      <div className="h-6 w-6 mb-3 text-primary"><tipIcons.Motivation /></div>
-                      <p className='text-lg font-semibold text-primary/90 text-center mb-2'>{tip.type}</p>
-                      <p className="text-sm text-center text-foreground/80">{tip.suggestion}</p>
-                    </CardContent>
-                  </Card>
-                </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-          <CarouselPrevious className='-left-4' />
-          <CarouselNext className='-right-4' />
-        </Carousel>
+        <div className='relative px-8'>
+            <Carousel className="w-full" opts={{ loop: true }}>
+            <CarouselContent>
+                {dailyTips.tips.map((tip, index) => (
+                <CarouselItem key={index}>
+                    <div className="p-1">
+                    <Card className='bg-secondary/40 border-none'>
+                        <CardContent className="flex flex-col items-center justify-center p-6 aspect-square">
+                        <div className="h-6 w-6 mb-3 text-primary"><tipIcons.Motivation /></div>
+                        <p className='text-lg font-semibold text-primary/90 text-center mb-2'>{tip.type}</p>
+                        <p className="text-sm text-center text-foreground/80">{tip.suggestion}</p>
+                        </CardContent>
+                    </Card>
+                    </div>
+                </CarouselItem>
+                ))}
+            </CarouselContent>
+            <CarouselPrevious className='-left-2' />
+            <CarouselNext className='-right-2' />
+            </Carousel>
+        </div>
       )}
       {!isLoadingTips && (!dailyTips || dailyTips.tips.length === 0) && (
         <Alert>
