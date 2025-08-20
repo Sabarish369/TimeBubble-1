@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 touch-friendly",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 touch-friendly btn-professional btn-ripple",
   {
     variants: {
       variant: {
@@ -21,7 +21,8 @@ const buttonVariants = cva(
         "link-destructive": "text-destructive-foreground hover:text-destructive-foreground/80 hover:underline underline-offset-4",
         reflect: "bg-gradient-to-r from-[hsl(var(--bubble-mint))] to-[hsl(var(--chart-2))] text-primary-foreground hover:opacity-90 transition-opacity",
         'secondary-outline': "bg-secondary/20 border border-border text-secondary-foreground hover:bg-secondary/40",
-        'ghost-destructive': "text-destructive hover:bg-destructive/10"
+        'ghost-destructive': "text-destructive hover:bg-destructive/10",
+        magic: "bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_100%] text-primary-foreground hover:bg-[position:100%_0] transition-all duration-500 shadow-lg hover:shadow-xl btn-magic"
       },
       size: {
         default: "h-10 px-4 py-2",

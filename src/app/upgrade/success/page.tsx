@@ -11,6 +11,7 @@ import { db } from '@/lib/firebase';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { CelebrationPopper } from '@/components/celebration-popper';
+import { ProUpgradeAnimation } from '@/components/pro-upgrade-animation';
 
 export default function UpgradeSuccessPage() {
   const { user, refreshUserStatus } = useAuth();
@@ -19,6 +20,8 @@ export default function UpgradeSuccessPage() {
   const sessionId = searchParams.get('session_id');
   const [isUpdating, setIsUpdating] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showUpgradeAnimation, setShowUpgradeAnimation] = useState(false);
+  const [showSuccessContent, setShowSuccessContent] = useState(false);
 
   useEffect(() => {
     if (user && sessionId) {
@@ -29,21 +32,28 @@ export default function UpgradeSuccessPage() {
           // Manually trigger a refresh of user status
           await refreshUserStatus();
           
-          // Wait for a moment to show the success message, then redirect
-          setTimeout(() => {
-            router.push('/app');
-          }, 3000);
+          setIsUpdating(false);
+          setShowUpgradeAnimation(true);
 
         } catch (err) {
           console.error("Failed to update user to Pro:", err);
           setError("There was an issue upgrading your account. Please contact support.");
-        } finally {
           setIsUpdating(false);
         }
       };
       updateUserToPro();
     }
   }, [user, sessionId, router, refreshUserStatus]);
+
+  const handleAnimationComplete = () => {
+    setShowUpgradeAnimation(false);
+    setShowSuccessContent(true);
+    
+    // Redirect after showing success content
+    setTimeout(() => {
+      router.push('/app');
+    }, 3000);
+  };
 
   if (!sessionId) {
     return (
@@ -75,15 +85,91 @@ export default function UpgradeSuccessPage() {
 
   return (
     <>
-    <CelebrationPopper />
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center p-4">
-      <CheckCircle2 className="h-24 w-24 text-green-500 mb-6" />
-      <h1 className="text-4xl md:text-5xl font-bold mb-4">Upgrade Successful!</h1>
-      <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-8">
-        Welcome to TimeBubble Pro! Please wait while we redirect you to the app...
-      </p>
-      <LoadingSpinner className="h-20 w-20" />
+    {showUpgradeAnimation && (
+      <ProUpgradeAnimation 
+        isVisible={showUpgradeAnimation} 
+        onComplete={handleAnimationComplete} 
+      />
+    )}
+    
+    {showSuccessContent && <CelebrationPopper />}
+    
+    {showSuccessContent && (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 text-center p-4 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-10 -left-10 w-52 h-52 bg-gradient-to-tr from-accent/20 to-primary/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-gradient-to-r from-green-400/20 to-emerald-500/20 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '2s' }} />
+      </div>
+
+      <div className="relative z-10 max-w-2xl mx-auto">
+        {/* Success icon with enhanced animation */}
+        <div className="relative mb-8">
+          <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse" />
+          <CheckCircle2 className="h-32 w-32 text-green-500 relative z-10 success-celebration mx-auto drop-shadow-lg" />
+          
+          {/* Floating sparkles around icon */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-2 h-2 bg-yellow-400 rounded-full animate-ping"
+                style={{
+                  top: `${30 + Math.sin((i * Math.PI) / 4) * 60}px`,
+                  left: `${30 + Math.cos((i * Math.PI) / 4) * 60}px`,
+                  animationDelay: `${i * 0.2}s`,
+                  animationDuration: '2s',
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Enhanced title with gradient */}
+        <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-green-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent animate-pulse">
+          Upgrade Successful!
+        </h1>
+
+        {/* Subtitle with better typography */}
+        <div className="mb-8 space-y-2">
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            🎉 Welcome to <span className="font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">TimeBubble Pro!</span>
+          </p>
+          <p className="text-lg text-muted-foreground/80">
+            Please wait while we redirect you to the app...
+          </p>
+        </div>
+
+        {/* Enhanced loading spinner */}
+        <div className="relative">
+          <LoadingSpinner className="h-24 w-24 mx-auto" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-32 h-32 border-4 border-primary/20 rounded-full animate-pulse" />
+          </div>
+        </div>
+
+        {/* Pro features preview */}
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          {[
+            { icon: '🚀', title: 'AI Insights', desc: 'Advanced analytics' },
+            { icon: '⚡', title: 'Smart Tips', desc: 'Proactive suggestions' },
+            { icon: '📊', title: 'Trend Analysis', desc: 'Long-term patterns' },
+          ].map((feature, index) => (
+            <div
+              key={index}
+              className="p-6 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105"
+              style={{ animationDelay: `${index * 0.2}s` }}
+            >
+              <div className="text-4xl mb-3">{feature.icon}</div>
+              <h3 className="font-bold text-lg mb-2">{feature.title}</h3>
+              <p className="text-sm text-muted-foreground">{feature.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
+    )}
     </>
   );
 }

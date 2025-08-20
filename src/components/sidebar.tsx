@@ -1,8 +1,7 @@
-
 'use client';
 
 import type { DragEvent } from 'react';
-import { Briefcase, BookOpen, Coffee, User, Heart, Plus, Trash2, Pencil, type LucideIcon, CalendarPlus, History } from 'lucide-react';
+import { Briefcase, BookOpen, Coffee, User, Heart, Plus, Trash2, Pencil, type LucideIcon, CalendarPlus, History, Lightbulb, Target, Battery } from 'lucide-react';
 import { BUBBLE_COLORS, SIDEBAR_WIDTH } from '@/lib/constants';
 import type { BubbleCategory, BubbleTemplate } from '@/types';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
@@ -22,12 +21,17 @@ import {
 } from "@/components/ui/alert-dialog"
 import { MissedTasksDrawer } from './missed-tasks-drawer';
 import { DailySidebarTip } from './daily-sidebar-tip';
+import { FeedbackSection } from './feedback-section';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { ProModal } from './pro-modal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
+import { DailyTipsDrawer } from './daily-tips-drawer';
+import { SmartSuggestions } from './smart-suggestions';
+import { HabitStackingModal } from './habit-stacking-modal';
+import { EnergyTrackingPanel } from './energy-tracking-panel';
 
 const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   work: Briefcase,
@@ -51,7 +55,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { templates, updateTemplate, deleteTemplate, setIsBubbleCreateModalOpen } = useTimeBubbles();
+  const { templates, updateTemplate, deleteTemplate, setIsBubbleCreateModalOpen, blocks } = useTimeBubbles();
   const { user, isPro } = useAuth();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isMissedTasksDrawerOpen, setIsMissedTasksDrawerOpen] = useState(false);
@@ -59,6 +63,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [editingTemplate, setEditingTemplate] = useState<BubbleTemplate | undefined>(undefined);
   const isMobile = useIsMobile();
   const { toast } = useToast();
+  const [isDailyTipsOpen, setIsDailyTipsOpen] = useState(false);
+  const [isMissedTasksOpen, setIsMissedTasksOpen] = useState(false);
+  const [isHabitStackingOpen, setIsHabitStackingOpen] = useState(false);
+  const [showEnergyTracking, setShowEnergyTracking] = useState(false);
 
   const allTemplates = [...defaultTemplates.map(t => {
     const userOverride = templates.find(ut => ut.id === t.id);
@@ -87,20 +95,20 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       description: template.description
     };
     e.dataTransfer.setData('application/json', JSON.stringify(templateData));
-    
+
     // Close sidebar on mobile when drag starts
     if (isMobile) {
       onClose();
     }
 
     const target = e.currentTarget;
-    
+
     // Add drag start animation to original element
     target.style.transform = 'scale(0.95) rotate(-2deg)';
     target.style.opacity = '0.6';
     target.style.transition = 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
     target.classList.add('dragging-source');
-    
+
     // Create enhanced custom drag image with better visual feedback
     const dragImage = target.cloneNode(true) as HTMLElement;
     dragImage.style.cssText = `
@@ -119,7 +127,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       transition: none !important;
       background: linear-gradient(135deg, hsl(var(--bubble-${template.color})) 0%, hsl(var(--bubble-${template.color})) 70%, rgba(255,255,255,0.3) 100%) !important;
     `;
-    
+
     dragImage.classList.add('enhanced-drag-ghost');
     dragImage.setAttribute('data-color', template.color);
 
@@ -155,16 +163,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const handleDragEnd = (e: DragEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     target.classList.remove('dragging-source');
-    
+
     // Enhanced bounce-back animation
     target.style.transform = 'scale(1.05)';
     target.style.opacity = '1';
     target.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-    
+
     setTimeout(() => {
       target.style.transform = 'scale(1.02)';
     }, 100);
-    
+
     setTimeout(() => {
       target.style.transform = '';
       target.style.opacity = '';
@@ -190,7 +198,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     setIsTemplateModalOpen(false);
     setEditingTemplate(undefined);
   }
-  
+
   const handleOpenCreateBubbleModal = () => {
     setIsBubbleCreateModalOpen(true);
     if(isMobile) onClose();
@@ -241,7 +249,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </Tooltip>
         </TooltipProvider>
       </div>
-      
+
       <div id="templates-list" className={cn("space-y-3 overflow-y-auto flex-1 no-scrollbar px-1")}>
         {allTemplates.map((template, index) => {
           const Icon = categoryIcons[template.category];
@@ -302,6 +310,55 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           );
         })}
       </div>
+
+      {/* New Feature Buttons */}
+      <div className="space-y-2">
+        <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsDailyTipsOpen(true)}
+            className="w-full justify-start gap-2"
+          >
+            <Lightbulb className="h-4 w-4" />
+            Daily Tips
+          </Button>
+
+          {isPro && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsHabitStackingOpen(true)}
+                className="w-full justify-start gap-2"
+              >
+                <Target className="h-4 w-4" />
+                Habit Stacking
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEnergyTracking(!showEnergyTracking)}
+                className="w-full justify-start gap-2"
+              >
+                <Battery className="h-4 w-4" />
+                Energy Tracking
+              </Button>
+            </>
+          )}
+      </div>
+
+      {/* Smart Suggestions and Energy Tracking Panel */}
+      {isPro && (
+          <div className="space-y-4">
+            <SmartSuggestions />
+            {showEnergyTracking && <EnergyTrackingPanel />}
+          </div>
+        )}
+
+
+      {/* Feedback Section */}
+      <FeedbackSection />
     </aside>
     {isMobile && isOpen && (
       <div 
@@ -315,10 +372,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       template={editingTemplate}
     />
     <MissedTasksDrawer
-      isOpen={isMissedTasksDrawerOpen}
-      onClose={() => setIsMissedTasksDrawerOpen(false)}
+      isOpen={isMissedTasksOpen}
+      onClose={() => setIsMissedTasksOpen(false)}
     />
     <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
+
+    {/* New Modals for Features */}
+    <DailyTipsDrawer isOpen={isDailyTipsOpen} onClose={() => setIsDailyTipsOpen(false)} />
+      <MissedTasksDrawer isOpen={isMissedTasksOpen} onClose={() => setIsMissedTasksOpen(false)} />
+
+      {isPro && (
+        <HabitStackingModal 
+          isOpen={isHabitStackingOpen} 
+          onClose={() => setIsHabitStackingOpen(false)}
+          routineBubbles={blocks.filter(b => b.category === 'personal' || b.title.toLowerCase().includes('routine'))}
+        />
+      )}
   </>
   );
 }

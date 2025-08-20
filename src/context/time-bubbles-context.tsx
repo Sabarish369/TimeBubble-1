@@ -2,10 +2,12 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react';
-import type { TimeBlock, BubbleTemplate, DailyInsights, DailyTips, DailySidebarTip, DailySidebarTipInput, UserPreferences } from '@/types';
+import type { TimeBlock, BubbleTemplate, DailyInsights, DailyTips, DailySidebarTip, DailySidebarTipInput, UserPreferences, HabitSuggestion, EnergyTracking, EnergyLevel } from '@/types';
 import { getDailyInsights as fetchDailyInsights } from '@/ai/flows/daily-insights';
 import { getDailyTips as fetchDailyTips } from '@/ai/flows/daily-tips';
 import { getDailySidebarTip } from '@/ai/flows/daily-sidebar-tip';
+import { getHabitStackingSuggestions } from '@/ai/flows/habit-stacking';
+import { getEnergyOptimizationSuggestions } from '@/ai/flows/energy-optimization';
 import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
 import { addDays, format, startOfDay, isToday, isPast, subDays } from 'date-fns';
@@ -23,6 +25,12 @@ type Theme = 'light' | 'dark';
 export interface MissedTaskGroup {
     date: string;
     tasks: TimeBlock[];
+}
+
+export interface EnergyData {
+    timestamp: Date;
+    level: EnergyLevel;
+    context?: string;
 }
 
 interface HistoryState {

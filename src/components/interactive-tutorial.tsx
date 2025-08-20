@@ -45,39 +45,51 @@ export function InteractiveTutorial({ onFinish }: { onFinish: () => void }) {
   const tutorialSteps: TutorialStep[] = [
     {
       elementId: 'sidebar',
-      title: 'Welcome to TimeBubble!',
-      description: "Let's take a quick tour. This is your sidebar, where you can find templates to quickly plan your day.",
+      title: '🎉 Welcome to TimeBubble!',
+      description: "Let's take a magical tour! This is your command center - the sidebar where all your templates live. Think of it as your personal productivity toolkit.",
+      tooltipPosition: 'right',
+    },
+    {
+      elementId: 'templates-header',
+      title: '📚 Your Template Library',
+      description: 'These are pre-made templates to speed up your planning. Each bubble has a category, duration, and beautiful color to help organize your day visually.',
       tooltipPosition: 'right',
     },
     {
       elementId: 'first-template-item',
-      title: 'Drag & Drop Templates',
-      description: 'Try dragging a template like "Focus Work" from here and dropping it onto the timeline to your right to schedule a task.',
+      title: '✨ Drag & Drop Magic',
+      description: 'Try dragging any template (like "Focus Work") from here and dropping it onto the timeline. Watch the magic happen as it creates a perfectly timed bubble!',
       tooltipPosition: 'right',
     },
     {
       elementId: 'timeline-main',
-      title: 'Your Visual Timeline',
-      description: "This is your timeline. Double-click anywhere on an empty spot to create a custom time bubble for a specific time.",
+      title: '🎯 Your Visual Timeline',
+      description: "This is where the magic happens! Double-click anywhere on an empty spot to create a custom time bubble. You can also resize bubbles by dragging their edges.",
       tooltipPosition: 'center',
     },
     {
       elementId: 'date-navigation',
-      title: 'Navigate Through Time',
-      description: "Use these controls to switch between days. Plan your week ahead or review past achievements.",
+      title: '🗓️ Time Travel Controls',
+      description: "Navigate through time with these controls. Plan your future, review your past, or jump to any date. Your productivity journey awaits!",
       tooltipPosition: 'bottom',
     },
     {
       elementId: 'missed-tasks-button',
-      title: 'Review Overdue Tasks',
-      description: "Click this history button to see any bubbles you missed. You can reschedule or dismiss them from there.",
+      title: '📋 Never Miss a Beat',
+      description: "Life happens! Click this history button to see any bubbles you missed. You can reschedule them with just a click - no guilt, just progress.",
       tooltipPosition: 'right',
     },
     {
       elementId: 'header-actions',
-      title: 'Daily Insights & More',
-      description: "At the end of your day, use the 'Sparkles' icon up here to get AI-powered insights on how you spent your time.",
+      title: '🚀 AI-Powered Insights',
+      description: "At the end of your day, click the 'Sparkles' icon to get personalized AI insights about your productivity patterns and helpful suggestions.",
       tooltipPosition: 'bottom',
+    },
+    {
+      elementId: 'feedback-section',
+      title: '💝 Share Your Voice',
+      description: "Found something you love or want to improve? Use the feedback section to help us make TimeBubble even better for you!",
+      tooltipPosition: 'right',
     },
     {
       elementId: 'ai-tips-drawer-trigger',
@@ -287,29 +299,51 @@ export function InteractiveTutorial({ onFinish }: { onFinish: () => void }) {
             <div className="fixed inset-0 bg-black/60"></div>
         )}
 
-        {/* Tooltip */}
+        {/* Enhanced Tooltip */}
         <div
             ref={tooltipRef}
             className={cn(
-                "absolute w-72 p-4 rounded-lg bg-background text-foreground shadow-2xl transition-all duration-300 pointer-events-auto"
+                "absolute w-80 p-6 rounded-xl bg-gradient-to-br from-background via-background/95 to-primary/5 text-foreground shadow-2xl border border-primary/20 backdrop-blur-sm transition-all duration-500 pointer-events-auto transform animate-in fade-in-0 zoom-in-95"
             )}
             style={tooltipStyle}
         >
-            <h3 className="font-bold text-lg mb-2">{currentStep.title}</h3>
-            <p className="text-sm text-muted-foreground mb-4">{currentStep.description}</p>
-            <div className="flex justify-between items-center">
-                 <span className='text-xs text-muted-foreground'>{step + 1} / {tutorialSteps.length}</span>
-                <div className='flex gap-2'>
-                    <Button variant="link" size="sm" onClick={handleFinish}>Skip</Button>
-                    {step > 0 && (
-                        <Button variant="outline" size="sm" onClick={handlePrev}>
-                            <ArrowLeft className="mr-1 h-4 w-4" /> Prev
+            {/* Magical glow effect */}
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 blur-xl -z-10" />
+            
+            <div className="relative">
+                <h3 className="font-bold text-xl mb-3 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    {currentStep.title}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+                    {currentStep.description}
+                </p>
+                
+                {/* Progress bar */}
+                <div className="w-full bg-secondary/30 rounded-full h-1 mb-4">
+                    <div 
+                        className="bg-gradient-to-r from-primary to-accent h-1 rounded-full transition-all duration-500" 
+                        style={{ width: `${((step + 1) / tutorialSteps.length) * 100}%` }}
+                    />
+                </div>
+                
+                <div className="flex justify-between items-center">
+                    <span className='text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full'>
+                        {step + 1} of {tutorialSteps.length}
+                    </span>
+                    <div className='flex gap-2'>
+                        <Button variant="ghost" size="sm" onClick={handleFinish} className="hover:bg-secondary/80">
+                            Skip Tour
                         </Button>
-                    )}
-                    <Button size="sm" onClick={handleNext}>
-                        {step === tutorialSteps.length - 1 ? 'Finish' : 'Next'}
-                        <ArrowRight className="ml-1 h-4 w-4" />
-                    </Button>
+                        {step > 0 && (
+                            <Button variant="outline" size="sm" onClick={handlePrev} className="hover:scale-105 transition-transform">
+                                <ArrowLeft className="mr-1 h-4 w-4" /> Back
+                            </Button>
+                        )}
+                        <Button size="sm" onClick={handleNext} className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white hover:scale-105 transition-all duration-200">
+                            {step === tutorialSteps.length - 1 ? '🎉 Finish' : 'Next'}
+                            <ArrowRight className="ml-1 h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>
