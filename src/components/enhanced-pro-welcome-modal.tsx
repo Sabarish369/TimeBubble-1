@@ -74,17 +74,17 @@ export function EnhancedProWelcomeModal({ isOpen, onClose }: EnhancedProWelcomeM
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg mx-auto bg-gradient-to-br from-background via-primary/5 to-accent/10 border-primary/20 backdrop-blur-xl relative overflow-hidden">
+      <DialogContent className="sm:max-w-lg mx-auto bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/20 dark:via-emerald-950/20 dark:to-teal-950/20 border-green-200 dark:border-green-800 backdrop-blur-xl relative overflow-hidden">
         {/* Celebration background */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-gradient-to-tr from-accent/20 to-primary/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+          <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-green-400/20 to-emerald-500/20 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-gradient-to-tr from-emerald-400/20 to-teal-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
           
           {/* Floating celebration particles */}
           {[...Array(20)].map((_, i) => (
             <div
               key={i}
-              className="absolute w-1 h-1 bg-gradient-to-r from-primary to-accent rounded-full animate-ping"
+              className="absolute w-1 h-1 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full animate-ping"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
@@ -101,12 +101,12 @@ export function EnhancedProWelcomeModal({ isOpen, onClose }: EnhancedProWelcomeM
             <DialogHeader className={`text-center space-y-6 transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}`}>
               <div className="flex justify-center mb-4">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary to-accent rounded-full blur-lg opacity-50 animate-pulse" />
-                  <CheckCircle className="h-20 w-20 text-primary relative z-10 drop-shadow-lg animate-bounce" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full blur-lg opacity-50 animate-pulse" />
+                  <CheckCircle className="h-20 w-20 text-green-500 relative z-10 drop-shadow-lg animate-bounce" />
                 </div>
               </div>
               
-              <DialogTitle className="text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+              <DialogTitle className="text-4xl font-bold bg-gradient-to-r from-green-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent">
                 🎉 Welcome to Pro!
               </DialogTitle>
               
@@ -120,7 +120,7 @@ export function EnhancedProWelcomeModal({ isOpen, onClose }: EnhancedProWelcomeM
               <Button
                 onClick={nextStep}
                 size="lg"
-                className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+                className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
               >
                 Explore Pro Features
                 <ChevronRight className="w-5 h-5 ml-2" />
@@ -142,7 +142,7 @@ export function EnhancedProWelcomeModal({ isOpen, onClose }: EnhancedProWelcomeM
                   <div
                     key={i}
                     className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      i === currentStep ? 'bg-primary scale-125' : 'bg-muted-foreground/30'
+                      i === currentStep ? 'bg-green-500 scale-125' : 'bg-muted-foreground/30'
                     }`}
                   />
                 ))}
@@ -188,7 +188,11 @@ export function EnhancedProWelcomeModal({ isOpen, onClose }: EnhancedProWelcomeM
 
               <Button
                 onClick={nextStep}
-                className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-semibold px-6 py-2 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2"
+                className={`font-semibold px-6 py-2 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center gap-2 ${
+                  currentStep === proFeatures.length - 1
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white'
+                    : 'bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white'
+                }`}
               >
                 {currentStep === proFeatures.length - 1 ? (
                   <>
