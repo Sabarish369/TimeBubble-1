@@ -100,7 +100,7 @@ export function ReflectionModal() {
 
   return (
     <Dialog open={!!reflectingBlock} onOpenChange={() => setReflectingBlock(null)}>
-      <DialogContent className="relative overflow-hidden max-h-[90vh] flex flex-col">
+      <DialogContent className="max-h-[90vh] flex flex-col">
         {/* Confetti Animation */}
         {showConfetti && (
           <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden rounded-lg">
@@ -152,7 +152,7 @@ export function ReflectionModal() {
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-hidden -mr-6 pr-6">
-        <ScrollArea className="h-full">
+        <ScrollArea className="h-full pr-6">
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} id="reflection-form" className="space-y-4">
                 <FormField
@@ -183,21 +183,21 @@ export function ReflectionModal() {
                         <RadioGroup
                         onValueChange={field.onChange}
                         defaultValue={field.value}
-                        className="flex gap-2"
+                        className="flex gap-2 flex-wrap"
                         >
                         {moodOptions.map(({ value, icon: Icon, label }) => (
-                            <FormItem key={value} className="flex-1">
+                            <FormItem key={value} className="flex-1 min-w-[70px]">
                             <FormControl>
                                 <RadioGroupItem value={value} className="sr-only" />
                             </FormControl>
                             <FormLabel
                                 className={cn(
-                                'flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground cursor-pointer',
+                                'flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-3 h-full hover:bg-accent hover:text-accent-foreground cursor-pointer',
                                 field.value === value && 'border-primary'
                                 )}
                             >
-                                <Icon className="mb-2 h-6 w-6" />
-                                {label}
+                                <Icon className="mb-1.5 h-6 w-6" />
+                                <span className="text-xs">{label}</span>
                             </FormLabel>
                             </FormItem>
                         ))}
