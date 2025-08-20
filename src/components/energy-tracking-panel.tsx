@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Brain, TrendingUp, Clock, Zap } from 'lucide-react';
-import { format, isToday } from 'date-fns';
+import { format, isToday, subDays } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { getEnergyOptimizationSuggestions } from '@/ai/flows/energy-optimization';
@@ -16,22 +16,27 @@ export function EnergyTrackingPanel() {
   const [analysis, setAnalysis] = useState<EnergyOptimizationOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { user, geminiApiKey } = useAuth();
-  const { timeBlocks, currentDate } = useTimeBubbles();
+  const { timeBlocks, currentDate, getBlocksForDate } = useTimeBubbles();
 
   const handleAnalyzeEnergy = async () => {
     if (!geminiApiKey) return;
 
-    const completedTasks = timeBlocks.filter(b => b.completed && b.reflection);
-    const upcomingTasks = timeBlocks.filter(b => !b.completed);
-
-    if (completedTasks.length < 2) {
-      alert("Please complete and reflect on at least two bubbles to analyze your energy patterns.");
-      return;
-    }
-
     setIsLoading(true);
     setAnalysis(null);
+
     try {
+      const yesterday = subDays(currentDate, 1);
+      const previousDayBlocks = await getBlocksForDate(yesterday);
+      
+      const completedTasks = previousDayBlocks.filter(b => b.completed && b.reflection);
+      const upcomingTasks = timeBlocks.filter(b => !b.completed);
+
+      if (completedTasks.length < 2) {
+        alert("Please complete and reflect on at least two bubbles from the previous day to analyze your energy patterns.");
+        setIsLoading(false);
+        return;
+      }
+
       const result = await getEnergyOptimizationSuggestions({
         apiKey: geminiApiKey,
         dailyData: JSON.stringify(completedTasks.map(t => ({
@@ -78,12 +83,12 @@ export function EnergyTrackingPanel() {
             Energy Optimizer
           </CardTitle>
           <CardDescription>
-            Let AI analyze your reflections to find your peak energy times and optimize your schedule.
+            Analyze yesterday's reflections to find your peak energy times and optimize today's schedule.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button onClick={handleAnalyzeEnergy} disabled={isLoading || !geminiApiKey} className="w-full">
-            {isLoading ? 'Analyzing...' : 'Analyze Energy & Optimize Schedule'}
+            {isLoading ? 'Analyzing...' : 'Analyze & Optimize Schedule'}
           </Button>
            {!geminiApiKey && (
              <p className="text-xs text-muted-foreground text-center mt-2">Please set your Gemini API key to use this feature.</p>
@@ -108,7 +113,7 @@ export function EnergyTrackingPanel() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <TrendingUp className="h-5 w-5" />
-                Energy Forecast
+                Energy Forecast for Today
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-3 gap-2 text-center">
