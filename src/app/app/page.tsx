@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Header } from "@/components/header";
@@ -40,10 +39,13 @@ export default function AppPage() {
     setIsBubbleCreateModalOpen,
     newBubbleStartTime
   } = useTimeBubbles();
-  
+
   const { user, isPro } = useAuth();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !localStorage.getItem(TUTORIAL_STORAGE_KEY);
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
   const [isProWelcomeModalOpen, setIsProWelcomeModalOpen] = useState(false);
@@ -69,7 +71,7 @@ export default function AppPage() {
       if (!tutorialCompleted) {
         setShowTutorial(true);
       }
-      
+
       // Check if user is Pro and hasn't seen the welcome modal yet
       const proWelcomeSeen = localStorage.getItem(PRO_WELCOME_KEY);
       if (isPro && !proWelcomeSeen) {
@@ -109,7 +111,7 @@ export default function AppPage() {
       }
     }
   }, [isMobile, showTutorial]);
-  
+
   useEffect(() => {
     if (showTutorial && isMobile) {
       setIsSidebarOpen(true);
