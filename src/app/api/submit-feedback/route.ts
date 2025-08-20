@@ -3,17 +3,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin SDK if not already initialized
+// Standardized Firebase Admin SDK initialization
 if (!getApps().length) {
   try {
-    // Construct the credential object from individual environment variables
     const serviceAccount = {
       projectId: process.env.FIREBASE_PROJECT_ID,
       privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
     };
-
-    // Check if all required parts of the service account are present
+    
     if (!serviceAccount.projectId || !serviceAccount.privateKey || !serviceAccount.clientEmail) {
       throw new Error('Firebase Admin SDK credentials are not fully configured in environment variables.');
     }
@@ -31,7 +29,7 @@ export async function POST(req: NextRequest) {
   // Ensure the Admin SDK was initialized before proceeding
   if (!getApps().length) {
     console.error('Feedback submission failed because Firebase Admin SDK is not initialized.');
-    return NextResponse.json({ error: 'Server configuration error.' }, { status: 500 });
+    return NextResponse.json({ error: 'Server configuration error. Check environment variables.' }, { status: 500 });
   }
 
   try {
