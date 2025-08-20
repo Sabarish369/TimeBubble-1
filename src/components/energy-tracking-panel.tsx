@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Brain, TrendingUp, Clock, Zap } from 'lucide-react';
+import { Brain, TrendingUp, Clock, Zap, Info } from 'lucide-react';
 import { format, isToday, subDays } from 'date-fns';
 import { useAuth } from '@/context/auth-context';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
@@ -15,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 export function EnergyTrackingPanel() {
   const [analysis, setAnalysis] = useState<EnergyOptimizationOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { user, geminiApiKey } = useAuth();
   const { timeBlocks, currentDate, getBlocksForDate } = useTimeBubbles();
 
@@ -23,6 +23,7 @@ export function EnergyTrackingPanel() {
 
     setIsLoading(true);
     setAnalysis(null);
+    setError(null);
 
     try {
       const yesterday = subDays(currentDate, 1);
@@ -32,7 +33,7 @@ export function EnergyTrackingPanel() {
       const upcomingTasks = timeBlocks.filter(b => !b.completed);
 
       if (completedTasks.length < 2) {
-        alert("Please complete and reflect on at least two bubbles from the previous day to analyze your energy patterns.");
+        setError("Please complete and reflect on at least two bubbles from the previous day to analyze your energy patterns.");
         setIsLoading(false);
         return;
       }
@@ -43,7 +44,11 @@ export function EnergyTrackingPanel() {
           title: t.title,
           category: t.category,
           startTime: format(t.startTime, 'HH:mm'),
-          reflection: t.reflection,
+          reflection: {
+            mood: t.reflection?.mood,
+            productivity: t.reflection?.productivity,
+            notes: t.reflection?.notes,
+          },
         }))),
         upcomingTasks: JSON.stringify(upcomingTasks.map(t => ({
           id: t.id,
@@ -57,7 +62,7 @@ export function EnergyTrackingPanel() {
       setAnalysis(result);
     } catch (error) {
       console.error('Failed to get energy recommendations:', error);
-      alert("There was an error analyzing your energy. Please try again.");
+      setError("There was an error analyzing your energy. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -71,7 +76,7 @@ export function EnergyTrackingPanel() {
 
   const getEnergyLabel = (level: number) => {
     const labels = ['Very Low', 'Low', 'Moderate', 'High', 'Very High'];
-    return labels[Math.round(level) - 1];
+    return labels[Math.round(level) - 1] || 'N/A';
   };
 
   return (
@@ -95,6 +100,16 @@ export function EnergyTrackingPanel() {
            )}
         </CardContent>
       </Card>
+      
+      {error && (
+        <Alert variant="default" className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800">
+          <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+          <AlertTitle className="text-yellow-800 dark:text-yellow-200">Prerequisite not met</AlertTitle>
+          <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {isLoading && (
          <Card>
@@ -149,16 +164,19 @@ export function EnergyTrackingPanel() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {analysis.recommendations.length > 0 ? analysis.recommendations.map((rec, index) => (
-                <div key={index} className="p-3 bg-muted/50 rounded-lg border">
-                  <div className="font-medium text-sm">{rec.taskId}</div>
-                  <div className="flex items-center gap-2 text-sm text-primary font-semibold my-1">
-                    <Clock className="h-3 w-3" />
-                    <span>Suggested Time: {rec.suggestedTime}</span>
+              {analysis.recommendations.length > 0 ? analysis.recommendations.map((rec, index) => {
+                const bubble = timeBlocks.find(b => b.id === rec.taskId);
+                return bubble && (
+                   <div key={index} className="p-3 bg-muted/50 rounded-lg border">
+                    <div className="font-medium text-sm">{bubble.title}</div>
+                    <div className="flex items-center gap-2 text-sm text-primary font-semibold my-1">
+                      <Clock className="h-3 w-3" />
+                      <span>Suggested Time: {rec.suggestedTime}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{rec.reasoning}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">{rec.reasoning}</p>
-                </div>
-              )) : (
+                )
+              }) : (
                 <Alert>
                   <AlertTitle>No recommendations right now.</AlertTitle>
                   <AlertDescription>

@@ -34,7 +34,7 @@ Task-Energy Matching Guidelines:
 - **Low Energy**: Rest, meditation, easy reading, simple organizing.
 
 For each recommendation:
-- taskId: ID of the task to reschedule.
+- taskId: The ID of the upcoming task to reschedule (from the input).
 - suggestedTime: An optimal time slot (e.g., "9:00 AM" or "2:00 PM").
 - reasoning: Why this timing optimizes productivity based on inferred energy patterns from their reflections.
 - priority: Urgency of the scheduling change.
