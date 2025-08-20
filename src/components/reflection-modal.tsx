@@ -11,10 +11,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Textarea } from '@/components/ui/textarea';
 import type { Mood } from '@/types';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
-import { Smile, Meh, Frown, Flame, Coffee } from 'lucide-react';
+import { Smile, Meh, Frown, Flame, Coffee, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Slider } from './ui/slider';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const reflectionSchema = z.object({
   productivity: z.number().min(1).max(5),
@@ -34,6 +34,15 @@ const moodOptions: { value: Mood; icon: React.ElementType, label: string }[] = [
 
 export function ReflectionModal() {
   const { reflectingBlock, setReflectingBlock, updateBlock } = useTimeBubbles();
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [confettiParticles, setConfettiParticles] = useState<Array<{
+    id: number;
+    x: number;
+    y: number;
+    rotation: number;
+    scale: number;
+    delay: number;
+  }>>([]);
 
   const form = useForm<ReflectionFormValues>({
     resolver: zodResolver(reflectionSchema),
@@ -57,6 +66,21 @@ export function ReflectionModal() {
 
   const onSubmit = (data: ReflectionFormValues) => {
     if (!reflectingBlock) return;
+    
+    // Generate confetti particles
+    const particles = Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      rotation: Math.random() * 360,
+      scale: 0.5 + Math.random() * 0.5,
+      delay: Math.random() * 500,
+    }));
+    
+    setConfettiParticles(particles);
+    setShowConfetti(true);
+    
+    // Update the block
     updateBlock(reflectingBlock.id, {
       completed: true,
       reflection: {
@@ -65,12 +89,61 @@ export function ReflectionModal() {
         timestamp: new Date(),
       },
     });
-    setReflectingBlock(null);
+    
+    // Hide confetti and close modal after animation
+    setTimeout(() => {
+      setShowConfetti(false);
+      setTimeout(() => setReflectingBlock(null), 300);
+    }, 2000);
   };
 
   return (
     <Dialog open={!!reflectingBlock} onOpenChange={() => setReflectingBlock(null)}>
-      <DialogContent>
+      <DialogContent className="relative overflow-hidden">
+        {/* Confetti Animation */}
+        {showConfetti && (
+          <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden">
+            {confettiParticles.map((particle) => (
+              <div
+                key={particle.id}
+                className="absolute animate-bounce"
+                style={{
+                  left: `${particle.x}%`,
+                  top: `${particle.y}%`,
+                  transform: `rotate(${particle.rotation}deg) scale(${particle.scale})`,
+                  animationDelay: `${particle.delay}ms`,
+                  animationDuration: '1.5s',
+                }}
+              >
+                <Sparkles 
+                  className="w-4 h-4 text-primary animate-pulse" 
+                  style={{ animationDuration: '0.8s' }}
+                />
+              </div>
+            ))}
+            
+            {/* Center celebration burst */}
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+              <div className="relative w-20 h-20 rounded-full border-4 border-primary/30 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center animate-pulse">
+                <Sparkles className="w-8 h-8 text-primary animate-spin" style={{ animationDuration: '2s' }} />
+                
+                {/* Orbiting particles */}
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={`orbit-${i}`}
+                    className="absolute w-2 h-2 bg-primary rounded-full animate-ping"
+                    style={{
+                      top: `${50 + Math.sin((i * Math.PI) / 2) * 40}px`,
+                      left: `${50 + Math.cos((i * Math.PI) / 2) * 40}px`,
+                      animationDelay: `${i * 0.2}s`,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        
         <DialogHeader>
           <DialogTitle>How did "{reflectingBlock?.title}" go?</DialogTitle>
           <DialogDescription>

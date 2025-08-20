@@ -132,15 +132,16 @@ export function ProUpgradeAnimation({ isVisible, onComplete }: ProUpgradeAnimati
                             </div>
                             
                             {/* Celebration particles */}
-                            {[...Array(12)].map((_, i) => (
+                            {[...Array(8)].map((_, i) => (
                                 <Star
                                     key={i}
                                     className="absolute w-4 h-4 text-yellow-400 animate-ping"
                                     style={{
-                                        top: `${20 + Math.sin((i * Math.PI) / 6) * 60}px`,
-                                        left: `${20 + Math.cos((i * Math.PI) / 6) * 60}px`,
-                                        animationDelay: `${i * 0.1}s`,
-                                        animationDuration: '1s',
+                                        top: `${50 + Math.sin((i * Math.PI) / 4) * 80}%`,
+                                        left: `${50 + Math.cos((i * Math.PI) / 4) * 80}%`,
+                                        transform: 'translate(-50%, -50%)',
+                                        animationDelay: `${i * 0.15}s`,
+                                        animationDuration: '1.2s',
                                     }}
                                 />
                             ))}
