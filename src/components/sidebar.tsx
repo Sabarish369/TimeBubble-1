@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { MissedTasksDrawer } from './missed-tasks-drawer';
 import { DailySidebarTip } from './daily-sidebar-tip';
+import { FeedbackSection } from './feedback-section';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -302,6 +303,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           );
         })}
       </div>
+      
+      {/* Feedback Section */}
+      <FeedbackSection />
     </aside>
     {isMobile && isOpen && (
       <div 

@@ -11,6 +11,7 @@ import { db } from '@/lib/firebase';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { LoadingSpinner } from '@/components/loading-spinner';
 import { CelebrationPopper } from '@/components/celebration-popper';
+import { ProUpgradeAnimation } from '@/components/pro-upgrade-animation';
 
 export default function UpgradeSuccessPage() {
   const { user, refreshUserStatus } = useAuth();
@@ -19,6 +20,8 @@ export default function UpgradeSuccessPage() {
   const sessionId = searchParams.get('session_id');
   const [isUpdating, setIsUpdating] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showUpgradeAnimation, setShowUpgradeAnimation] = useState(false);
+  const [showSuccessContent, setShowSuccessContent] = useState(false);
 
   useEffect(() => {
     if (user && sessionId) {
@@ -29,21 +32,28 @@ export default function UpgradeSuccessPage() {
           // Manually trigger a refresh of user status
           await refreshUserStatus();
           
-          // Wait for a moment to show the success message, then redirect
-          setTimeout(() => {
-            router.push('/app');
-          }, 3000);
+          setIsUpdating(false);
+          setShowUpgradeAnimation(true);
 
         } catch (err) {
           console.error("Failed to update user to Pro:", err);
           setError("There was an issue upgrading your account. Please contact support.");
-        } finally {
           setIsUpdating(false);
         }
       };
       updateUserToPro();
     }
   }, [user, sessionId, router, refreshUserStatus]);
+
+  const handleAnimationComplete = () => {
+    setShowUpgradeAnimation(false);
+    setShowSuccessContent(true);
+    
+    // Redirect after showing success content
+    setTimeout(() => {
+      router.push('/app');
+    }, 3000);
+  };
 
   if (!sessionId) {
     return (
@@ -75,7 +85,16 @@ export default function UpgradeSuccessPage() {
 
   return (
     <>
-    <CelebrationPopper />
+    {showUpgradeAnimation && (
+      <ProUpgradeAnimation 
+        isVisible={showUpgradeAnimation} 
+        onComplete={handleAnimationComplete} 
+      />
+    )}
+    
+    {showSuccessContent && <CelebrationPopper />}
+    
+    {showSuccessContent && (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/5 text-center p-4 relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
@@ -150,6 +169,7 @@ export default function UpgradeSuccessPage() {
         </div>
       </div>
     </div>
+    )}
     </>
   );
 }
