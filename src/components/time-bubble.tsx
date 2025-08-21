@@ -397,7 +397,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
                     key={colorName}
                     className={cn("w-6 h-6 rounded-full border", block.color === colorName && "ring-2 ring-ring")}
                     style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
-                    onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBBLE_COLORS })}
+                    onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBble_COLORS })}
                     />
                 ))}
                 </div>
@@ -413,7 +413,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
                                 key={colorName}
                                 className={cn("w-6 h-6 rounded-full border relative", 
                                     block.color === colorName && "ring-2 ring-ring",
-                                    !isPro && "opacity-60 cursor-not-allowed"
+                                    !isPro && "opacity-60"
                                 )}
                                 style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
                                 onClick={() => handleColorSelect(colorName)}

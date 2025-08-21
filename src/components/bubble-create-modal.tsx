@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -341,11 +342,10 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
                             className={cn(
                               "w-8 h-8 rounded-full border-2 relative group", 
                               field.value === name ? "border-ring ring-2 ring-ring" : "border-transparent",
-                              !isPro && "cursor-not-allowed opacity-60"
+                              !isPro && "opacity-60"
                             )}
                             style={{ backgroundColor: `hsl(var(--bubble-${name}))` }}
                             onClick={() => handleColorSelect(name, field.onChange)}
-                            disabled={!isPro}
                           >
                             {!isPro && <Lock className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 text-white opacity-70" />}
                           </button>
