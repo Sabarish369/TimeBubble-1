@@ -93,6 +93,8 @@ interface TimeBubblesContextType {
   getDailyTips: () => Promise<void>;
   dailyTips: DailyTips | null;
   isLoadingTips: boolean;
+  aiCallCount: number;
+  incrementAiCallCount: () => void;
 }
 
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
@@ -148,6 +150,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [zoomLevel, setZoomLevelState] = useState(1);
   const [theme, setThemeState] = useState<Theme>('dark');
   const [isMissedTasksDrawerOpen, setIsMissedTasksDrawerOpen] = useState(false);
+  const [aiCallCount, setAiCallCount] = useState(0);
 
   const { scheduleTaskNotifications, clearTaskNotifications } = useNotifications();
 
@@ -159,6 +162,10 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         NotificationManager.setupForegroundMessageListener();
     }
   }, [user]);
+
+  const incrementAiCallCount = () => {
+    setAiCallCount(prev => prev + 1);
+  };
 
   const saveTimeBlocksToFirestore = useCallback(async (blocks: TimeBlock[], date: Date) => {
     if (!user || !blocks) return;
@@ -243,6 +250,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
             }))
         );
 
+        incrementAiCallCount();
         const input = {
             schedule,
             productivityPatterns,
@@ -743,6 +751,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     setDailyInsights(null);
     try {
       const dailyData = getBlocksForSuggestions();
+      incrementAiCallCount();
       const result = await fetchDailyInsights({ dailyData, apiKey: geminiApiKey });
       setDailyInsights(result);
     } catch (error) {
@@ -760,6 +769,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
   const getNewDailySidebarTip = useCallback(async (input: DailySidebarTipInput): Promise<DailySidebarTip> => {
     if (!geminiApiKey) throw new Error("API key is not set.");
+    incrementAiCallCount();
     const result = await getDailySidebarTip({ ...input, apiKey: geminiApiKey });
     return result;
   }, [geminiApiKey]);
@@ -932,6 +942,8 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     getDailyTips,
     dailyTips,
     isLoadingTips,
+    aiCallCount,
+    incrementAiCallCount,
   };
 
   return (
