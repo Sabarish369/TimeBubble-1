@@ -34,7 +34,7 @@ export async function showBrowserNotification(options: BrowserNotificationOption
       body: options.body,
       icon: options.icon || '/logo.svg',
       tag: options.tag,
-      requireInteraction: options.requireInteraction || true,
+      requireInteraction: options.requireInteraction || false,
       badge: '/logo.svg',
     });
 
@@ -60,19 +60,19 @@ export async function showBrowserNotification(options: BrowserNotificationOption
  * Show a "get ready" notification for an upcoming task
  */
 export function showGetReadyNotification(taskTitle: string, minutesUntilStart: number): Promise<boolean> {
-  const title = minutesUntilStart === 1 
+  const title = minutesUntilStart <= 1 
     ? '🚨 Task Starting Now!' 
     : `⏰ Task Starting in ${minutesUntilStart} minute${minutesUntilStart === 1 ? '' : 's'}`;
   
-  const body = minutesUntilStart === 1
+  const body = minutesUntilStart <= 1
     ? `"${taskTitle}" is starting now. Time to begin!`
     : `"${taskTitle}" starts in ${minutesUntilStart} minute${minutesUntilStart === 1 ? '' : 's'}. Get ready!`;
 
   return showBrowserNotification({
     title,
     body,
-    tag: `task-${taskTitle}`, // Prevents duplicate notifications
-    requireInteraction: minutesUntilStart === 1, // Make 1-minute warning persistent
+    tag: `task-start-${taskTitle}`, // Prevents duplicate notifications
+    requireInteraction: minutesUntilStart <= 1, // Make 1-minute warning persistent
   });
 }
 
@@ -82,11 +82,12 @@ export function showGetReadyNotification(taskTitle: string, minutesUntilStart: n
 export function showTaskCompletionNotification(taskTitle: string): Promise<boolean> {
   return showBrowserNotification({
     title: '✅ Task Completed!',
-    body: `Great job completing "${taskTitle}"!`,
+    body: `Great job completing "${taskTitle}"! Time to reflect.`,
     tag: `completed-${taskTitle}`,
-    requireInteraction: false,
+    requireInteraction: true,
   });
 }
+
 
 /**
  * Check if browser notifications are available and permitted

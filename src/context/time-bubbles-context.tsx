@@ -12,13 +12,10 @@ import { getEnergyOptimizationSuggestions } from '@/ai/flows/energy-optimization
 import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
 import { addDays, format, startOfDay, isToday, isPast, subDays } from 'date-fns';
-import * as NotificationManager from '@/lib/notification-manager';
 import { useAuth } from './auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc, writeBatch, Timestamp, query, where } from 'firebase/firestore';
 import { ensureDateObject } from '@/lib/time-bubbles-utils';
-import { scheduleNotificationsForBubble, clearNotificationsForBubble } from '@/lib/notification-scheduler';
-import { startNotificationProcessor } from '@/lib/notification-processor';
 import { useNotifications } from '@/hooks/use-notifications';
 
 type Theme = 'light' | 'dark';
@@ -103,30 +100,11 @@ const getDayKey = (date: Date | string) => format(new Date(date), 'yyyy-MM-dd');
 
 const ZOOM_STORAGE_KEY = 'timebubble_zoom';
 
-const playNotificationSound = () => {
-    if (typeof window !== 'undefined' && window.AudioContext) {
-        const audioContext = new window.AudioContext();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
-        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 1);
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        oscillator.start();
-        oscillator.stop(audioContext.currentTime + 1);
-    }
-};
-
 export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const { user, geminiApiKey } = useAuth();
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [history, setHistory] = useState<HistoryState>({});
-  const [bubbles, setBubbles] = useState<TimeBubble[]>([]); // State for timeBubbles collection
+  const [isSyncing, setIsSyncing] = useState(false);
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date())); // State for the selected date
 
   const [templates, setTemplates] = useState<BubbleTemplate[]>([]);
@@ -155,13 +133,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const { scheduleTaskNotifications, clearTaskNotifications } = useNotifications();
 
   const { toast } = useToast();
-
-   useEffect(() => {
-    if (typeof window !== 'undefined' && user) {
-        NotificationManager.requestPermissionAndGetToken(user.uid);
-        NotificationManager.setupForegroundMessageListener();
-    }
-  }, [user]);
 
   const incrementAiCallCount = () => {
     setAiCallCount(prev => prev + 1);
@@ -195,16 +166,20 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
 const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: TimeBlock[]) => TimeBlock[]), date: Date, saveToDb: boolean = false) => {
+  setIsSyncing(true);
   let finalBlocks: TimeBlock[] = [];
   setTimeBlocks(prevBlocks => {
       finalBlocks = typeof newBlocks === 'function' ? newBlocks(prevBlocks) : newBlocks;
+      updateHistory(date, finalBlocks);
+      if (saveToDb) {
+          saveTimeBlocksToFirestore(finalBlocks, date);
+      }
+      // Re-schedule notifications for all blocks
+      finalBlocks.forEach(scheduleTaskNotifications);
       return finalBlocks;
   });
-  updateHistory(date, finalBlocks);
-  if (saveToDb) {
-      saveTimeBlocksToFirestore(finalBlocks, date);
-  }
-}, [updateHistory, saveTimeBlocksToFirestore]);
+  setIsSyncing(false);
+}, [updateHistory, saveTimeBlocksToFirestore, scheduleTaskNotifications]);
 
   const getBlocksForDate = useCallback(async (date: Date): Promise<TimeBlock[]> => {
     if (!user) return [];
@@ -369,10 +344,11 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
   const getMissedTasks = useCallback(async (): Promise<MissedTaskGroup[]> => {
     if (!user) return [];
-
-    const allDaysCollection = collection(db, 'daily_data'); // Assuming daily_data is at the root, adjust if nested
-    const q = query(allDaysCollection, where('userId', '==', user.uid));
-    const querySnapshot = await getDocs(q);
+    
+    // We will get all data across all dates for the user.
+    // In a real production app with lots of data, this would need pagination.
+    const userDaysCollectionRef = collection(db, 'users', user.uid, 'daily_data');
+    const querySnapshot = await getDocs(userDaysCollectionRef);
 
     const now = new Date();
     const missedTasksByDate: Record<string, TimeBlock[]> = {};
@@ -425,43 +401,26 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dateKey);
 
     const unsubscribe = onSnapshot(dayDocRef, (docSnap) => {
-        // This check prevents Firestore from overwriting local state during an undo/redo action.
-        if (docSnap.metadata.hasPendingWrites) {
-            return;
-        }
+        if (isSyncing) return;
 
         let blocksFromDb: TimeBlock[] = [];
         if (docSnap.exists() && docSnap.data().blocks) {
             blocksFromDb = docSnap.data().blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
         }
 
-        setTimeBlocks(blocksFromDb);
-        // Reset history for the day with the new data from DB
-        setHistory(prev => ({
-            ...prev,
-            [dateKey]: { snapshots: [blocksFromDb], index: 0 }
-        }));
+        setTimeBlocksWithHistory(blocksFromDb, currentDate, false);
 
         if (!isLoaded) {
             setIsLoaded(true);
         }
     }, (error) => {
         console.error("Error listening to day data:", error);
-         if (error.code === 'permission-denied') {
-            toast({
-                title: 'Permission Error',
-                description: 'Could not load daily data. Please check your Firestore security rules.',
-                variant: 'destructive',
-                duration: 10000,
-            });
-        } else {
-            toast({ title: 'Connection Error', description: 'Could not sync your data.', variant: 'destructive' });
-        }
+        toast({ title: 'Connection Error', description: 'Could not sync your data.', variant: 'destructive' });
         setIsLoaded(true);
     });
 
     return () => unsubscribe();
-  }, [user, currentDate, toast, isLoaded]); // Rerun when user or date changes
+  }, [user, currentDate, toast, isLoaded, setTimeBlocksWithHistory, isSyncing]);
 
   useEffect(() => {
     if (!user || !db) return;
@@ -474,14 +433,6 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         }
     }, (error) => {
         console.error("Error listening to templates:", error);
-         if (error.code === 'permission-denied') {
-            toast({
-                title: 'Permission Error',
-                description: 'Could not load templates. Please check your Firestore security rules.',
-                variant: 'destructive',
-                duration: 10000,
-            });
-        }
     });
     return () => unsubscribe();
   }, [user]);
@@ -512,14 +463,6 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
       }
     }, (error) => {
       console.error("Error listening to user preferences:", error);
-      if (error.code === 'permission-denied') {
-        toast({
-          title: 'Permission Error',
-          description: 'Could not load your preferences. Please check your Firestore security rules.',
-          variant: 'destructive',
-          duration: 10000,
-        });
-      }
     });
     return () => unsubscribe();
   }, [user]);
@@ -550,7 +493,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     const blocksForDate = isCurrentOpenDate ? timeBlocks : await getBlocksForDate(date);
 
     const newStartTime = findAvailableSlot(block.startTime, block.duration, blocksForDate);
-    const newBlock: TimeBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false, notified: false, actionable: false, notificationScheduled: false };
+    const newBlock: TimeBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false };
 
     const newBlocks = [...blocksForDate, newBlock];
 
@@ -572,8 +515,9 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
 
   const deleteBlock = useCallback(async (id: string): Promise<void> => {
+    clearTaskNotifications(id);
     setTimeBlocksWithHistory(prev => prev.filter(b => b.id !== id), currentDate, true);
-  }, [currentDate, setTimeBlocksWithHistory]);
+  }, [currentDate, setTimeBlocksWithHistory, clearTaskNotifications]);
 
   const deleteBlockFromDate = async (id: string, date: Date | string) => {
     if (!user) return;
@@ -595,8 +539,9 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
 
   const clearAllBlocks = useCallback(() => {
+    timeBlocks.forEach(block => clearTaskNotifications(block.id));
     setTimeBlocksWithHistory([], currentDate, true);
-  }, [setTimeBlocksWithHistory, currentDate]);
+  }, [setTimeBlocksWithHistory, currentDate, timeBlocks, clearTaskNotifications]);
 
   const duplicateBlock = useCallback((id: string) => {
     const blockToDuplicate = timeBlocks.find(b => b.id === id);
@@ -668,8 +613,9 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     }
 
     try {
-        const allDaysCollection = collection(db, 'daily_data'); // Assuming daily_data is at the root
-        const q = query(allDaysCollection, where('userId', '==', user.uid));
+        // This operation spans multiple documents, so we use a transaction
+        const allDaysCollectionRef = collection(db, 'users', user.uid, 'daily_data');
+        const q = query(allDaysCollectionRef);
         const querySnapshot = await getDocs(q);
 
         let blockToReschedule: TimeBlock | null = null;
@@ -677,7 +623,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
         for (const docSnap of querySnapshot.docs) {
             const data = docSnap.data();
-            const found = data.blocks.find((b: any) => b.id === id);
+            const found = (data.blocks as any[])?.find((b: any) => b.id === id);
             if (found) {
                 blockToReschedule = { ...found, startTime: ensureDateObject(found.startTime) };
                 sourceDayKey = docSnap.id;
@@ -690,15 +636,11 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
             return;
         }
 
-        NotificationManager.clearNotification(id);
-
         const rescheduledBlockData: TimeBlock = {
           ...blockToReschedule,
           startTime: newStartTime,
-          notified: false,
           actionable: false,
           completed: false,
-          notificationScheduled: false,
         };
 
         const newDayKey = getDayKey(newStartTime);
@@ -889,6 +831,20 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   const dayHistory = history[dateKey];
   const canUndo = dayHistory ? dayHistory.index > 0 : false;
   const canRedo = dayHistory ? dayHistory.index < dayHistory.snapshots.length - 1 : false;
+
+  // Effect to check for actionable blocks when timeBlocks change
+  useEffect(() => {
+    const now = new Date();
+    const upcomingActionable = timeBlocks.find(block => {
+      const endTime = new Date(ensureDateObject(block.startTime).getTime() + block.duration * 60000);
+      return !block.completed && endTime < now && !block.actionable;
+    });
+
+    if (upcomingActionable) {
+      updateBlock(upcomingActionable.id, { actionable: true }, false);
+      setActionableBlock(upcomingActionable);
+    }
+  }, [timeBlocks, updateBlock]);
 
   const value = {
     timeBlocks,

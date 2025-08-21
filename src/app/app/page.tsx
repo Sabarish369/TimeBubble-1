@@ -17,7 +17,7 @@ import { LoginModal } from "@/components/login-modal";
 import { useAuth } from "@/context/auth-context";
 import { InteractiveTutorial } from "@/components/interactive-tutorial";
 import { useIsMobile } from "@/hooks/use-mobile";
-import * as NotificationManager from "@/lib/notification-manager";
+import { useNotifications } from "@/hooks/use-notifications";
 import { ProWelcomeModal } from "@/components/pro-welcome-modal";
 import { ApiKeyModal } from "@/components/api-key-modal";
 
@@ -42,21 +42,13 @@ export default function AppPage() {
   } = useTimeBubbles();
   
   const { user, isPro } = useAuth();
+  useNotifications(); // Initialize notification system
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
   const [isProWelcomeModalOpen, setIsProWelcomeModalOpen] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-
-  useEffect(() => {
-    // Request permission and get token
-    if (user && 'Notification' in window && 'serviceWorker' in navigator) {
-        NotificationManager.requestPermissionAndGetToken(user.uid);
-        NotificationManager.setupForegroundMessageListener();
-    }
-  }, [user]);
-
 
   useEffect(() => {
     // This logic might be redundant if AuthGuard is used, but can be a fallback.

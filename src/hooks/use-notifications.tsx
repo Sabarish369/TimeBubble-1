@@ -1,78 +1,58 @@
 
-import { useEffect, useCallback } from 'react';
+'use client';
+
+import { useEffect, useCallback, useState } from 'react';
 import { useAuth } from '@/context/auth-context';
-import { startNotificationProcessor } from '@/lib/notification-processor';
-import { requestPermissionAndGetToken, setupForegroundMessageListener } from '@/lib/notification-manager';
-import { scheduleNotificationsForBubble, clearNotificationsForBubble } from '@/lib/notification-scheduler';
+import { requestNotificationPermission, canShowBrowserNotifications, showBrowserNotification } from '@/lib/browser-notification';
+import { scheduleNotificationsForBlock, clearScheduledNotifications } from '@/lib/notification-scheduler';
+import type { TimeBlock } from '@/types';
+
 
 export function useNotifications() {
   const { user } = useAuth();
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize FCM and start notification processor
+  // Initialize notification system
   useEffect(() => {
-    if (!user) return;
+    if (!user || isInitialized) return;
 
-    let cleanup: (() => void) | undefined;
-
-    const initializeNotifications = async () => {
-      try {
-        // Request FCM permission and get token
-        await requestPermissionAndGetToken(user.uid);
-        
-        // Setup foreground message listener
-        setupForegroundMessageListener();
-        
-        // Start the notification processor
-        cleanup = startNotificationProcessor();
-        
-        console.log('✅ Notification system initialized');
-      } catch (error) {
-        console.error('Failed to initialize notifications:', error);
-      }
+    const initialize = async () => {
+        console.log('🔔 Initializing notification system...');
+        try {
+            const hasPermission = canShowBrowserNotifications();
+            if (hasPermission) {
+                console.log('✅ Browser notifications are working!');
+            } else {
+                console.log('🤔 Requesting notification permission...');
+                const granted = await requestNotificationPermission();
+                 if (granted) {
+                     console.log('✅ Permission granted!');
+                 } else {
+                     console.warn('🚨 Permission denied. Notifications will not be shown.');
+                 }
+            }
+            setIsInitialized(true);
+            console.log('✅ Notification system fully initialized');
+        } catch (error) {
+            console.error('Failed to initialize notifications:', error);
+        }
     };
+    initialize();
+    
+  }, [user, isInitialized]);
 
-    initializeNotifications();
-
-    return () => {
-      if (cleanup) {
-        cleanup();
-      }
-    };
-  }, [user]);
-
-  // Function to schedule notifications for a task
-  const scheduleTaskNotifications = useCallback(async (
-    bubbleId: string,
-    bubbleTitle: string,
-    startTime: Date,
-    duration: number = 60
-  ) => {
-    if (!user) {
-      console.warn('Cannot schedule notifications: user not logged in');
-      return;
-    }
-
+  const scheduleTaskNotifications = useCallback(async (block: TimeBlock) => {
+    if (!isInitialized) return;
     try {
-      const count = await scheduleNotificationsForBubble(
-        user.uid,
-        bubbleId,
-        bubbleTitle,
-        startTime,
-        duration
-      );
-      console.log(`✅ Scheduled ${count} notifications for "${bubbleTitle}"`);
-      return count;
+      scheduleNotificationsForBlock(block);
     } catch (error) {
       console.error('Failed to schedule notifications:', error);
-      throw error;
     }
-  }, [user]);
+  }, [isInitialized]);
 
-  // Function to clear notifications for a task
-  const clearTaskNotifications = useCallback(async (bubbleId: string) => {
+  const clearTaskNotifications = useCallback(async (blockId: string) => {
     try {
-      await clearNotificationsForBubble(bubbleId);
-      console.log(`✅ Cleared notifications for bubble: ${bubbleId}`);
+      clearScheduledNotifications(blockId);
     } catch (error) {
       console.error('Failed to clear notifications:', error);
     }
@@ -81,6 +61,6 @@ export function useNotifications() {
   return {
     scheduleTaskNotifications,
     clearTaskNotifications,
-    isReady: !!user
+    isReady: isInitialized,
   };
 }
