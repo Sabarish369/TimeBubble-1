@@ -60,6 +60,28 @@ export interface UserPreferences {
   geminiApiKey?: string;
 }
 
+export interface TimeBubble {
+    id: string;
+    title: string;
+    startTime: Date;
+    duration: number; // in minutes
+    color: BubbleColor;
+    category: BubbleCategory;
+    completed: boolean;
+    description?: string;
+    reflection?: ReflectionData;
+}
+
+
+export interface EnergyTracking {
+    morning: EnergyLevel;
+    afternoon: EnergyLevel;
+    evening: EnergyLevel;
+}
+
+export type EnergyLevel = 1 | 2 | 3 | 4 | 5;
+
+
 export type DailyInsights = z.infer<typeof DailyInsightsOutputSchema>;
 export type DailyTips = z.infer<typeof DailyTipsOutputSchema>;
 export type DailySidebarTip = z.infer<typeof DailySidebarTipOutputSchema>;
