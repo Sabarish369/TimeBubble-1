@@ -52,7 +52,15 @@ const dailyTipsFlow = ai.defineFlow(
   },
   async (input) => {
     const llm = googleAI.model('gemini-1.5-flash', {apiKey: input.apiKey});
-    const { output } = await prompt(input, {model: llm});
-    return output!;
+    try {
+        const { output } = await prompt(input, {model: llm});
+        return output!;
+    } catch (error: any) {
+        if (error.status === 400) {
+            throw new Error("Invalid API Key. Please check your key in the settings.");
+        }
+        console.error("Error fetching daily tips:", error);
+        throw error;
+    }
   }
 );

@@ -53,6 +53,11 @@ const dailySidebarTipFlow = ai.defineFlow(
       const { output } = await prompt(input, { model: llm });
       return output!;
     } catch (error: any) {
+      // Check for invalid API key error
+      if (error.status === 400) {
+        throw new Error("Invalid API Key. Please check your key in the settings.");
+      }
+      
       // Improved retry mechanism for transient errors, especially rate limiting
       if (error.status === 429) { // Specifically handle "Too Many Requests"
         console.warn('Rate limit hit, retrying in 60 seconds...', error);

@@ -59,7 +59,10 @@ const energyOptimizationFlow = ai.defineFlow(
     try {
       const { output } = await prompt(input, { model: llm });
       return output!;
-    } catch (error) {
+    } catch (error: any) {
+        if (error.status === 400) {
+            throw new Error("Invalid API Key. Please check your key in the settings.");
+        }
       console.warn('First attempt to get energy optimization failed, retrying...', error);
       await new Promise(resolve => setTimeout(resolve, 2000));
       const { output } = await prompt(input, { model: llm });
