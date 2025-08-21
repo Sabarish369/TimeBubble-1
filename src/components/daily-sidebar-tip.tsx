@@ -64,9 +64,14 @@ export function DailySidebarTip() {
       if (storageKey) {
         localStorage.setItem(storageKey, JSON.stringify(result));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch daily tip:', err);
-      setError('Could not load a tip for today.');
+      if (err.message.includes("Invalid API Key")) {
+        setError("Invalid API Key. Please update it in your profile.");
+        setIsApiKeyModalOpen(true);
+      } else {
+        setError('Could not load a tip for today.');
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -78,40 +83,43 @@ export function DailySidebarTip() {
     fetchTip();
   }, [currentDate, isPro, geminiApiKey]);
   
-  // Refetch when schedule changes, with a debounce to prevent excessive calls
+  // Refetch when schedule changes, with a debounce to prevent excessive calls during drag/edits
   useEffect(() => {
+    // Clear any existing timer every time the schedule changes
     if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
     }
-
-    // Don't refetch on the very first load
+    
+    // Don't refetch on the very first load or while a refresh is happening
     if (isLoading) return;
     
-    // Set a timeout to fetch the tip after user has stopped making changes
+    // Set a new timer. This will only run after the user stops making changes for 2 seconds.
     debounceTimeoutRef.current = setTimeout(() => {
         if (isPro && geminiApiKey) {
             console.log("Debounced schedule change detected. Refreshing tip...");
-            fetchTip(true);
+            fetchTip(true); // Force a refresh from the API
         }
     }, 2000); // 2-second debounce delay
 
+    // Cleanup function to clear the timer if the component unmounts
     return () => {
         if (debounceTimeoutRef.current) {
             clearTimeout(debounceTimeoutRef.current);
         }
     };
-  }, [timeBlocks, isPro, geminiApiKey, isLoading]);
+  }, [timeBlocks, isPro, geminiApiKey, isLoading, fetchTip]);
 
 
-  // Refetch every hour
+  // Refetch every hour to keep the tip fresh
   useEffect(() => {
-    const interval = setInterval(() => {
+    const hourlyInterval = setInterval(() => {
       if(isPro && geminiApiKey) {
+        console.log("Hourly refresh triggered for daily tip.");
         fetchTip(true);
       }
     }, 1000 * 60 * 60); // 1 hour
 
-    return () => clearInterval(interval);
+    return () => clearInterval(hourlyInterval);
   },[isPro, geminiApiKey, fetchTip])
   
   const handleRefresh = async () => {
