@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Lightbulb, RefreshCw, Star, KeyRound } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isToday } from 'date-fns';
 import type { DailySidebarTip as DailySidebarTipType } from '@/types';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { cn } from '@/lib/utils';
@@ -24,6 +24,7 @@ export function DailySidebarTip() {
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const isCurrentDay = isToday(currentDate);
 
   const getStorageKey = useCallback(() => {
     if (!user) return null;
@@ -32,7 +33,7 @@ export function DailySidebarTip() {
 
 
   const fetchTip = useCallback(async (forceRefresh = false) => {
-    if (!isPro) {
+    if (!isPro || !isCurrentDay) {
       setIsLoading(false);
       return;
     }
@@ -67,16 +68,16 @@ export function DailySidebarTip() {
     } catch (err: any) {
       console.error('Failed to fetch daily tip:', err);
       if (err.message.includes("Invalid API Key")) {
-        setError("Invalid API Key. Please update it in your profile.");
+        setError("Invalid API Key. Click to update it in your profile.");
         setIsApiKeyModalOpen(true);
       } else {
-        setError('Could not load a tip for today.');
+        setError('Could not load a tip. Click to retry.');
       }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [timeBlocks, currentDate, getNewDailySidebarTip, getStorageKey, isPro, geminiApiKey]);
+  }, [timeBlocks, currentDate, getNewDailySidebarTip, getStorageKey, isPro, geminiApiKey, isCurrentDay]);
 
   // Fetch tip on initial load and when date changes
   useEffect(() => {
@@ -85,42 +86,40 @@ export function DailySidebarTip() {
   
   // Refetch when schedule changes, with a debounce to prevent excessive calls during drag/edits
   useEffect(() => {
-    // Clear any existing timer every time the schedule changes
+    if (!isCurrentDay) return;
+
     if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
     }
     
-    // Don't refetch on the very first load or while a refresh is happening
     if (isLoading) return;
     
-    // Set a new timer. This will only run after the user stops making changes for 2 seconds.
     debounceTimeoutRef.current = setTimeout(() => {
         if (isPro && geminiApiKey) {
-            console.log("Debounced schedule change detected. Refreshing tip...");
-            fetchTip(true); // Force a refresh from the API
+            fetchTip(true);
         }
-    }, 2000); // 2-second debounce delay
+    }, 120000); // 2-minute debounce delay
 
-    // Cleanup function to clear the timer if the component unmounts
     return () => {
         if (debounceTimeoutRef.current) {
             clearTimeout(debounceTimeoutRef.current);
         }
     };
-  }, [timeBlocks, isPro, geminiApiKey, isLoading, fetchTip]);
+  }, [timeBlocks, isPro, geminiApiKey, isLoading, fetchTip, isCurrentDay]);
 
 
-  // Refetch every hour to keep the tip fresh
+  // Refetch every 6 hours to keep the tip fresh
   useEffect(() => {
+    if (!isCurrentDay) return;
+
     const hourlyInterval = setInterval(() => {
       if(isPro && geminiApiKey) {
-        console.log("Hourly refresh triggered for daily tip.");
         fetchTip(true);
       }
-    }, 1000 * 60 * 60); // 1 hour
+    }, 1000 * 60 * 60 * 6); // 6 hours
 
     return () => clearInterval(hourlyInterval);
-  },[isPro, geminiApiKey, fetchTip])
+  },[isPro, geminiApiKey, fetchTip, isCurrentDay])
   
   const handleRefresh = async () => {
      if (!isPro) {
@@ -161,7 +160,7 @@ export function DailySidebarTip() {
           <div className="flex-1">
             <div className="flex justify-between items-center">
                  <p className="font-semibold text-sm text-primary/90 mb-1">{isPro ? "Tip of the Day" : "Pro Tip"}</p>
-                 {isPro && geminiApiKey && <RefreshCw className={cn("h-4 w-4 text-primary/60 transition-transform group-hover:rotate-180", isRefreshing && "animate-spin")} />}
+                 {isPro && geminiApiKey && isCurrentDay && <RefreshCw className={cn("h-4 w-4 text-primary/60 transition-transform group-hover:rotate-180", isRefreshing && "animate-spin")} />}
             </div>
             {isLoading ? (
               <div className="space-y-1.5">
@@ -171,9 +170,13 @@ export function DailySidebarTip() {
             ) : error ? (
               <p className="text-xs text-destructive">{error}</p>
             ) : isPro ? (
-              <p className="text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">
-                {tip?.tip}
-              </p>
+                isCurrentDay ? (
+                    <p className="text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">
+                        {tip?.tip}
+                    </p>
+                ) : (
+                     <p className='text-sm font-semibold'>Daily tips are available for the current day.</p>
+                )
             ) : (
                 <p className='text-sm font-semibold'>Upgrade to Pro to unlock daily personalized tips.</p>
             )}
@@ -182,7 +185,7 @@ export function DailySidebarTip() {
       </CardContent>
     </Card>
     <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
-    <ApiKeyModal isOpen={isApiKeyModalOpen} onClose={() => setIsApiKeyModalOpen(false)} />
+    <ApiKeyModal isOpen={isApiKeyModalOpen} onClose={() => setIsApiKeyModalOpen(false)} error={error ?? undefined}/>
     </>
   );
 }
