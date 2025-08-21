@@ -869,10 +869,11 @@ body {
 
   /* Pro User Background Gradient */
   .pro-gradient-background {
-    background-image: linear-gradient(
-      to bottom,
-      hsl(var(--accent) / 0.15) 0%,
-      hsl(var(--background)) 20%
+    background-color: hsl(var(--background));
+    background-image: radial-gradient(
+      ellipse 40% 50% at 10% 10%,
+      hsl(var(--primary) / 0.15),
+      transparent
     );
   }
 }
