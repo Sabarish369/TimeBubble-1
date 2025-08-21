@@ -3,7 +3,7 @@
 
 import type { TimeBlock as TimeBlockType } from '@/types';
 import type { MouseEvent, RefObject } from 'react';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { BUBBLE_COLORS, HOUR_HEIGHT, TOTAL_HOURS, FREE_COLOR_NAMES, PRO_COLOR_NAMES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -44,7 +44,7 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   health: Heart,
 };
 
-export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbleProps) {
+function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBubbleProps) {
   const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setSelectedBlock, setReschedulingBlock, zoomLevel, currentDate } = useTimeBubbles();
   const { isPro } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
@@ -397,7 +397,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
                     key={colorName}
                     className={cn("w-6 h-6 rounded-full border", block.color === colorName && "ring-2 ring-ring")}
                     style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
-                    onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBble_COLORS })}
+                    onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBBLE_COLORS })}
                     />
                 ))}
                 </div>
@@ -518,3 +518,30 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
     </>
   );
 }
+
+// Custom comparison function for React.memo
+const areBubblesEqual = (prevProps: TimeBubbleProps, nextProps: TimeBubbleProps) => {
+    // Basic checks first
+    if (prevProps.timelineRef !== nextProps.timelineRef || prevProps.scrollContainerRef !== nextProps.scrollContainerRef) {
+        return false;
+    }
+
+    const prevBlock = prevProps.block;
+    const nextBlock = nextProps.block;
+    
+    // Compare all relevant properties of the block
+    return (
+        prevBlock.id === nextBlock.id &&
+        prevBlock.title === nextBlock.title &&
+        ensureDateObject(prevBlock.startTime).getTime() === ensureDateObject(nextBlock.startTime).getTime() &&
+        prevBlock.duration === nextBlock.duration &&
+        prevBlock.color === nextBlock.color &&
+        prevBlock.category === nextBlock.category &&
+        prevBlock.completed === nextBlock.completed &&
+        prevBlock.actionable === nextBlock.actionable &&
+        prevBlock.description === nextBlock.description
+    );
+};
+
+export const TimeBubble = React.memo(TimeBubbleComponent, areBubblesEqual);
+
