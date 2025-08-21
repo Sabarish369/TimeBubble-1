@@ -52,10 +52,16 @@ const dailySidebarTipFlow = ai.defineFlow(
     try {
       const { output } = await prompt(input, { model: llm });
       return output!;
-    } catch (error) {
-      // Simple retry mechanism for transient errors like 503
-      console.warn('First attempt to get daily tip failed, retrying in 2 seconds...', error);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    } catch (error: any) {
+      // Improved retry mechanism for transient errors, especially rate limiting
+      if (error.status === 429) { // Specifically handle "Too Many Requests"
+        console.warn('Rate limit hit, retrying in 60 seconds...', error);
+        await new Promise(resolve => setTimeout(resolve, 60000));
+      } else {
+        console.warn('First attempt to get daily tip failed, retrying in 5 seconds...', error);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+      
       const { output } = await prompt(input, { model: llm });
       return output!;
     }

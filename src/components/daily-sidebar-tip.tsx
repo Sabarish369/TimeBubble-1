@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Lightbulb, RefreshCw, Star, KeyRound } from 'lucide-react';
@@ -22,6 +22,7 @@ export function DailySidebarTip() {
   const { user, isPro, geminiApiKey } = useAuth();
   const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 
   const getStorageKey = useCallback(() => {
@@ -77,13 +78,30 @@ export function DailySidebarTip() {
     fetchTip();
   }, [currentDate, isPro, geminiApiKey]);
   
-  // Refetch when schedule changes
+  // Refetch when schedule changes, with a debounce to prevent excessive calls
   useEffect(() => {
-    // We don't want to fetch on the very first render, so we check if it's already loaded
-    if(tip) {
-      fetchTip(true);
+    if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
     }
-  }, [timeBlocks]);
+
+    // Don't refetch on the very first load
+    if (isLoading) return;
+    
+    // Set a timeout to fetch the tip after user has stopped making changes
+    debounceTimeoutRef.current = setTimeout(() => {
+        if (isPro && geminiApiKey) {
+            console.log("Debounced schedule change detected. Refreshing tip...");
+            fetchTip(true);
+        }
+    }, 2000); // 2-second debounce delay
+
+    return () => {
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
+        }
+    };
+  }, [timeBlocks, isPro, geminiApiKey, isLoading]);
+
 
   // Refetch every hour
   useEffect(() => {
