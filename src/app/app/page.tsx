@@ -157,8 +157,9 @@ export default function AppPage() {
           ref={mainRef} 
           id="timeline-main"
           className={cn(
-            "flex-1 overflow-y-auto bg-gradient-to-b from-primary/5 via-background to-accent/5 no-scrollbar transition-all duration-300",
-            isSidebarOpen && isMobile && "opacity-50 pointer-events-none"
+            "flex-1 overflow-y-auto no-scrollbar transition-all duration-300",
+            isSidebarOpen && isMobile && "opacity-50 pointer-events-none",
+            isPro ? "pro-gradient-background" : "bg-gradient-to-b from-primary/5 via-background to-accent/5"
           )}
         >
           <Timeline scrollContainerRef={mainRef} />

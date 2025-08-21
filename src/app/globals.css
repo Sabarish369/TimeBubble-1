@@ -866,4 +866,13 @@ body {
   .feedback-type-button:hover {
     animation: feedback-bounce 0.5s ease-in-out;
   }
+
+  /* Pro User Background Gradient */
+  .pro-gradient-background {
+    background-image: linear-gradient(
+      to bottom,
+      hsl(var(--accent) / 0.15) 0%,
+      hsl(var(--background)) 20%
+    );
+  }
 }
