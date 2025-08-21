@@ -33,7 +33,7 @@ export function DailySidebarTip() {
 
 
   const fetchTip = useCallback(async (forceRefresh = false) => {
-    if (!isPro || !isCurrentDay) {
+    if (!isPro) {
       setIsLoading(false);
       return;
     }
@@ -52,9 +52,15 @@ export function DailySidebarTip() {
       if (storageKey && !forceRefresh) {
         const cachedTip = localStorage.getItem(storageKey);
         if (cachedTip) {
-          setTip(JSON.parse(cachedTip));
-          setIsLoading(false);
-          return;
+          try {
+            const parsedTip = JSON.parse(cachedTip);
+            setTip(parsedTip);
+            setIsLoading(false);
+            return;
+          } catch(e) {
+            console.warn("Could not parse cached tip, fetching new one.");
+            localStorage.removeItem(storageKey);
+          }
         }
       }
 
@@ -62,7 +68,7 @@ export function DailySidebarTip() {
       const result = await getNewDailySidebarTip({ scheduleData: scheduleString });
       setTip(result);
 
-      if (storageKey) {
+      if (storageKey && result) {
         localStorage.setItem(storageKey, JSON.stringify(result));
       }
     } catch (err: any) {
@@ -77,7 +83,7 @@ export function DailySidebarTip() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [timeBlocks, currentDate, getNewDailySidebarTip, getStorageKey, isPro, geminiApiKey, isCurrentDay]);
+  }, [timeBlocks, currentDate, getNewDailySidebarTip, getStorageKey, isPro, geminiApiKey]);
 
   // Fetch tip on initial load and when date changes
   useEffect(() => {
@@ -86,8 +92,6 @@ export function DailySidebarTip() {
   
   // Refetch when schedule changes, with a debounce to prevent excessive calls during drag/edits
   useEffect(() => {
-    if (!isCurrentDay) return;
-
     if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
     }
@@ -98,28 +102,26 @@ export function DailySidebarTip() {
         if (isPro && geminiApiKey) {
             fetchTip(true);
         }
-    }, 120000); // 2-minute debounce delay
+    }, 2000); // 2-second debounce delay
 
     return () => {
         if (debounceTimeoutRef.current) {
             clearTimeout(debounceTimeoutRef.current);
         }
     };
-  }, [timeBlocks, isPro, geminiApiKey, isLoading, fetchTip, isCurrentDay]);
+  }, [timeBlocks, isPro, geminiApiKey, isLoading, fetchTip]);
 
 
-  // Refetch every 6 hours to keep the tip fresh
+  // Refetch every hour to keep the tip fresh
   useEffect(() => {
-    if (!isCurrentDay) return;
-
     const hourlyInterval = setInterval(() => {
       if(isPro && geminiApiKey) {
         fetchTip(true);
       }
-    }, 1000 * 60 * 60 * 6); // 6 hours
+    }, 1000 * 60 * 60); // 1 hour
 
     return () => clearInterval(hourlyInterval);
-  },[isPro, geminiApiKey, fetchTip, isCurrentDay])
+  },[isPro, geminiApiKey, fetchTip])
   
   const handleRefresh = async () => {
      if (!isPro) {
