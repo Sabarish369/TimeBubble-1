@@ -80,12 +80,6 @@ export function InteractiveTutorial({ onFinish }: { onFinish: () => void }) {
       tooltipPosition: 'right',
     },
     {
-      elementId: 'header-actions',
-      title: '🚀 AI-Powered Insights',
-      description: "At the end of your day, click the 'Sparkles' icon to get personalized AI insights about your productivity patterns and helpful suggestions.",
-      tooltipPosition: 'bottom',
-    },
-    {
       elementId: 'feedback-section',
       title: '💝 Share Your Voice',
       description: "Found something you love or want to improve? Use the feedback section to help us make TimeBubble even better for you!",
@@ -93,8 +87,8 @@ export function InteractiveTutorial({ onFinish }: { onFinish: () => void }) {
     },
     {
       elementId: 'ai-tips-drawer-trigger',
-      title: 'Get Proactive Tips',
-      description: "Click the lightbulb icon to get real-time AI tips to improve your well-being and productivity throughout the day.",
+      title: '🚀 AI-Powered Insights (Pro)',
+      description: "This is the AI Optimizer, your hub for Pro features. Get personalized daily insights, proactive tips, habit suggestions, and more.",
       tooltipPosition: 'left',
     },
   ];
@@ -350,5 +344,3 @@ export function InteractiveTutorial({ onFinish }: { onFinish: () => void }) {
     </div>
   );
 }
-
-    
