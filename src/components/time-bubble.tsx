@@ -1,15 +1,14 @@
-
 'use client';
 
 import type { TimeBlock as TimeBlockType } from '@/types';
 import type { MouseEvent, RefObject } from 'react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
-import { BUBBLE_COLORS, HOUR_HEIGHT, TOTAL_HOURS } from '@/lib/constants';
+import { BUBBLE_COLORS, HOUR_HEIGHT, TOTAL_HOURS, FREE_COLOR_NAMES, PRO_COLOR_NAMES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon, History, Undo } from 'lucide-react';
+import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon, History, Undo, Lock } from 'lucide-react';
 import { Button } from './ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from './ui/dropdown-menu';
 import { format, isToday, startOfDay } from 'date-fns';
 import type { BubbleCategory } from '@/types';
 import {
@@ -26,6 +25,9 @@ import {
 import { ActiveBubbleAnimation } from './active-bubble-animation';
 import { ensureDateObject } from '@/lib/time-bubbles-utils';
 import { CelebrationPopper } from './celebration-popper';
+import { useAuth } from '@/context/auth-context';
+import { Tooltip, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { ProModal } from './pro-modal';
 
 interface TimeBubbleProps {
   block: TimeBlockType;
@@ -43,11 +45,13 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
 
 export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbleProps) {
   const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setSelectedBlock, setReschedulingBlock, zoomLevel, currentDate } = useTimeBubbles();
+  const { isPro } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'top' | 'bottom' | null>(null);
   const [didMove, setDidMove] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isProModalOpen, setIsProModalOpen] = useState(false);
   
   const [liveStartTime, setLiveStartTime] = useState(ensureDateObject(block.startTime));
   const [liveDuration, setLiveDuration] = useState(block.duration);
@@ -303,7 +307,16 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
     setShowCelebration(false);
   };
   
+  const handleColorSelect = (colorName: keyof typeof BUBBLE_COLORS) => {
+    if (PRO_COLOR_NAMES.includes(colorName as any) && !isPro) {
+        setIsProModalOpen(true);
+    } else {
+        updateBlock(block.id, { color: colorName });
+    }
+  };
+
   return (
+    <>
     <div
       data-bubble-id={block.id}
       className={cn(
@@ -375,16 +388,48 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
-            <div className="flex gap-2 p-2">
-              {Object.keys(BUBBLE_COLORS).map((colorName) => (
-                <button
-                  key={colorName}
-                  className={cn("w-6 h-6 rounded-full border", block.color === colorName && "ring-2 ring-ring")}
-                  style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
-                  onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBBLE_COLORS })}
-                />
-              ))}
-            </div>
+            <DropdownMenuGroup>
+                <div className="text-xs text-muted-foreground px-2 pt-1 pb-2">Free Colors</div>
+                <div className="flex gap-2 p-2">
+                {FREE_COLOR_NAMES.map((colorName) => (
+                    <button
+                    key={colorName}
+                    className={cn("w-6 h-6 rounded-full border", block.color === colorName && "ring-2 ring-ring")}
+                    style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
+                    onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBBLE_COLORS })}
+                    />
+                ))}
+                </div>
+            </DropdownMenuGroup>
+            <DropdownMenuGroup>
+                <div className="text-xs text-muted-foreground px-2 pt-1 pb-2">Pro Colors</div>
+                <div className="flex gap-2 p-2">
+                <TooltipProvider>
+                    {PRO_COLOR_NAMES.map((colorName) => (
+                        <Tooltip key={colorName} delayDuration={100}>
+                        <TooltipTrigger asChild>
+                            <button
+                                key={colorName}
+                                className={cn("w-6 h-6 rounded-full border relative", 
+                                    block.color === colorName && "ring-2 ring-ring",
+                                    !isPro && "opacity-60 cursor-not-allowed"
+                                )}
+                                style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
+                                onClick={() => handleColorSelect(colorName)}
+                            >
+                            {!isPro && <Lock className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-3 w-3 text-white opacity-90"/>}
+                            </button>
+                        </TooltipTrigger>
+                        {!isPro && (
+                            <TooltipContent>
+                                <p>Upgrade to Pro to use this color.</p>
+                            </TooltipContent>
+                        )}
+                        </Tooltip>
+                    ))}
+                </TooltipProvider>
+                </div>
+            </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -468,5 +513,7 @@ export function TimeBubble({ block, timelineRef, scrollContainerRef }: TimeBubbl
         onMouseDown={isInteractive ? (e) => handleResizeMouseDown(e, 'bottom') : undefined}
       />
     </div>
+    <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
+    </>
   );
 }

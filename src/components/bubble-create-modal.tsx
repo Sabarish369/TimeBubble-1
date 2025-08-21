@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -31,14 +30,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
-import { BUBBLE_COLORS, DEFAULT_BUBBLE_COLOR } from '@/lib/constants';
+import { BUBBLE_COLORS, DEFAULT_BUBBLE_COLOR, FREE_COLOR_NAMES, PRO_COLOR_NAMES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type { BubbleCategory, BubbleColor } from '@/types';
 import { useEffect, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Lock } from 'lucide-react';
 import { format, setHours, setMinutes, startOfDay, getHours, getMinutes, addHours } from 'date-fns';
 import { Calendar } from './ui/calendar';
+import { useAuth } from '@/context/auth-context';
+import { ProModal } from './pro-modal';
 
 interface BubbleCreateModalProps {
   isOpen: boolean;
@@ -71,12 +72,13 @@ const createSchema = z.object({
 type CreateFormValues = z.infer<typeof createSchema>;
 
 const categories: BubbleCategory[] = ['work', 'study', 'break', 'personal', 'health'];
-const colorNames = Object.keys(BUBBLE_COLORS) as (keyof typeof BUBBLE_COLORS)[];
 const hourOptions = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
 const minuteOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
 
 export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime }: BubbleCreateModalProps) {
   const { addBlockOnDate, currentDate } = useTimeBubbles();
+  const { isPro } = useAuth();
+  const [isProModalOpen, setIsProModalOpen] = useState(false);
   
   const form = useForm<CreateFormValues>({
     resolver: zodResolver(createSchema),
@@ -135,7 +137,16 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
     onClose();
   };
 
+  const handleColorSelect = (colorName: string, fieldOnChange: (value: string) => void) => {
+    if (PRO_COLOR_NAMES.includes(colorName as any) && !isPro) {
+      setIsProModalOpen(true);
+    } else {
+      fieldOnChange(colorName);
+    }
+  };
+
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
@@ -308,16 +319,38 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
                 <FormItem>
                   <FormLabel>Color</FormLabel>
                   <FormControl>
-                    <div className="flex gap-2 p-2 rounded-lg border">
-                      {colorNames.map((name) => (
-                        <button
-                          type="button"
-                          key={name}
-                          className={cn("w-8 h-8 rounded-full border-2", field.value === name ? "border-ring ring-2 ring-ring" : "border-transparent")}
-                          style={{ backgroundColor: `hsl(var(--bubble-${name}))` }}
-                          onClick={() => field.onChange(name)}
-                        />
-                      ))}
+                    <div className="p-2 rounded-lg border">
+                      <div className="text-xs text-muted-foreground mb-2">Free Colors</div>
+                      <div className="flex flex-wrap gap-2">
+                        {FREE_COLOR_NAMES.map((name) => (
+                          <button
+                            type="button"
+                            key={name}
+                            className={cn("w-8 h-8 rounded-full border-2", field.value === name ? "border-ring ring-2 ring-ring" : "border-transparent")}
+                            style={{ backgroundColor: `hsl(var(--bubble-${name}))` }}
+                            onClick={() => handleColorSelect(name, field.onChange)}
+                          />
+                        ))}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-3 mb-2">Pro Colors</div>
+                       <div className="flex flex-wrap gap-2">
+                        {PRO_COLOR_NAMES.map((name) => (
+                          <button
+                            type="button"
+                            key={name}
+                            className={cn(
+                              "w-8 h-8 rounded-full border-2 relative group", 
+                              field.value === name ? "border-ring ring-2 ring-ring" : "border-transparent",
+                              !isPro && "cursor-not-allowed opacity-60"
+                            )}
+                            style={{ backgroundColor: `hsl(var(--bubble-${name}))` }}
+                            onClick={() => handleColorSelect(name, field.onChange)}
+                            disabled={!isPro}
+                          >
+                            {!isPro && <Lock className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 text-white opacity-70" />}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -332,5 +365,7 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
         </Form>
       </DialogContent>
     </Dialog>
+    <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
+    </>
   );
 }
