@@ -19,6 +19,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { AIOptimizerDrawer } from './ai-optimizer-drawer';
 import { AiQuotaIndicator } from './ai-quota-indicator';
 import { UpgradeBadge } from './upgrade-badge';
+import { ProBadge } from './pro-badge';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -43,7 +44,10 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             <span className="sr-only">Toggle Sidebar</span>
           </Button>
         )}
-        <TimeBubbleLogo className="h-6 w-auto" />
+        <div className="flex items-center gap-2">
+          <TimeBubbleLogo className="h-6 w-auto" />
+          <ProBadge />
+        </div>
       </div>
       <div id="date-navigation" className="flex-1 flex justify-center items-center gap-1 md:gap-2">
         <Button variant="outline" size={isMobile ? 'sm' : 'default'} onClick={goToToday}>
