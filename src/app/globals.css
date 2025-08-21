@@ -870,10 +870,10 @@ body {
   /* Pro User Background Gradient */
   .pro-gradient-background {
     background-color: hsl(var(--background));
-    background-image: radial-gradient(
-      ellipse 40% 50% at 10% 10%,
-      hsl(var(--primary) / 0.15),
-      transparent
+    background-image: linear-gradient(
+      to bottom,
+      hsl(45 100% 80% / 0.2), /* A more visible golden-yellow */
+      transparent 300px
     );
   }
 }
