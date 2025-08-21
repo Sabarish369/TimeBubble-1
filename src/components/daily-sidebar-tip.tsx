@@ -18,7 +18,7 @@ export function DailySidebarTip() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { getBlocksForDate, currentDate, getNewDailySidebarTip } = useTimeBubbles();
+  const { timeBlocks, currentDate, getNewDailySidebarTip } = useTimeBubbles();
   const { user, isPro, geminiApiKey } = useAuth();
   const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
@@ -56,8 +56,7 @@ export function DailySidebarTip() {
         }
       }
 
-      const scheduleForDay = await getBlocksForDate(currentDate);
-      const scheduleString = JSON.stringify(scheduleForDay.map(b => ({ title: b.title, category: b.category, duration: b.duration })));
+      const scheduleString = JSON.stringify(timeBlocks.map(b => ({ title: b.title, category: b.category, duration: b.duration })));
       const result = await getNewDailySidebarTip({ scheduleData: scheduleString });
       setTip(result);
 
@@ -71,11 +70,31 @@ export function DailySidebarTip() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [currentDate, getBlocksForDate, getNewDailySidebarTip, getStorageKey, isPro, geminiApiKey]);
+  }, [timeBlocks, currentDate, getNewDailySidebarTip, getStorageKey, isPro, geminiApiKey]);
 
+  // Fetch tip on initial load and when date changes
   useEffect(() => {
     fetchTip();
-  }, [fetchTip]);
+  }, [currentDate, isPro, geminiApiKey]);
+  
+  // Refetch when schedule changes
+  useEffect(() => {
+    // We don't want to fetch on the very first render, so we check if it's already loaded
+    if(tip) {
+      fetchTip(true);
+    }
+  }, [timeBlocks]);
+
+  // Refetch every hour
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if(isPro && geminiApiKey) {
+        fetchTip(true);
+      }
+    }, 1000 * 60 * 60); // 1 hour
+
+    return () => clearInterval(interval);
+  },[isPro, geminiApiKey, fetchTip])
   
   const handleRefresh = async () => {
      if (!isPro) {
