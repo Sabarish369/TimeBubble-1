@@ -79,7 +79,7 @@ export default function AppPage() {
   }, [isLoaded, isPro]);
 
   // Find the first actionable block to show in the modal
-  const blockToShow = actionableBlock ?? timeBlocks.find(b => b.actionable);
+  const blockToShow = actionableBlock ?? (timeBlocks || []).find(b => b.actionable);
 
   useEffect(() => {
     if (mainRef.current && isLoaded) {

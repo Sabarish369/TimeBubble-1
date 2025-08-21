@@ -66,6 +66,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // The handleUserChange function needs to be defined outside or hoisted
+  const handleUserChange = useCallback( (user: User | null) => {
+    setLoading(true);
+    setUser(user);
+    setLoginCookie(!!user);
+    if (user) {
+      // Set up a real-time listener for the user document
+      const userDocRef = doc(db, 'users', user.uid);
+      const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setIsPro(!!data.isPro);
+          // Check if geminiApiKey is null or undefined before setting state
+          setGeminiApiKeyState(data.geminiApiKey || null);
+        } else {
+          // New user, create their doc
+          setDoc(userDocRef, { email: user.email, displayName: user.displayName, isPro: false }, { merge: true });
+          setIsPro(false);
+          setGeminiApiKeyState(null);
+        }
+        setLoading(false);
+      }, (error) => {
+          console.error("Firestore user data listener error:", error);
+          if (error.code === 'permission-denied') {
+              toast({
+                  title: 'Permission Error',
+                  description: "Your security rules are preventing access to user data. Please check your Firestore rules.",
+                  variant: 'destructive',
+                  duration: 10000,
+              });
+          }
+          setLoading(false);
+      });
+      return unsubscribe;
+
+    } else {
+      // User logged out, clear state
+      setIsPro(false);
+      setGeminiApiKeyState(null);
+      setLoading(false);
+      return () => {};
+    }
+  }, [toast]);
+
 
   useEffect(() => {
     if (!auth || !Object.keys(auth).length) {
@@ -73,15 +117,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return;
     }
-
-    setLoading(true);
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       handleUserChange(user);
-      setLoading(false);
     });
     return () => unsubscribeAuth();
 
-  }, [toast]);
+  }, [handleUserChange]);
 
   const handleAuthError = (err: any) => {
     let message = 'An unknown error occurred.';
@@ -167,47 +208,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // The redirect method doesn't return a promise that resolves with a result
     // We rely on the onAuthStateChanged listener after the redirect
   };
-
-  // The handleUserChange function needs to be defined outside or hoisted
-  const handleUserChange = (user: User | null) => {
-    setUser(user);
-    setLoginCookie(!!user);
-    if (user) {
-      // Set up a real-time listener for the user document
-      const userDocRef = doc(db, 'users', user.uid);
-      const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setIsPro(!!data.isPro);
-          // Check if geminiApiKey is null or undefined before setting state
-          setGeminiApiKeyState(data.geminiApiKey || null);
-        } else {
-          // New user, create their doc
-          setDoc(userDocRef, { email: user.email, displayName: user.displayName, isPro: false }, { merge: true });
-          setIsPro(false);
-          setGeminiApiKeyState(null);
-        }
-      }, (error) => {
-          console.error("Firestore user data listener error:", error);
-          if (error.code === 'permission-denied') {
-              toast({
-                  title: 'Permission Error',
-                  description: "Your security rules are preventing access to user data. Please check your Firestore rules.",
-                  variant: 'destructive',
-                  duration: 10000,
-              });
-          }
-      });
-      return unsubscribe;
-
-    } else {
-      // User logged out, clear state
-      setIsPro(false);
-      setGeminiApiKeyState(null);
-      return () => {};
-    }
-  };
-
 
   const signOut = async () => {
     await performAuthAction(async () => {
