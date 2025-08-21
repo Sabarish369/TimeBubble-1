@@ -16,6 +16,15 @@ export async function requestPermissionAndGetToken(userId: string) {
     return;
   }
 
+  // Register the service worker
+  try {
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    console.log('Service worker registered successfully', registration);
+  } catch (error) {
+    console.error('Service worker registration failed:', error);
+    return; // Can't proceed without a service worker
+  }
+  
   try {
     const messaging = getMessaging(app);
 

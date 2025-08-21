@@ -1,24 +1,37 @@
 
-// Import the Firebase app and messaging libraries
-import { initializeApp } from 'firebase/app';
-import { getMessaging } from 'firebase/messaging/sw';
+// This file is intentionally left blank.
+// It's required for Firebase Cloud Messaging to work in the browser.
+// The main Firebase messaging logic is handled in the app's client-side code.
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
+// For background notifications, you would add logic here.
+// Example:
+/*
+import { initializeApp } from "firebase/app";
+import { getMessaging, onBackgroundMessage } from "firebase/messaging/sw";
 
-// Initialize the Firebase app in the service worker
-const app = initializeApp(firebaseConfig);
+const firebaseApp = initializeApp({
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID",
+});
 
-// Initialize Firebase Cloud Messaging and get a reference to the service
-const messaging = getMessaging(app);
+const messaging = getMessaging(firebaseApp);
 
-// The service worker doesn't need to do anything else.
-// Firebase automatically handles background notifications.
-console.log('Firebase messaging service worker successfully set up.');
+onBackgroundMessage(messaging, (payload) => {
+  console.log(
+    "[firebase-messaging-sw.js] Received background message ",
+    payload
+  );
+  
+  const notificationTitle = payload.notification.title;
+  const notificationOptions = {
+    body: payload.notification.body,
+    icon: "/logo.svg",
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
+*/
