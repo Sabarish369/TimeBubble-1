@@ -7,9 +7,6 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  experimental: {
-    // Remove allowedOrigins as it's not a valid experimental option
-  },
   images: {
     remotePatterns: [
       {
