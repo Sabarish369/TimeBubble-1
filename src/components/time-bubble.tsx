@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { TimeBlock as TimeBlockType } from '@/types';
@@ -26,7 +27,7 @@ import { ActiveBubbleAnimation } from './active-bubble-animation';
 import { ensureDateObject } from '@/lib/time-bubbles-utils';
 import { CelebrationPopper } from './celebration-popper';
 import { useAuth } from '@/context/auth-context';
-import { Tooltip, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { ProModal } from './pro-modal';
 
 interface TimeBubbleProps {
