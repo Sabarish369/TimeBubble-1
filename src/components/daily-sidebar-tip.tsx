@@ -96,10 +96,12 @@ export function DailySidebarTip() {
         clearTimeout(debounceTimeoutRef.current);
     }
     
+    // Do not run this effect if initial loading is happening
     if (isLoading) return;
     
     debounceTimeoutRef.current = setTimeout(() => {
         if (isPro && geminiApiKey) {
+            // Force a refresh when timeblocks change
             fetchTip(true);
         }
     }, 2000); // 2-second debounce delay
@@ -109,7 +111,7 @@ export function DailySidebarTip() {
             clearTimeout(debounceTimeoutRef.current);
         }
     };
-  }, [timeBlocks, isPro, geminiApiKey, isLoading, fetchTip]);
+  }, [timeBlocks, isPro, geminiApiKey, currentDate]);
 
 
   // Refetch every hour to keep the tip fresh
