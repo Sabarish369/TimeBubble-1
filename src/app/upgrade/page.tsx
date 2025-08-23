@@ -20,6 +20,7 @@ const freeFeatures = [
     { text: 'Proactive AI Tips & Nudges', included: false },
     { text: 'Habit Stacking Suggestions', included: false },
     { text: 'Energy & Chronotype Analysis', included: false },
+    { text: 'Powered by Google Gemini API', included: false },
     { text: 'Priority Support', included: false },
 ];
 
@@ -32,6 +33,7 @@ const proFeatures = [
     { text: 'Proactive AI Tips & Nudges', included: true },
     { text: 'Habit Stacking Suggestions', included: true },
     { text: 'Energy & Chronotype Analysis', included: true },
+    { text: 'Powered by Google Gemini API', included: true },
     { text: 'Priority Support & All Future Pro Features', included: true },
 ];
 
@@ -134,7 +136,7 @@ export default function UpgradePage() {
                             title="Lifetime Pro"
                             price="$49"
                             priceSubtitle="One-time payment"
-                            description="Unlock every feature, forever. For our first supporters."
+                            description="Unlock every feature, forever, powered by the Google Gemini API."
                             features={proFeatures}
                             onUpgrade={handleUpgrade}
                             isLoading={isLoading}
