@@ -769,6 +769,22 @@ body {
     }
   }
 
+  /* Pro Header Glow */
+  .pro-header-glow {
+    box-shadow: 0 2px 20px -5px hsl(45 100% 70% / 0.8);
+    animation: header-glow-pulse 2.5s infinite alternate;
+  }
+
+  @keyframes header-glow-pulse {
+    from {
+      box-shadow: 0 2px 15px -8px hsl(45 100% 70% / 0.6);
+    }
+    to {
+      box-shadow: 0 2px 25px -5px hsl(45 100% 70% / 0.9);
+    }
+  }
+
+
   /* --- New Animations for Tutorial and Upgrade --- */
 
   /* Float and celebrate animation */

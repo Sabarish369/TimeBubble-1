@@ -20,6 +20,7 @@ import { AIOptimizerDrawer } from './ai-optimizer-drawer';
 import { AiQuotaIndicator } from './ai-quota-indicator';
 import { UpgradeBadge } from './upgrade-badge';
 import { ProBadge } from './pro-badge';
+import { useAuth } from '@/context/auth-context';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -34,9 +35,13 @@ export function Header({ onToggleSidebar }: HeaderProps) {
     goToPreviousDay,
   } = useTimeBubbles();
   const isMobile = useIsMobile();
+  const { isPro } = useAuth();
 
   return (
-    <header className="flex items-center justify-between p-2 md:p-4 border-b shrink-0 bg-gradient-to-r from-primary/10 via-background to-accent/10 touch-friendly">
+    <header className={cn(
+      "relative flex items-center justify-between p-2 md:p-4 border-b shrink-0 bg-background touch-friendly",
+      isPro && "pro-header-glow"
+    )}>
       <div className="flex items-center gap-2 md:gap-4">
         {isMobile && (
           <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="mobile-friendly-tap">
@@ -68,7 +73,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4 md:h-5 md:w-5" />
-                {format(currentDate, isMobile ? 'MMM d, yy' : 'MMMM do, yyyy')}
+                {currentDate ? format(currentDate, isMobile ? 'MMM d, yy' : 'MMMM do, yyyy') : "Loading..."}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
