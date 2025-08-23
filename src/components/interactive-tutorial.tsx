@@ -88,7 +88,7 @@ export function InteractiveTutorial({ onFinish }: { onFinish: () => void }) {
     {
       elementId: 'ai-tips-drawer-trigger',
       title: '🚀 AI-Powered Insights (Pro)',
-      description: "This is the AI Optimizer, your hub for Pro features. Get personalized daily insights, proactive tips, habit suggestions, and more.",
+      description: "This is the AI Optimizer, your hub for Pro features. Get personalized daily insights, proactive tips, habit stacking suggestions, and energy tracking.",
       tooltipPosition: 'left',
     },
   ];
