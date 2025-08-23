@@ -99,7 +99,7 @@ export function ProModal({ isOpen, onClose }: ProModalProps) {
           })}
         </div>
 
-        <DialogFooter className={`flex-col gap-3 relative z-10 transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionDelay: '700ms' }}>
+        <DialogFooter className={`flex-col items-center gap-3 relative z-10 transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionDelay: '700ms' }}>
           <Button 
             size="lg" 
             className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 relative overflow-hidden group"
@@ -112,10 +112,10 @@ export function ProModal({ isOpen, onClose }: ProModalProps) {
             </Link>
           </Button>
           <Button 
-            size="lg" 
+            size="sm" 
             variant="ghost" 
             onClick={onClose}
-            className="w-full hover:bg-white/10 transition-colors duration-200"
+            className="hover:bg-white/10 transition-colors duration-200"
           >
             Maybe Later
           </Button>
