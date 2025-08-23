@@ -21,9 +21,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User ID is required.' }, { status: 400 });
     }
 
-    const priceId = process.env.STRIPE_LIFETIME_PRICE_ID;
+    // Use environment variable or a fallback for the Price ID
+    const priceId = process.env.STRIPE_LIFETIME_PRICE_ID || 'price_1PKOyDRp4yLqXGqQtYyAol8C';
     if (!priceId) {
-        console.error('STRIPE_LIFETIME_PRICE_ID is not configured.');
+        console.error('STRIPE_LIFETIME_PRICE_ID is not configured and no fallback is available.');
         return NextResponse.json({ error: 'Stripe Price ID is not configured.' }, { status: 500 });
     }
 
