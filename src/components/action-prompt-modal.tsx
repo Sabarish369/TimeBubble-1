@@ -8,7 +8,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
@@ -37,6 +36,8 @@ export function ActionPromptModal({ isOpen, onClose, block }: ActionPromptModalP
   };
 
   const handleMarkAsMissed = () => {
+    // Mark as missed but don't complete it.
+    // Set actionable to false so it doesn't pop up again.
     updateBlock(block.id, { completed: false, actionable: false });
     onClose();
   };
@@ -61,11 +62,11 @@ export function ActionPromptModal({ isOpen, onClose, block }: ActionPromptModalP
             <MessageSquareText />
             Reflect & Complete
           </Button>
-          <Button variant="secondary-outline" size="lg" className="h-20 flex-col gap-1" onClick={handleReschedule}>
+          <Button variant="secondary" size="lg" className="h-20 flex-col gap-1" onClick={handleReschedule}>
             <History />
             Reschedule
           </Button>
-          <Button variant="secondary-outline" size="lg" className="h-20 flex-col gap-1" onClick={handleMarkAsMissed}>
+          <Button variant="secondary" size="lg" className="h-20 flex-col gap-1" onClick={handleMarkAsMissed}>
             <XCircle />
             Mark as Missed
           </Button>

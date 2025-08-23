@@ -693,6 +693,20 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     setDailyInsights(null);
     try {
       const dailyData = getBlocksForSuggestions();
+      const completedBlocks = timeBlocks.filter(b => b.completed && b.reflection);
+
+      if (completedBlocks.length === 0) {
+        setDailyInsights({
+          title: "Ready for Insights?",
+          summary: "You haven't completed any tasks with reflections for this day yet.",
+          productivityInsight: "Complete some tasks and log how they went to unlock your personalized productivity insights.",
+          moodInsight: "We can't wait to see how your activities and mood connect!",
+          recommendation: "After your next task, click on it and add a reflection to get started.",
+        });
+        setIsLoadingInsights(false);
+        return;
+      }
+      
       incrementAiCallCount();
       const result = await fetchDailyInsights({ dailyData, apiKey: geminiApiKey });
       setDailyInsights(result);
@@ -835,16 +849,21 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   // Effect to check for actionable blocks when timeBlocks change
   useEffect(() => {
     const now = new Date();
-    const upcomingActionable = timeBlocks.find(block => {
+    // Only check for actionable blocks on the current day
+    if (!isToday(currentDate)) return;
+
+    timeBlocks.forEach(block => {
       const endTime = new Date(ensureDateObject(block.startTime).getTime() + block.duration * 60000);
-      return !block.completed && endTime < now && !block.actionable;
+      
+      // A block is actionable if its time has passed, it's not completed, and we haven't already marked it as actionable.
+      // This prevents an infinite loop.
+      if (now > endTime && !block.completed && !block.actionable) {
+        updateBlock(block.id, { actionable: true }, false);
+        setActionableBlock(block); // Immediately show modal for the first one found
+      }
     });
 
-    if (upcomingActionable) {
-      updateBlock(upcomingActionable.id, { actionable: true }, false);
-      setActionableBlock(upcomingActionable);
-    }
-  }, [timeBlocks, updateBlock]);
+  }, [timeBlocks, updateBlock, currentDate]);
 
   const value = {
     timeBlocks,
