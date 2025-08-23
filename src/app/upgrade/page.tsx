@@ -2,7 +2,7 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { Check, X, Star, Loader2 } from "lucide-react";
+import { Check, X, Star, Loader2, BrainCircuit, Target, BatteryCharging } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { TimeBubbleLogo } from "@/components/timebubble-logo";
@@ -16,9 +16,10 @@ const freeFeatures = [
     { text: 'Unlimited Time Bubbles', included: true },
     { text: '3 Custom Bubble Templates', included: true },
     { text: 'Basic Daily Summary', included: false },
-    { text: 'AI-Powered Insights', included: false },
+    { text: 'Advanced AI-Powered Insights', included: false },
     { text: 'Proactive AI Tips & Nudges', included: false },
-    { text: 'Long-Term Trend Analysis', included: false },
+    { text: 'Habit Stacking Suggestions', included: false },
+    { text: 'Energy & Chronotype Analysis', included: false },
     { text: 'Priority Support', included: false },
 ];
 
@@ -29,7 +30,8 @@ const proFeatures = [
     { text: 'Basic Daily Summary', included: true },
     { text: 'Advanced AI-Powered Insights', included: true },
     { text: 'Proactive AI Tips & Nudges', included: true },
-    { text: 'Long-Term Trend Analysis', included: true },
+    { text: 'Habit Stacking Suggestions', included: true },
+    { text: 'Energy & Chronotype Analysis', included: true },
     { text: 'Priority Support & All Future Pro Features', included: true },
 ];
 
@@ -73,9 +75,28 @@ export default function UpgradePage() {
     const handleUpgrade = async () => {
         if (!user) return;
         setIsLoading(true);
-        // Simulate a successful payment flow by redirecting to the success page
-        // A real implementation would call a payment provider first.
-        router.push('/upgrade/success?session_id=simulated_session');
+        try {
+            const res = await fetch('/api/create-checkout-session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId: user.uid }),
+            });
+
+            if (!res.ok) {
+                throw new Error('Failed to create checkout session');
+            }
+
+            const { sessionId } = await res.json();
+            // This is a Stripe checkout session ID. In a real app, you would redirect to Stripe.
+            // For this simulation, we'll go to the success page.
+             router.push('/upgrade/success?session_id=' + sessionId);
+        } catch (error) {
+            console.error(error);
+            setIsLoading(false);
+            // You might want to show an error toast here
+        }
     };
 
 
