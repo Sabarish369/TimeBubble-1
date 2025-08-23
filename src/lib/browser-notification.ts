@@ -88,6 +88,18 @@ export function showTaskCompletionNotification(taskTitle: string): Promise<boole
   });
 }
 
+/**
+ * Shows a generic reminder notification.
+ */
+export function showReminderNotification(title: string, body: string): Promise<boolean> {
+  return showBrowserNotification({
+    title,
+    body,
+    tag: `general-reminder-${Date.now()}`,
+    requireInteraction: false,
+  });
+}
+
 
 /**
  * Check if browser notifications are available and permitted

@@ -17,6 +17,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc, writeBatch, Timestamp, query, where } from 'firebase/firestore';
 import { ensureDateObject } from '@/lib/time-bubbles-utils';
 import { useNotifications } from '@/hooks/use-notifications';
+import { showReminderNotification } from '@/lib/browser-notification';
 
 type Theme = 'light' | 'dark';
 
@@ -105,7 +106,6 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [history, setHistory] = useState<HistoryState>({});
   const [isSyncing, setIsSyncing] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(startOfDay(new Date())); // State for the selected date
 
   const [templates, setTemplates] = useState<BubbleTemplate[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -483,6 +483,46 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     }
   }, [theme]);
 
+  // Effect for idle time notifications
+  useEffect(() => {
+    if (!user) return;
+
+    const checkIdleTimeAndNotify = async () => {
+      // 1. Check if current time is "free"
+      const now = new Date();
+      const isBusyNow = timeBlocks.some(block => {
+        const startTime = ensureDateObject(block.startTime);
+        const endTime = new Date(startTime.getTime() + block.duration * 60000);
+        return now >= startTime && now < endTime;
+      });
+
+      if (isBusyNow) return; // Don't notify if user is in a scheduled block
+
+      // 2. Check if there are missed tasks
+      const missedTasks = await getMissedTasks();
+      if (missedTasks.length === 0) return; // No need to notify if there's nothing to do
+
+      // 3. Randomly decide whether to send a notification (e.g., 50% chance each time)
+      if (Math.random() > 0.5) return;
+
+      // 4. Send one of a few random notifications
+      const reminders = [
+        { title: "Psst! Got a minute?", body: "Looks like you have some free time. Why not clear out some of those overdue tasks?" },
+        { title: "A moment of productivity?", body: "This looks like a good time to reflect on or reschedule your missed bubbles." },
+        { title: "Clear your timeline!", body: "You have some tasks pending from previous days. Now might be a great time to tackle them." }
+      ];
+      const randomReminder = reminders[Math.floor(Math.random() * reminders.length)];
+
+      showReminderNotification(randomReminder.title, randomReminder.body);
+    };
+
+    // Run this check periodically, e.g., every 15 minutes
+    const intervalId = setInterval(checkIdleTimeAndNotify, 15 * 60 * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [user, timeBlocks, getMissedTasks]);
+
+
   const addBlockOnDate = useCallback(async (block: Omit<TimeBlock, 'id' | 'completed'>, date: Date) => {
     if (!user) {
         toast({ title: 'Not signed in', description: 'You must be signed in to add bubbles.', variant: 'destructive'});
@@ -710,13 +750,21 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
       incrementAiCallCount();
       const result = await fetchDailyInsights({ dailyData, apiKey: geminiApiKey });
       setDailyInsights(result);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting AI insights:', error);
-      toast({
-        title: 'AI Error',
-        description: 'Could not get daily insights.',
-        variant: 'destructive',
-      });
+       if (error.message.includes("429")) {
+        toast({
+          title: 'Rate Limit Exceeded',
+          description: "You've made too many requests to the AI. Please try again after some time.",
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'AI Error',
+          description: 'Could not get daily insights.',
+          variant: 'destructive',
+        });
+      }
       setDailyInsights(null);
     } finally {
       setIsLoadingInsights(false);
