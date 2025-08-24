@@ -40,9 +40,9 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   return (
     <header className={cn(
       "relative flex items-center justify-between p-2 md:p-4 border-b shrink-0 bg-background touch-friendly",
-      isPro && "pro-header-glow"
+      isPro && "pro-gradient-background"
     )}>
-      <div className="flex items-center gap-2 md:gap-4">
+      <div className="flex items-center gap-2 md:gap-4 relative z-10">
         {isMobile && (
           <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="mobile-friendly-tap">
             <Menu className="h-6 w-6" />
@@ -54,11 +54,11 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           <ProBadge />
         </div>
       </div>
-      <div id="date-navigation" className="flex-1 flex justify-center items-center gap-1 md:gap-2">
+      <div id="date-navigation" className="flex-1 flex justify-center items-center gap-1 md:gap-2 relative z-10">
         <Button variant="outline" size={isMobile ? 'sm' : 'default'} onClick={goToToday}>
           Today
         </Button>
-        <div className="flex items-center gap-1 rounded-md border p-1">
+        <div className="flex items-center gap-1 rounded-md border p-1 bg-background/50">
           <Button variant="ghost" size="icon" className={cn("h-7 w-7", isMobile && "mobile-friendly-tap h-9 w-9")} onClick={goToPreviousDay}>
             <ChevronLeft className="h-5 w-5" />
             <span className="sr-only">Previous day</span>
@@ -91,7 +91,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           </Button>
         </div>
       </div>
-      <div id="header-actions" className="flex items-center gap-2 md:gap-4">
+      <div id="header-actions" className="flex items-center gap-2 md:gap-4 relative z-10">
         <AiQuotaIndicator />
           <UpgradeBadge />
         <ThemeToggle />
