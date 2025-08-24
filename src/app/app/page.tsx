@@ -70,8 +70,8 @@ export default function AppPage() {
     }
   }, [isLoaded, isPro]);
 
-  // Find the first actionable block to show in the modal
-  const blockToShow = actionableBlock ?? (timeBlocks || []).find(b => b.actionable);
+  // Use the actionableBlock from context as the source of truth for the modal
+  const blockToShow = actionableBlock;
 
   useEffect(() => {
     if (mainRef.current && isLoaded) {
@@ -118,10 +118,10 @@ export default function AppPage() {
 
   const handleClosePrompt = () => {
     if (blockToShow) {
-      // Mark it as not actionable anymore so it doesn't pop up again
-      updateBlock(blockToShow.id, { actionable: false });
+      // The modal's internal actions will handle the block state.
+      // We just need to clear the actionableBlock from the context to dismiss the modal.
+      setActionableBlock(null);
     }
-    setActionableBlock(null);
   }
 
   const handleFinishTutorial = () => {

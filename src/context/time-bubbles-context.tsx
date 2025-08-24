@@ -895,23 +895,37 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   const canRedo = dayHistory ? dayHistory.index < dayHistory.snapshots.length - 1 : false;
 
   // Effect to check for actionable blocks when timeBlocks change
-  useEffect(() => {
-    const now = new Date();
-    // Only check for actionable blocks on the current day
-    if (!isToday(currentDate)) return;
+    useEffect(() => {
+        const checkActionable = () => {
+            const now = new Date();
+            if (!isToday(currentDate)) return;
 
-    timeBlocks.forEach(block => {
-      const endTime = new Date(ensureDateObject(block.startTime).getTime() + block.duration * 60000);
-      
-      // A block is actionable if its time has passed, it's not completed, and we haven't already marked it as actionable.
-      // This prevents an infinite loop.
-      if (now > endTime && !block.completed && !block.actionable) {
-        updateBlock(block.id, { actionable: true }, false);
-        setActionableBlock(block); // Immediately show modal for the first one found
-      }
-    });
+            let blockToSetActionable: TimeBlock | null = null;
+            
+            const updatedBlocks = timeBlocks.map(block => {
+                const endTime = new Date(ensureDateObject(block.startTime).getTime() + block.duration * 60000);
+                if (now > endTime && !block.completed && !block.actionable) {
+                    if (!blockToSetActionable) { // Only set the first one found in a batch
+                        blockToSetActionable = { ...block, actionable: true };
+                    }
+                    return { ...block, actionable: true };
+                }
+                return block;
+            });
+            
+            if (blockToSetActionable) {
+                // Update the state with all actionable changes
+                setTimeBlocksWithHistory(updatedBlocks, currentDate, true); 
+                // Set the specific block to trigger the modal
+                setActionableBlock(blockToSetActionable);
+            }
+        };
 
-  }, [timeBlocks, updateBlock, currentDate]);
+        const intervalId = setInterval(checkActionable, 15000); // Check every 15 seconds
+        return () => clearInterval(intervalId);
+
+    }, [timeBlocks, currentDate, setTimeBlocksWithHistory, setActionableBlock]);
+
 
   const value = {
     timeBlocks,
