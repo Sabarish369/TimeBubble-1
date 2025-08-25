@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from './ui/button';
 import { useTimeBubbles, type MissedTaskGroup } from '@/context/time-bubbles-context';
-import { ChevronLeft, Lightbulb, Zap, HeartPulse, BrainCircuit, Rocket, Star, Sparkles, Target, Battery, Activity } from 'lucide-react';
+import { ChevronLeft, Lightbulb, Zap, HeartPulse, BrainCircuit, Rocket, Star, Sparkles, Target, Battery, Activity, CalendarRange } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
@@ -25,6 +25,7 @@ import { ApiKeyModal } from './api-key-modal';
 import { SmartSuggestions } from './smart-suggestions';
 import { HabitStackingModal } from './habit-stacking-modal';
 import { EnergyTrackingPanel } from './energy-tracking-panel';
+import { WeeklyAnalysisPanel } from './weekly-analysis-panel';
 
 const tipIcons: Record<string, LucideIcon> = {
   Productivity: Zap,
@@ -34,7 +35,7 @@ const tipIcons: Record<string, LucideIcon> = {
   Motivation: Lightbulb,
 };
 
-type View = 'main' | 'insights' | 'tips' | 'habit' | 'energy';
+type View = 'main' | 'insights' | 'tips' | 'habit' | 'energy' | 'weekly';
 
 export function AIOptimizerDrawer() {
   const [isOpen, setIsOpen] = useState(false);
@@ -102,6 +103,9 @@ export function AIOptimizerDrawer() {
       </Button>
       <Button variant="outline" className="w-full justify-start gap-3 py-6 text-base" onClick={() => setView('energy')}>
         <Battery className="h-5 w-5 text-blue-500" /> Energy Tracking
+      </Button>
+      <Button variant="outline" className="w-full justify-start gap-3 py-6 text-base" onClick={() => setView('weekly')}>
+        <CalendarRange className="h-5 w-5 text-purple-500" /> Weekly Analysis
       </Button>
     </div>
   );
@@ -203,6 +207,10 @@ export function AIOptimizerDrawer() {
     <EnergyTrackingPanel />
   );
 
+  const renderWeeklyView = () => (
+    <WeeklyAnalysisPanel />
+  );
+
   return (
     <>
       <div id="ai-tips-drawer-trigger" className={cn("fixed top-1/2 -translate-y-1/2 right-0 z-40 transition-transform duration-500", isOpen && "translate-x-[-384px]")}>
@@ -240,6 +248,7 @@ export function AIOptimizerDrawer() {
             {view === 'insights' && renderInsightsView()}
             {view === 'tips' && renderTipsView()}
             {view === 'energy' && renderEnergyView()}
+            {view === 'weekly' && renderWeeklyView()}
           </div>
         </SheetContent>
       </Sheet>

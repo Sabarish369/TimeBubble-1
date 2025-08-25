@@ -139,3 +139,64 @@ export type HabitStackingInput = z.infer<typeof HabitStackingInputSchema>;
 export type HabitStackingOutput = z.infer<typeof HabitStackingOutputSchema>;
 export type EnergyOptimizationInput = z.infer<typeof EnergyOptimizationInputSchema>;
 export type EnergyOptimizationOutput = z.infer<typeof EnergyOptimizationOutputSchema>;
+
+// Weekly Analysis Types
+export const WeeklyAnalysisInputSchema = z.object({
+  apiKey: z.string(),
+  weeklyData: z.string().describe(
+    "JSON string of the last 7 days. Shape: [{ date: 'YYYY-MM-DD', blocks: [{ id, title, category, duration, startTime, completed, reflection?{ mood, productivity, notes } }] }]"
+  ),
+  computedMetrics: z
+    .string()
+    .optional()
+    .describe(
+      "Optional JSON with precomputed metrics (totals, completion rates, averages) to improve accuracy."
+    ),
+  weekRangeLabel: z
+    .string()
+    .optional()
+    .describe("Optional human-readable range label, e.g., 'Mar 3–Mar 9'."),
+});
+
+const CategoryBreakdownSchema = z.object({
+  category: z.enum(['work', 'study', 'break', 'personal', 'health']).describe('Bubble category'),
+  minutes: z.number().describe('Total scheduled minutes'),
+  completed: z.number().describe('Completed bubbles count'),
+  completionRate: z.number().describe('0-1 completion rate for this category'),
+});
+
+export const WeeklyAnalysisOutputSchema = z.object({
+  summary: z.string().describe('High-level weekly narrative with concrete observations.'),
+  kpis: z.object({
+    totalBubbles: z.number(),
+    completedBubbles: z.number(),
+    completionRate: z.number().describe('0-1 overall completion rate'),
+    totalMinutes: z.number().describe('Total scheduled minutes'),
+    totalCompletedMinutes: z.number().describe('Total completed minutes'),
+    avgProductivity: z.number().describe('1-5 average for completed reflections'),
+    dominantMood: z.enum(['happy', 'neutral', 'stressed', 'tired', 'focused']).describe('Most frequent mood among reflections'),
+    categoryBreakdown: z.array(CategoryBreakdownSchema),
+  }),
+  bestFocusWindows: z.array(z.string()).describe('Time-of-day windows like "09:00–11:00" derived from reflections.'),
+  topWins: z.array(z.string()).describe('Top 3-5 achievements phrased concretely.'),
+  bottlenecks: z.array(z.string()).describe('Top 3-5 obstacles with likely causes.'),
+  recommendations: z.array(z.string()).describe('Actionable improvements, specific and testable.'),
+  nextWeekPlan: z
+    .array(
+      z.object({
+        goal: z.string(),
+        rationale: z.string(),
+      })
+    )
+    .describe('Three prioritized goals for next week.'),
+  daySummaries: z.array(
+    z.object({
+      date: z.string(),
+      title: z.string(),
+      highlight: z.string(),
+    })
+  ).describe('One-line highlight per day'),
+});
+
+export type WeeklyAnalysisInput = z.infer<typeof WeeklyAnalysisInputSchema>;
+export type WeeklyAnalysisOutput = z.infer<typeof WeeklyAnalysisOutputSchema>;
