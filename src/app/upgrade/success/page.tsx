@@ -5,7 +5,7 @@ import { CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth-context';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -14,6 +14,14 @@ import { CelebrationPopper } from '@/components/celebration-popper';
 import { ProUpgradeAnimation } from '@/components/pro-upgrade-animation';
 
 export default function UpgradeSuccessPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen w-full items-center justify-center bg-background"><LoadingSpinner /></div>}>
+      <UpgradeSuccessContent />
+    </Suspense>
+  );
+}
+
+function UpgradeSuccessContent() {
   const { user, refreshUserStatus } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();

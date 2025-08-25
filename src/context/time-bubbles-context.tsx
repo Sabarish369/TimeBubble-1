@@ -4,6 +4,8 @@
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react';
 import type { TimeBlock, BubbleTemplate, DailyInsights, DailyTips, DailySidebarTip, DailySidebarTipInput, UserPreferences, HabitSuggestion, EnergyTracking, EnergyLevel } from '@/types';
+import type { WeeklyAnalysisOutput } from '@/types/ai-types';
+import { getWeeklyAnalysis as runWeeklyAnalysis } from '@/ai/flows/weekly-analysis';
 import { getDailyInsights as fetchDailyInsights } from '@/ai/flows/daily-insights';
 import { getDailyTips as fetchDailyTips } from '@/ai/flows/daily-tips';
 import { getDailySidebarTip } from '@/ai/flows/daily-sidebar-tip';
@@ -11,7 +13,7 @@ import { getHabitStackingSuggestions } from '@/ai/flows/habit-stacking';
 import { getEnergyOptimizationSuggestions } from '@/ai/flows/energy-optimization';
 import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
-import { addDays, format, startOfDay, isToday, isPast, subDays } from 'date-fns';
+import { addDays, format, startOfDay, isToday, isPast, subDays, startOfWeek } from 'date-fns';
 import { useAuth } from './auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc, writeBatch, Timestamp, query, where } from 'firebase/firestore';
@@ -93,6 +95,10 @@ interface TimeBubblesContextType {
   isLoadingTips: boolean;
   aiCallCount: number;
   incrementAiCallCount: () => void;
+  getWeeklyAnalysis: () => Promise<void>;
+  weeklyAnalysis: WeeklyAnalysisOutput | null;
+  isLoadingWeeklyAnalysis: boolean;
+  clearWeeklyAnalysis: () => void;
 }
 
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
@@ -116,6 +122,8 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
 
   const [dailyTips, setDailyTips] = useState<DailyTips | null>(null);
   const [isLoadingTips, setIsLoadingTips] = useState(false);
+  const [weeklyAnalysis, setWeeklyAnalysis] = useState<WeeklyAnalysisOutput | null>(null);
+  const [isLoadingWeeklyAnalysis, setIsLoadingWeeklyAnalysis] = useState(false);
 
   const [lastCompletedBlock, setLastCompletedBlock] = useState<TimeBlock | null>(null);
 
@@ -246,6 +254,120 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         setIsLoadingTips(false);
     }
   }, [geminiApiKey, currentDate, getBlocksForDate, toast]);
+
+  const buildWeeklyDataset = useCallback(async () => {
+    const start = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const days: Array<{ date: string; blocks: any[] }> = [];
+    let totalMinutes = 0;
+    let totalCompletedMinutes = 0;
+    let totalCompleted = 0;
+    let total = 0;
+    const categoryStats: Record<string, { minutes: number; completed: number; total: number }> = {
+      work: { minutes: 0, completed: 0, total: 0 },
+      study: { minutes: 0, completed: 0, total: 0 },
+      break: { minutes: 0, completed: 0, total: 0 },
+      personal: { minutes: 0, completed: 0, total: 0 },
+      health: { minutes: 0, completed: 0, total: 0 },
+    };
+    const productivityScores: number[] = [];
+    const moodCounts: Record<string, number> = {};
+
+    for (let i = 0; i < 7; i++) {
+      const date = addDays(start, i);
+      const blocks = await getBlocksForDate(date);
+      const simplified = blocks.map(b => ({
+        id: b.id,
+        title: b.title,
+        category: b.category,
+        duration: b.duration,
+        startTime: format(b.startTime, 'HH:mm'),
+        completed: b.completed,
+        reflection: b.reflection ? {
+          mood: b.reflection.mood,
+          productivity: b.reflection.productivity,
+          notes: b.reflection.notes,
+        } : undefined,
+      }));
+
+      simplified.forEach(b => {
+        totalMinutes += b.duration;
+        total += 1;
+        categoryStats[b.category].minutes += b.duration;
+        categoryStats[b.category].total += 1;
+        if (b.completed) {
+          totalCompleted += 1;
+          totalCompletedMinutes += b.duration;
+          categoryStats[b.category].completed += 1;
+        }
+        if (b.completed && b.reflection?.productivity) {
+          productivityScores.push(Number(b.reflection.productivity));
+        }
+        if (b.completed && b.reflection?.mood) {
+          const m = b.reflection.mood as string;
+          moodCounts[m] = (moodCounts[m] ?? 0) + 1;
+        }
+      });
+
+      days.push({ date: format(date, 'yyyy-MM-dd'), blocks: simplified });
+    }
+
+    const avgProductivity = productivityScores.length
+      ? productivityScores.reduce((a, b) => a + b, 0) / productivityScores.length
+      : 0;
+    const dominantMood = Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'neutral';
+
+    const categoryBreakdown = Object.entries(categoryStats).map(([category, s]) => ({
+      category,
+      minutes: s.minutes,
+      completed: s.completed,
+      completionRate: s.total ? s.completed / s.total : 0,
+    }));
+
+    const computed = {
+      totalBubbles: total,
+      completedBubbles: totalCompleted,
+      completionRate: total ? totalCompleted / total : 0,
+      totalMinutes,
+      totalCompletedMinutes,
+      avgProductivity,
+      dominantMood,
+      categoryBreakdown,
+    };
+
+    const weekRangeLabel = `${format(start, 'MMM d')}–${format(addDays(start, 6), 'MMM d')}`;
+
+    return {
+      weeklyData: JSON.stringify(days),
+      computedMetrics: JSON.stringify(computed),
+      weekRangeLabel,
+    };
+  }, [currentDate, getBlocksForDate]);
+
+  const getWeeklyAnalysis = useCallback(async () => {
+    if (!geminiApiKey) return;
+    setIsLoadingWeeklyAnalysis(true);
+    setWeeklyAnalysis(null);
+    try {
+      const dataset = await buildWeeklyDataset();
+      incrementAiCallCount();
+      const output = await runWeeklyAnalysis({
+        apiKey: geminiApiKey,
+        weeklyData: dataset.weeklyData,
+        computedMetrics: dataset.computedMetrics,
+        weekRangeLabel: dataset.weekRangeLabel,
+      } as any);
+      setWeeklyAnalysis(output);
+    } catch (e) {
+      console.error('Weekly analysis failed', e);
+      setWeeklyAnalysis(null);
+    } finally {
+      setIsLoadingWeeklyAnalysis(false);
+    }
+  }, [geminiApiKey, buildWeeklyDataset]);
+
+  const clearWeeklyAnalysis = useCallback(() => {
+    setWeeklyAnalysis(null);
+  }, []);
 
 
   useEffect(() => {
@@ -981,6 +1103,10 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     isLoadingTips,
     aiCallCount,
     incrementAiCallCount,
+    getWeeklyAnalysis,
+    weeklyAnalysis,
+    isLoadingWeeklyAnalysis,
+    clearWeeklyAnalysis,
   };
 
   return (
