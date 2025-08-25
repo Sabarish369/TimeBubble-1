@@ -18,7 +18,7 @@ import { useAuth } from "@/context/auth-context";
 import { InteractiveTutorial } from "@/components/interactive-tutorial";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNotifications } from "@/hooks/use-notifications";
-import { ProWelcomeModal } from "@/components/pro-welcome-modal";
+import { EnhancedProWelcomeModal } from "@/components/enhanced-pro-welcome-modal";
 import { ApiKeyModal } from "@/components/api-key-modal";
 
 
@@ -174,10 +174,10 @@ export default function AppPage() {
         onClose={() => setIsLoginModalOpen(false)}
       />
       {showTutorial && <InteractiveTutorial onFinish={handleFinishTutorial} />}
-      <ProWelcomeModal 
-        isOpen={isProWelcomeModalOpen} 
-        onClose={handleCloseProWelcome}
-      />
+              <EnhancedProWelcomeModal
+          isOpen={isProWelcomeModalOpen}
+          onClose={handleCloseProWelcome}
+        />
        <ApiKeyModal
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}

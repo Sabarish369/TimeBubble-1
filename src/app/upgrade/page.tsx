@@ -10,6 +10,7 @@ import { AuthGuard } from "@/components/auth-guard";
 import { useAuth } from "@/context/auth-context";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { PremiumBubbleIntro } from "@/components/premium-bubble-intro";
 
 const freeFeatures = [
     { text: 'Visual Time-Blocking Timeline', included: true },
@@ -40,8 +41,13 @@ const proFeatures = [
 
 function PlanColumn({ title, price, priceSubtitle, description, features, onUpgrade, isLoading, isRecommended = false }: { title: string, price: string, priceSubtitle: string, description: string, features: {text: string, included: boolean}[], onUpgrade?: () => void, isLoading?: boolean, isRecommended?: boolean }) {
   return (
-    <div className={cn("p-8 rounded-2xl border bg-primary/5 transition-all w-full max-w-md", isRecommended ? "border-primary shadow-2xl ring-2 ring-primary" : "border-border/50")}>
-      <h3 className="text-2xl font-bold text-center mb-2">{title}</h3>
+    <div className={cn("p-8 rounded-2xl border bg-primary/5 transition-all w-full max-w-md relative overflow-hidden", isRecommended ? "border-primary shadow-2xl ring-2 ring-primary premium-plan-card" : "border-border/50")}>
+      {/* Premium glow effect for recommended plan */}
+      {isRecommended && (
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/5 to-primary/10 animate-pulse rounded-2xl" />
+      )}
+      <div className="relative z-10">
+        <h3 className="text-2xl font-bold text-center mb-2">{title}</h3>
        <p className="text-muted-foreground text-center mb-4">{description}</p>
       
       <p className="text-5xl font-bold text-center mb-2">{price}</p>
@@ -63,6 +69,7 @@ function PlanColumn({ title, price, priceSubtitle, description, features, onUpgr
             <span className={cn("text-muted-foreground", feature.included && "text-foreground")}>{feature.text}</span>
           </div>
         ))}
+      </div>
       </div>
     </div>
   );
@@ -115,6 +122,11 @@ export default function UpgradePage() {
             </header>
             <main className="flex-1 py-16 md:py-24">
                 <div className="container mx-auto px-4">
+                    {/* Premium Bubble Intro Animation */}
+                    <div className="mb-16">
+                        <PremiumBubbleIntro />
+                    </div>
+                    
                     <div className="text-center max-w-3xl mx-auto">
                         <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">Seize Our Limited-Time Lifetime Deal</h1>
                         <p className="text-lg md:text-xl text-muted-foreground mb-12">

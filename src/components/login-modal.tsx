@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from "react";
@@ -21,6 +20,8 @@ import { GoogleIcon } from "@/components/icons/google-icon";
 import { useAuth } from "@/context/auth-context";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
+// Email verification disabled for now
+// import { EmailVerificationModal } from "./email-verification-modal";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -52,6 +53,9 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
     "signIn"
   );
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  // Email verification disabled for now
+  // const [showEmailVerification, setShowEmailVerification] = useState(false);
+  // const [verificationEmail, setVerificationEmail] = useState("");
   const { signIn, signUp, signInWithGoogle, sendPasswordReset, error, loading } = useAuth();
 
   const signInForm = useForm<SignInValues>({ resolver: zodResolver(signInSchema) });
@@ -64,7 +68,14 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   };
 
   const onSignUp: SubmitHandler<SignUpValues> = async (data) => {
-    await signUp(data.email, data.password, data.name);
+    try {
+      await signUp(data.email, data.password, data.name);
+      // Email verification disabled for now
+      // setVerificationEmail(data.email);
+      // setShowEmailVerification(true);
+    } catch (error) {
+      // Error is handled by the auth context
+    }
   };
   
   const onForgotPassword: SubmitHandler<ForgotPasswordValues> = async (data) => {
@@ -88,7 +99,8 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const anyLoading = loading || isGoogleLoading;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md p-0" onInteractOutside={handleInteractOutside}>
         <div className="p-6">
           <div className="flex justify-center mb-6">
@@ -237,5 +249,13 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
         </div>
       </DialogContent>
     </Dialog>
+    
+    {/* Email verification disabled for now */}
+    {/* <EmailVerificationModal
+      isOpen={showEmailVerification}
+      onClose={() => setShowEmailVerification(false)}
+      email={verificationEmail}
+    /> */}
+    </>
   );
 }

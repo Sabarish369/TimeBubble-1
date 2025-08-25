@@ -86,3 +86,64 @@ export type DailyInsights = z.infer<typeof DailyInsightsOutputSchema>;
 export type DailyTips = z.infer<typeof DailyTipsOutputSchema>;
 export type DailySidebarTip = z.infer<typeof DailySidebarTipOutputSchema>;
 export type DailySidebarTipInput = z.infer<typeof DailySidebarTipInputSchema>;
+
+// Weekly Analysis Types
+export interface ProgressData {
+  date: string;
+  completionRate: number;
+  productivityScore: number;
+  moodScore: number;
+  workHours: number;
+  personalHours: number;
+  consistencyScore: number;
+  balanceScore: number;
+}
+
+export type InsightImpact = 'positive' | 'negative' | 'neutral';
+export type InsightType = 'productivity' | 'consistency' | 'balance' | 'improvement' | 'achievement';
+
+export interface WeeklyInsight {
+  title: string;
+  description: string;
+  type: InsightType;
+  impact: InsightImpact;
+  metric?: number;
+  previousWeek?: number;
+}
+
+export type RecommendationPriority = 'high' | 'medium' | 'low';
+
+export interface WeeklyRecommendation {
+  title: string;
+  description: string;
+  priority: RecommendationPriority;
+  expectedImpact: number;
+  actionable: boolean;
+}
+
+export type TrendDirection = 'up' | 'down' | 'stable';
+export type TrendSignificance = 'high' | 'medium' | 'low';
+
+export interface WeeklyTrend {
+  metric: string;
+  currentValue: number;
+  previousValue: number;
+  change: number;
+  direction: TrendDirection;
+  significance: TrendSignificance;
+}
+
+export interface WeeklyAnalysis {
+  overallScore: number;
+  completionRate: number;
+  productivityScore: number;
+  consistencyScore: number;
+  balanceScore: number;
+  totalWorkHours: number;
+  totalPersonalHours: number;
+  totalBreakHours: number;
+  totalStudyHours: number;
+  insights: WeeklyInsight[];
+  recommendations: WeeklyRecommendation[];
+  trends: WeeklyTrend[];
+}

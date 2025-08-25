@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ActiveBubbleAnimation } from './active-bubble-animation';
 import { ensureDateObject } from '@/lib/time-bubbles-utils';
-import { CelebrationPopper } from './celebration-popper';
+import { TaskCompletionCelebration } from './task-completion-celebration';
 import { useAuth } from '@/context/auth-context';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { ProModal } from './pro-modal';
@@ -57,6 +57,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
   const [liveStartTime, setLiveStartTime] = useState(ensureDateObject(block.startTime));
   const [liveDuration, setLiveDuration] = useState(block.duration);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationPosition, setCelebrationPosition] = useState({ x: 0, y: 0 });
   const [isCurrent, setIsCurrent] = useState(false);
   const [isPast, setIsPast] = useState(false);
 
@@ -76,11 +77,20 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
   // Trigger celebration when block becomes completed
   useEffect(() => {
     if (block.completed) {
+      // Get the bubble's position for celebration
+      const bubbleElement = document.querySelector(`[data-bubble-id="${block.id}"]`);
+      if (bubbleElement) {
+        const rect = bubbleElement.getBoundingClientRect();
+        setCelebrationPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        });
+      }
       setShowCelebration(true);
-      const timer = setTimeout(() => setShowCelebration(false), 2000); // Animation duration
+      const timer = setTimeout(() => setShowCelebration(false), 3000); // Extended animation duration
       return () => clearTimeout(timer);
     }
-  }, [block.completed]);
+  }, [block.completed, block.id]);
   
   // Check if bubble is the current one or overdue
   useEffect(() => {
@@ -346,7 +356,13 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
       />
       
       {showAsCurrent && <ActiveBubbleAnimation />}
-      {showCelebration && <CelebrationPopper />}
+      {showCelebration && (
+        <TaskCompletionCelebration
+          isVisible={showCelebration}
+          position={celebrationPosition}
+          onComplete={() => setShowCelebration(false)}
+        />
+      )}
       
       <div className="absolute top-1 right-1 z-20 flex items-center" style={{ opacity: isOverdue ? 0 : 1}}>
         <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer" onClick={(e) => {e.stopPropagation(); setReflectingBlock(block)}}>

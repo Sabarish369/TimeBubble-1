@@ -2,6 +2,7 @@
 'use client';
 
 import { format } from 'date-fns';
+import { useState } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Menu, Sparkles } from 'lucide-react';
 import {
   Popover,
@@ -21,6 +22,9 @@ import { AiQuotaIndicator } from './ai-quota-indicator';
 import { UpgradeBadge } from './upgrade-badge';
 import { ProBadge } from './pro-badge';
 import { useAuth } from '@/context/auth-context';
+import { AtmosphericLights } from './atmospheric-lights';
+import { WeeklyAnalysis } from './weekly-analysis';
+import { BarChart3 } from 'lucide-react';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -36,12 +40,15 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   } = useTimeBubbles();
   const isMobile = useIsMobile();
   const { isPro } = useAuth();
+  const [isWeeklyAnalysisOpen, setIsWeeklyAnalysisOpen] = useState(false);
 
   return (
     <header className={cn(
       "relative flex items-center justify-between p-2 md:p-4 border-b shrink-0 bg-background touch-friendly",
       isPro && "pro-gradient-background"
     )}>
+      {/* Atmospheric moving lights behind header content */}
+      <AtmosphericLights className="z-0" count={12} speed={18} size={6} />
       <div className="flex items-center gap-2 md:gap-4 relative z-10">
         {isMobile && (
           <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="mobile-friendly-tap">
@@ -93,11 +100,29 @@ export function Header({ onToggleSidebar }: HeaderProps) {
       </div>
       <div id="header-actions" className="flex items-center gap-2 md:gap-4 relative z-10">
         <AiQuotaIndicator />
+        {isPro && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative h-9 w-9 rounded-full hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary/40"
+            onClick={() => setIsWeeklyAnalysisOpen(true)}
+          >
+            <BarChart3 className="h-5 w-5 text-primary" />
+            <span className="absolute -top-1 -right-1 text-[9px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary/80">Beta</span>
+            <span className="sr-only">Open Weekly Analysis</span>
+          </Button>
+        )}
           <UpgradeBadge />
         <ThemeToggle />
         <UserProfile />
         <AIOptimizerDrawer />
       </div>
+      {isPro && (
+        <WeeklyAnalysis
+          isOpen={isWeeklyAnalysisOpen}
+          onClose={() => setIsWeeklyAnalysisOpen(false)}
+        />
+      )}
     </header>
   );
 }

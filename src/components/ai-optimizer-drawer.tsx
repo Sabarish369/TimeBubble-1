@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -90,58 +90,167 @@ export function AIOptimizerDrawer() {
   }
 
   const renderMainView = () => (
-    <div className="space-y-4 pt-4">
-      <Button variant="outline" className="w-full justify-start gap-3 py-6 text-base" onClick={handleFetchInsights}>
-        <Activity className="h-5 w-5 text-primary" /> Daily Insights
-      </Button>
-      <Button variant="outline" className="w-full justify-start gap-3 py-6 text-base" onClick={handleFetchTips}>
-        <Lightbulb className="h-5 w-5 text-amber-500" /> Daily Tips
-      </Button>
-      <Button variant="outline" className="w-full justify-start gap-3 py-6 text-base" onClick={() => setIsHabitStackingOpen(true)}>
-        <Target className="h-5 w-5 text-green-500" /> Habit Stacking
-      </Button>
-      <Button variant="outline" className="w-full justify-start gap-3 py-6 text-base" onClick={() => setView('energy')}>
-        <Battery className="h-5 w-5 text-blue-500" /> Energy Tracking
-      </Button>
+    <div className="space-y-6 pt-4">
+      <div 
+        className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 hover:border-amber-400/30 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-400/10 cursor-pointer backdrop-blur-sm"
+        onClick={handleFetchInsights}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="relative p-6">
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-orange-500 flex items-center justify-center shadow-lg">
+              <Activity className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-white mb-2">Daily Insights</h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Get AI-powered analysis of your daily patterns and productivity insights.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div 
+        className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 hover:border-amber-400/30 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-400/10 cursor-pointer backdrop-blur-sm"
+        onClick={handleFetchTips}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="relative p-6">
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+              <Lightbulb className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-white mb-2">Daily Tips</h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Receive personalized productivity tips and optimization suggestions.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div 
+        className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 hover:border-amber-400/30 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-400/10 cursor-pointer backdrop-blur-sm"
+        onClick={() => setIsHabitStackingOpen(true)}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="relative p-6">
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+              <Target className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-white mb-2">Habit Stacking</h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Build better habits by stacking them with your existing routines.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div 
+        className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 hover:border-amber-400/30 transition-all duration-300 hover:shadow-2xl hover:shadow-amber-400/10 cursor-pointer backdrop-blur-sm"
+        onClick={() => setView('energy')}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="relative p-6">
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center shadow-lg">
+              <Battery className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-white mb-2">Energy Tracking</h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                Monitor your energy levels and optimize your schedule accordingly.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {isPro && (
+        <div className="flex items-center justify-center space-x-2 p-4 rounded-lg bg-gradient-to-r from-amber-400/20 to-orange-500/20 border border-amber-400/30">
+          <Star className="h-4 w-4 text-amber-400" />
+          <span className="text-amber-400 font-medium">Pro Features Active</span>
+        </div>
+      )}
     </div>
   );
   
   const renderInsightsView = () => (
     <div className="py-4">
+      
       {isLoadingInsights ? (
         <div className="space-y-4">
-          <Skeleton className="h-8 w-3/4" />
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
+          <div className="h-8 w-3/4 bg-slate-700/50 rounded animate-pulse" />
+          <div className="h-16 w-full bg-slate-700/50 rounded animate-pulse" />
+          <div className="h-12 w-full bg-slate-700/50 rounded animate-pulse" />
+          <div className="h-12 w-full bg-slate-700/50 rounded animate-pulse" />
+          <div className="h-12 w-full bg-slate-700/50 rounded animate-pulse" />
         </div>
       ) : dailyInsights ? (
-        <Card className="border-none shadow-none bg-transparent">
-          <CardContent className="p-0">
-            <h3 className="font-bold text-xl mb-3 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">{dailyInsights.title}</h3>
-            <p className="text-base text-muted-foreground mb-6">{dailyInsights.summary}</p>
-            <div className="mb-4">
-              <p className="font-bold text-lg bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">💡 Productivity Insight</p>
-              <p className="text-sm text-muted-foreground">{dailyInsights.productivityInsight}</p>
+        <div className="rounded-xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 p-6 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-semibold text-white">{dailyInsights.title}</h3>
+            <div className="flex space-x-1">
+              <Sparkles className="h-4 w-4 text-amber-400" />
+              <Sparkles className="h-4 w-4 text-blue-400" />
+              <Sparkles className="h-4 w-4 text-purple-400" />
             </div>
-             <div className="mb-4">
-              <p className="font-bold text-lg bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">😊 Mood Insight</p>
-              <p className="text-sm text-muted-foreground">{dailyInsights.moodInsight}</p>
+          </div>
+          <p className="text-slate-300 text-sm leading-relaxed mb-6">{dailyInsights.summary}</p>
+          
+          <div className="space-y-4">
+            <div className="flex items-start space-x-3 p-4 rounded-lg bg-slate-800/30 border border-slate-700/30">
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-orange-500 flex items-center justify-center">
+                <Activity className="h-4 w-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-amber-400 mb-1">💡 Productivity Insight</div>
+                <div className="text-sm text-slate-300">{dailyInsights.productivityInsight}</div>
+              </div>
             </div>
-             <div className="mb-4">
-              <p className="font-bold text-lg bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">🚀 Recommendation</p>
-              <p className="text-sm text-muted-foreground">{dailyInsights.recommendation}</p>
+            
+            <div className="flex items-start space-x-3 p-4 rounded-lg bg-slate-800/30 border border-slate-700/30">
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                <HeartPulse className="h-4 w-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-cyan-400 mb-1">😊 Mood Insight</div>
+                <div className="text-sm text-slate-300">{dailyInsights.moodInsight}</div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+            
+            <div className="flex items-start space-x-3 p-4 rounded-lg bg-slate-800/30 border border-slate-700/30">
+              <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                <Rocket className="h-4 w-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-emerald-400 mb-1">🚀 Recommendation</div>
+                <div className="text-sm text-slate-300">{dailyInsights.recommendation}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       ) : (
-        <div className="text-center py-8 text-sm text-muted-foreground">
-          Click the button below to analyze your day and get personalized insights.
+        <div className="text-center py-8">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
+            <Sparkles className="h-8 w-8 text-slate-400" />
+          </div>
+          <p className="text-slate-400 text-sm">
+            Click the button below to analyze your day and get personalized insights.
+          </p>
         </div>
       )}
       <div className="mt-6 text-center">
-        <Button onClick={getDailyInsights} disabled={isLoadingInsights}>
+        <Button 
+          className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium px-6 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl" 
+          onClick={getDailyInsights} 
+          disabled={isLoadingInsights}
+        >
             {isLoadingInsights ? "Analyzing..." : "Analyze My Day"}
         </Button>
       </div>
@@ -149,13 +258,14 @@ export function AIOptimizerDrawer() {
   );
 
   const renderTipsView = () => (
-    <>
+    <div>
+      
       {isLoadingTips && (
         <div className="space-y-4 pt-4">
-          <Skeleton className="h-40 w-full" />
+          <div className="h-40 w-full bg-slate-700/50 rounded animate-pulse" />
           <div className="flex justify-center gap-4">
-            <Skeleton className="h-8 w-16" />
-            <Skeleton className="h-8 w-16" />
+            <div className="h-8 w-16 bg-slate-700/50 rounded animate-pulse" />
+            <div className="h-8 w-16 bg-slate-700/50 rounded animate-pulse" />
           </div>
         </div>
       )}
@@ -166,37 +276,50 @@ export function AIOptimizerDrawer() {
                 {dailyTips.tips.map((tip, index) => (
                 <CarouselItem key={index}>
                     <div className="p-1">
-                    <Card className='bg-secondary/40 border-none'>
-                        <CardContent className="flex flex-col items-center justify-center p-6 aspect-square">
-                        <div className="h-6 w-6 mb-3 text-primary"><tipIcons.Motivation /></div>
-                        <p className='text-lg font-semibold text-primary/90 text-center mb-2'>{tip.type}</p>
-                        <p className="text-sm text-center text-foreground/80">{tip.suggestion}</p>
-                        </CardContent>
-                    </Card>
+                    <div className="rounded-xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 p-6 aspect-square relative backdrop-blur-sm">
+                        <div className="absolute top-3 right-3 flex space-x-1">
+                          <Sparkles className="h-3 w-3 text-amber-400" />
+                          <Sparkles className="h-3 w-3 text-blue-400" />
+                        </div>
+                        <div className="flex flex-col items-center text-center h-full justify-center space-y-4">
+                          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
+                            {tipIcons[tip.type] ? React.createElement(tipIcons[tip.type], { className: "h-6 w-6 text-white" }) : <Lightbulb className="h-6 w-6 text-white" />}
+                          </div>
+                          <div>
+                            <p className='text-xs font-medium text-amber-400 mb-2'>{tip.type}</p>
+                            <p className="text-sm text-slate-300 leading-relaxed">{tip.suggestion}</p>
+                          </div>
+                        </div>
+                    </div>
                     </div>
                 </CarouselItem>
                 ))}
             </CarouselContent>
-            <CarouselPrevious className='-left-2' />
-            <CarouselNext className='-right-2' />
+            <CarouselPrevious className='bg-slate-800/80 border-slate-700/50 text-white hover:bg-slate-700/80 -left-2' />
+            <CarouselNext className='bg-slate-800/80 border-slate-700/50 text-white hover:bg-slate-700/80 -right-2' />
             </Carousel>
         </div>
       )}
       {!isLoadingTips && (!dailyTips || dailyTips.tips.length === 0) && (
-        <Alert>
-          <Lightbulb className="h-4 w-4" />
-          <AlertTitle>No tips available yet.</AlertTitle>
-          <AlertDescription>
+        <div className="text-center py-8">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
+            <Lightbulb className="h-8 w-8 text-slate-400" />
+          </div>
+          <p className="text-slate-400 text-sm">
             Once you complete a day's schedule, refresh to get tips for tomorrow.
-          </AlertDescription>
-        </Alert>
+          </p>
+        </div>
       )}
       <div className="mt-6 text-center">
-        <Button onClick={getDailyTips} disabled={isLoadingTips}>
+        <Button 
+          className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-medium px-6 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl" 
+          onClick={getDailyTips} 
+          disabled={isLoadingTips}
+        >
           {isLoadingTips ? "Optimizing..." : "Refresh Tips"}
         </Button>
       </div>
-    </>
+    </div>
   );
 
   const renderEnergyView = () => (
@@ -217,22 +340,32 @@ export function AIOptimizerDrawer() {
       </div>
 
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetContent className="w-[400px] sm:w-[400px] sm:max-w-none bg-background/80 backdrop-blur-lg border-l border-border/50">
-          <SheetHeader className='mb-4'>
+        <SheetContent className="ai-optimizer-sheet">
+          {/* AI Magic Bubbles */}
+          <div className="ai-magic-bubble-1" />
+          <div className="ai-magic-bubble-2" />
+          <div className="ai-magic-bubble-3" />
+          <div className="ai-magic-bubble-4" />
+          <div className="ai-magic-bubble-5" />
+          
+          <SheetHeader className='mb-6'>
             <div className='relative flex items-center justify-center'>
                  {view !== 'main' && (
-                    <Button variant="ghost" size="sm" onClick={() => setView('main')} className="absolute left-0 h-auto p-1.5">
+                    <Button variant="ghost" size="sm" onClick={() => setView('main')} className="ai-back-button">
                         <ChevronLeft className="h-5 w-5" />
                     </Button>
                 )}
-                <SheetTitle className="flex items-center justify-center text-2xl">
-                    <Sparkles className="h-7 w-7 mr-3 text-amber-400"/>
-                    AI Optimizer
-                </SheetTitle>
+                <div className="ai-sheet-title">
+                  <div className="ai-title-icon">
+                    <div className="ai-title-glow" />
+                    <Sparkles className="h-8 w-8 text-amber-400 relative z-10"/>
+                  </div>
+                  <span className="ai-title-text">AI Optimizer</span>
+                </div>
             </div>
-            <SheetDescription className='text-center'>
+            <p className="ai-sheet-description">
                 Your hub for AI-powered productivity features.
-            </SheetDescription>
+            </p>
           </SheetHeader>
           
           <div className="h-full overflow-y-auto pb-20 no-scrollbar">

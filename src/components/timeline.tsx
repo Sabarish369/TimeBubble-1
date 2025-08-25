@@ -11,6 +11,7 @@ import { ReflectionModal } from './reflection-modal';
 import { BubbleDetailsModal } from './bubble-details-modal';
 import { RescheduleModal } from './reschedule-modal';
 import { useToast } from '@/hooks/use-toast';
+import { GhostBubble } from './ghost-bubble';
 import { isToday, isPast } from 'date-fns';
 
 interface TimelineProps {
@@ -32,6 +33,16 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
   } = useTimeBubbles();
   const timelineRef = React.useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  
+  // Ghost bubble state
+  const [ghostBubble, setGhostBubble] = React.useState<{
+    template: any;
+    position: { x: number; y: number };
+    isVisible: boolean;
+  } | null>(null);
+  
+  // Store current drag template
+  const currentDragTemplate = React.useRef<any>(null);
 
   const hourHeight = HOUR_HEIGHT * zoomLevel;
   const pixelsPerMinute = hourHeight / 60;
@@ -67,6 +78,10 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
 
       addBlock({ ...template, startTime });
       
+      // Hide ghost bubble and clear drag template
+      setGhostBubble(null);
+      currentDragTemplate.current = null;
+      
       // Success animation
       if (timelineRef.current) {
         timelineRef.current.classList.remove('drag-over-active');
@@ -100,11 +115,40 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
     setIsBubbleCreateModalOpen(true);
   };
 
+  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    // Try to get template data from the drag event
+    if (e.dataTransfer.types.includes('application/json')) {
+      try {
+        const data = e.dataTransfer.getData('application/json');
+        if (data) {
+          currentDragTemplate.current = JSON.parse(data);
+        }
+      } catch (error) {
+        // Ignore parsing errors
+      }
+    }
+  };
+
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
-    if (timelineRef.current) {
+    if (timelineRef.current && currentDragTemplate.current) {
       timelineRef.current.classList.add('drag-over-active');
+      
+      // Update ghost bubble position
+      const rect = timelineRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      setGhostBubble(prev => prev ? {
+        ...prev,
+        position: { x, y }
+      } : {
+        template: currentDragTemplate.current,
+        position: { x, y },
+        isVisible: true
+      });
     }
   };
 
@@ -112,6 +156,8 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
     e.preventDefault();
     if (timelineRef.current && !timelineRef.current.contains(e.relatedTarget as Node)) {
       timelineRef.current.classList.remove('drag-over-active');
+      setGhostBubble(null);
+      currentDragTemplate.current = null;
     }
   };
 
@@ -121,15 +167,36 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
       className="relative bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-200"
       style={{ height: `${TOTAL_HOURS * hourHeight}px` }}
       onDrop={handleDrop}
+      onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDoubleClick={handleDoubleClick}
       onDragLeave={handleDragLeave}
+      onMouseMove={ghostBubble ? (e) => {
+        if (currentDragTemplate.current) {
+          const rect = timelineRef.current?.getBoundingClientRect();
+          if (rect) {
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            setGhostBubble(prev => prev ? { ...prev, position: { x, y } } : null);
+          }
+        }
+      } : undefined}
     >
       <TimelineGrid />
       <CurrentTimeIndicator />
       {isLoaded && timeBlocks.map(block => (
         <TimeBubble key={block.id} block={block} timelineRef={timelineRef} scrollContainerRef={scrollContainerRef} />
       ))}
+      
+      {/* Ghost Bubble for drag preview */}
+      {ghostBubble && (
+        <GhostBubble
+          template={ghostBubble.template}
+          position={ghostBubble.position}
+          isVisible={ghostBubble.isVisible}
+        />
+      )}
+      
       {reflectingBlock && <ReflectionModal />}
       {selectedBlock && <BubbleDetailsModal />}
       {reschedulingBlock && <RescheduleModal />}

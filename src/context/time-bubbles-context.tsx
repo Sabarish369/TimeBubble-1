@@ -4,9 +4,22 @@
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react';
 import type { TimeBlock, BubbleTemplate, DailyInsights, DailyTips, DailySidebarTip, DailySidebarTipInput, UserPreferences, HabitSuggestion, EnergyTracking, EnergyLevel } from '@/types';
-import { getDailyInsights as fetchDailyInsights } from '@/ai/flows/daily-insights';
-import { getDailyTips as fetchDailyTips } from '@/ai/flows/daily-tips';
-import { getDailySidebarTip } from '@/ai/flows/daily-sidebar-tip';
+// Dynamic imports to avoid SSR issues
+const getDailyInsights = async (input: any) => {
+  const { getDailyInsights: fetchDailyInsights } = await import('@/ai/flows/daily-insights');
+  return fetchDailyInsights(input);
+};
+
+const getDailyTips = async (input: any) => {
+  const { getDailyTips: fetchDailyTips } = await import('@/ai/flows/daily-tips');
+  return fetchDailyTips(input);
+};
+
+const getDailySidebarTip = async (input: any) => {
+  const { getDailySidebarTip: fetchDailySidebarTip } = await import('@/ai/flows/daily-sidebar-tip');
+  return fetchDailySidebarTip(input);
+};
+
 import { getHabitStackingSuggestions } from '@/ai/flows/habit-stacking';
 import { getEnergyOptimizationSuggestions } from '@/ai/flows/energy-optimization';
 import { useToast } from '@/hooks/use-toast';
@@ -18,6 +31,7 @@ import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc, writeB
 import { ensureDateObject } from '@/lib/time-bubbles-utils';
 import { useNotifications } from '@/hooks/use-notifications';
 import { showReminderNotification } from '@/lib/browser-notification';
+import { Button } from '@/components/ui/button';
 
 type Theme = 'light' | 'dark';
 
@@ -66,6 +80,7 @@ interface TimeBubblesContextType {
   isLoadingInsights: boolean;
   clearDailyInsights: () => void;
   getNewDailySidebarTip: (input: DailySidebarTipInput) => Promise<DailySidebarTip>;
+  generateWeeklyAnalysis: () => Promise<void>;
   reflectingBlock: TimeBlock | null;
   setReflectingBlock: (block: TimeBlock | null) => void;
   reschedulingBlock: TimeBlock | null;
@@ -102,7 +117,7 @@ const getDayKey = (date: Date | string) => format(new Date(date), 'yyyy-MM-dd');
 const ZOOM_STORAGE_KEY = 'timebubble_zoom';
 
 export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
-  const { user, geminiApiKey } = useAuth();
+  const { user, geminiApiKey, isPro } = useAuth();
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [history, setHistory] = useState<HistoryState>({});
   const [isSyncing, setIsSyncing] = useState(false);
@@ -131,6 +146,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [aiCallCount, setAiCallCount] = useState(0);
 
   const { scheduleTaskNotifications, clearTaskNotifications } = useNotifications();
+  const isApplyingExternalUpdateRef = useRef(false);
 
   const { toast } = useToast();
 
@@ -153,7 +169,13 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
         const currentHistory = prev[dateKey] ?? { snapshots: [[]], index: 0 };
         // If we are undoing, we don't want to create a new branch in history
         const newSnapshots = currentHistory.snapshots.slice(0, currentHistory.index + 1);
-        newSnapshots.push(newBlocks);
+        // Avoid pushing duplicate snapshots
+        const last = newSnapshots[newSnapshots.length - 1];
+        const lastStr = JSON.stringify(last ?? []);
+        const nextStr = JSON.stringify(newBlocks ?? []);
+        if (lastStr !== nextStr) {
+            newSnapshots.push(newBlocks);
+        }
 
         return {
             ...prev,
@@ -165,12 +187,14 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
-const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: TimeBlock[]) => TimeBlock[]), date: Date, saveToDb: boolean = false) => {
+const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: TimeBlock[]) => TimeBlock[]), date: Date, saveToDb: boolean = false, trackHistory: boolean = true) => {
   setIsSyncing(true);
   let finalBlocks: TimeBlock[] = [];
   setTimeBlocks(prevBlocks => {
       finalBlocks = typeof newBlocks === 'function' ? newBlocks(prevBlocks) : newBlocks;
-      updateHistory(date, finalBlocks);
+      if (trackHistory && !isApplyingExternalUpdateRef.current) {
+          updateHistory(date, finalBlocks);
+      }
       if (saveToDb) {
           saveTimeBlocksToFirestore(finalBlocks, date);
       }
@@ -232,15 +256,34 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
             apiKey: geminiApiKey,
         };
 
-        const result = await fetchDailyTips(input);
+        const result = await getDailyTips(input);
         setDailyTips(result);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error getting AI proactive tip:', error);
-        toast({
-            title: 'AI Tip Error',
-            description: 'Could not fetch tips for today.',
-            variant: 'destructive',
-        });
+        if (error.message && error.message.includes("429")) {
+            toast({
+                title: 'API Rate Limit Exceeded',
+                description: 'You\'ve reached your daily API limit. Please update your Gemini API key to continue using AI features.',
+                variant: 'destructive',
+                action: (
+                    <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                            window.location.href = '/settings';
+                        }}
+                    >
+                        Update API Key
+                    </Button>
+                ),
+            });
+        } else {
+            toast({
+                title: 'AI Tip Error',
+                description: 'Could not fetch tips for today.',
+                variant: 'destructive',
+            });
+        }
         setDailyTips(null);
     } finally {
         setIsLoadingTips(false);
@@ -329,6 +372,11 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
         if (updates.completed && !newBlocks[blockIndex].completed) {
             setLastCompletedBlock(updatedBlock);
+            
+            // Trigger weekly analysis update when a task is completed
+            if (isPro && geminiApiKey) {
+              generateWeeklyAnalysis();
+            }
         }
 
         // If a drag/resize happened, resolve collisions
@@ -340,7 +388,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         newBlocks[blockIndex] = updatedBlock;
         return newBlocks;
     }, currentDate, saveToDb);
-  }, [currentDate, setTimeBlocksWithHistory, findAvailableSlot]);
+  }, [currentDate, setTimeBlocksWithHistory, findAvailableSlot, isPro, geminiApiKey]);
 
   const getMissedTasks = useCallback(async (): Promise<MissedTaskGroup[]> => {
     if (!user) return [];
@@ -408,7 +456,10 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
             blocksFromDb = docSnap.data().blocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime)}));
         }
 
-        setTimeBlocksWithHistory(blocksFromDb, currentDate, false);
+        // Apply external sync without tracking history to keep undo/redo stable
+        isApplyingExternalUpdateRef.current = true;
+        setTimeBlocksWithHistory(blocksFromDb, currentDate, false, false);
+        isApplyingExternalUpdateRef.current = false;
 
         if (!isLoaded) {
             setIsLoaded(true);
@@ -748,15 +799,26 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
       }
       
       incrementAiCallCount();
-      const result = await fetchDailyInsights({ dailyData, apiKey: geminiApiKey });
+             const result = await getDailyInsights({ dailyData, apiKey: geminiApiKey });
       setDailyInsights(result);
     } catch (error: any) {
       console.error('Error getting AI insights:', error);
        if (error.message.includes("429")) {
         toast({
-          title: 'Rate Limit Exceeded',
-          description: "You've made too many requests to the AI. Please try again after some time.",
+          title: 'API Rate Limit Exceeded',
+          description: 'You\'ve reached your daily API limit. Please update your Gemini API key to continue using AI features.',
           variant: 'destructive',
+          action: (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                window.location.href = '/settings';
+              }}
+            >
+              Update API Key
+            </Button>
+          ),
         });
       } else {
         toast({
@@ -774,9 +836,150 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   const getNewDailySidebarTip = useCallback(async (input: DailySidebarTipInput): Promise<DailySidebarTip> => {
     if (!geminiApiKey) throw new Error("API key is not set.");
     incrementAiCallCount();
-    const result = await getDailySidebarTip({ ...input, apiKey: geminiApiKey });
-    return result;
-  }, [geminiApiKey]);
+    try {
+      const result = await getDailySidebarTip({ ...input, apiKey: geminiApiKey });
+      return result;
+    } catch (error: any) {
+      if (error.message && error.message.includes("429")) {
+        toast({
+          title: 'API Rate Limit Exceeded',
+          description: 'You\'ve reached your daily API limit. Please update your Gemini API key to continue using AI features.',
+          variant: 'destructive',
+          action: (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                window.location.href = '/settings';
+              }}
+            >
+              Update API Key
+            </Button>
+          ),
+        });
+      }
+      throw error;
+    }
+  }, [geminiApiKey, toast]);
+
+  // Generate weekly analysis automatically
+  const generateWeeklyAnalysis = useCallback(async () => {
+    if (!isPro || !geminiApiKey) return;
+    
+    try {
+      // Get current week data
+      const weekStart = new Date(currentDate);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Monday
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6); // Sunday
+      
+      // Collect all blocks for the current week
+      const weekBlocks: TimeBlock[] = [];
+      for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+        const dayBlocks = await getBlocksForDate(d);
+        weekBlocks.push(...dayBlocks);
+      }
+      
+      // Generate progress data
+      const weekData = weekBlocks.map(block => ({
+        date: format(new Date(block.startTime), 'yyyy-MM-dd'),
+        completionRate: block.completed ? 100 : 0,
+        productivityScore: block.reflection?.productivity ? block.reflection.productivity * 20 : 0,
+        moodScore: block.reflection?.mood ? 
+          (block.reflection.mood === 'happy' ? 100 : 
+           block.reflection.mood === 'focused' ? 80 : 
+           block.reflection.mood === 'neutral' ? 60 : 
+           block.reflection.mood === 'stressed' ? 40 : 20) : 60,
+        workHours: block.category === 'work' ? block.duration / 60 : 0,
+        personalHours: block.category === 'personal' ? block.duration / 60 : 0,
+        consistencyScore: block.completed ? 100 : 0,
+        balanceScore: 50 // Default balance score
+      }));
+      
+      // Call the weekly analysis API
+      const response = await fetch('/api/weekly-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          weekData: weekData,
+          previousWeekData: [],
+          apiKey: geminiApiKey
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.error && errorData.error.includes('429')) {
+          toast({
+            title: 'API Rate Limit Exceeded',
+            description: 'You\'ve reached your daily API limit. Please update your Gemini API key to continue using AI features.',
+            variant: 'destructive',
+            action: (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  // Trigger API key modal or redirect to settings
+                  window.location.href = '/settings';
+                }}
+              >
+                Update API Key
+              </Button>
+            ),
+          });
+          return;
+        }
+        throw new Error('Failed to generate weekly analysis');
+      }
+      
+      const result = await response.json();
+      
+      // Store the weekly analysis result
+      if (user) {
+        const weeklyAnalysisRef = doc(db, 'users', user.uid, 'weekly_analysis', format(weekStart, 'yyyy-MM-dd'));
+        await setDoc(weeklyAnalysisRef, {
+          ...result,
+          weekStart: format(weekStart, 'yyyy-MM-dd'),
+          weekEnd: format(weekEnd, 'yyyy-MM-dd'),
+          lastUpdated: new Date().toISOString()
+        }, { merge: true });
+        
+        // Notification removed per request
+      }
+      
+    } catch (error: any) {
+      console.error('Error generating weekly analysis:', error);
+      
+      // Check if it's a rate limit error
+      if (error.message && error.message.includes('429')) {
+        toast({
+          title: 'API Rate Limit Exceeded',
+          description: 'You\'ve reached your daily API limit. Please update your Gemini API key to continue using AI features.',
+          variant: 'destructive',
+          action: (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                // Trigger API key modal or redirect to settings
+                window.location.href = '/settings';
+              }}
+            >
+              Update API Key
+            </Button>
+          ),
+        });
+      } else {
+        toast({
+          title: 'Weekly Analysis Error',
+          description: 'Failed to generate weekly analysis. Please try again later.',
+          variant: 'destructive',
+        });
+      }
+    }
+  }, [isPro, geminiApiKey, currentDate, getBlocksForDate, user, toast]);
+
+
 
 
   const clearAllMissedTasks = async () => {
@@ -845,7 +1048,10 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     if (dayHistory && dayHistory.index > 0) {
       const newIndex = dayHistory.index - 1;
       const newBlocks = dayHistory.snapshots[newIndex];
+      // Apply without creating new history entries
+      isApplyingExternalUpdateRef.current = true;
       setTimeBlocks(newBlocks);
+      isApplyingExternalUpdateRef.current = false;
       saveTimeBlocksToFirestore(newBlocks, currentDate);
       setHistory(prev => ({
         ...prev,
@@ -860,7 +1066,10 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     if (dayHistory && dayHistory.index < dayHistory.snapshots.length - 1) {
       const newIndex = dayHistory.index + 1;
       const newBlocks = dayHistory.snapshots[newIndex];
+      // Apply without creating new history entries
+      isApplyingExternalUpdateRef.current = true;
       setTimeBlocks(newBlocks);
+      isApplyingExternalUpdateRef.current = false;
       saveTimeBlocksToFirestore(newBlocks, currentDate);
       setHistory(prev => ({
         ...prev,
@@ -954,6 +1163,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     isLoadingInsights,
     clearDailyInsights,
     getNewDailySidebarTip,
+    generateWeeklyAnalysis,
     reflectingBlock,
     setReflectingBlock,
     reschedulingBlock,

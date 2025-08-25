@@ -2,10 +2,11 @@
 'use client';
 
 import { CheckCircle2 } from 'lucide-react';
+import { LockBreakingBubble } from '@/components/lock-breaking-bubble';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth-context';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -13,7 +14,7 @@ import { LoadingSpinner } from '@/components/loading-spinner';
 import { CelebrationPopper } from '@/components/celebration-popper';
 import { ProUpgradeAnimation } from '@/components/pro-upgrade-animation';
 
-export default function UpgradeSuccessPage() {
+function UpgradeSuccessContent() {
   const { user, refreshUserStatus } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -104,12 +105,13 @@ export default function UpgradeSuccessPage() {
       </div>
 
       <div className="relative z-10 max-w-2xl mx-auto">
-        {/* Success icon with enhanced animation */}
+        {/* Lock-breaking bubble animation */}
         <div className="relative mb-8">
-          <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse" />
-          <CheckCircle2 className="h-32 w-32 text-green-500 relative z-10 success-celebration mx-auto drop-shadow-lg" />
+          <div className="flex justify-center">
+            <LockBreakingBubble size="lg" />
+          </div>
           
-          {/* Floating sparkles around icon */}
+          {/* Floating sparkles around bubble */}
           <div className="absolute inset-0 flex items-center justify-center">
             {[...Array(8)].map((_, i) => (
               <div
@@ -128,7 +130,7 @@ export default function UpgradeSuccessPage() {
 
         {/* Enhanced title with gradient */}
         <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-green-600 via-emerald-500 to-teal-500 bg-clip-text text-transparent animate-pulse">
-          Upgrade Successful!
+          Unlock Complete! 🔓
         </h1>
 
         {/* Subtitle with better typography */}
@@ -171,5 +173,13 @@ export default function UpgradeSuccessPage() {
     </div>
     )}
     </>
+  );
+}
+
+export default function UpgradeSuccessPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen w-full items-center justify-center bg-background"><LoadingSpinner /></div>}>
+      <UpgradeSuccessContent />
+    </Suspense>
   );
 }

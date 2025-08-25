@@ -12,6 +12,7 @@ import {
   signOut as firebaseSignOut,
   updateProfile,
   sendPasswordResetEmail,
+  sendEmailVerification,
   type User,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
@@ -32,6 +33,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
+  sendEmailVerification: () => Promise<void>;
   refreshUserStatus: () => Promise<void>;
 }
 
@@ -153,11 +155,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             case 'auth/too-many-requests':
                 message = 'Too many attempts. Please try again later or reset your password.';
                 break;
+            case 'auth/user-disabled':
+                message = 'This account has been disabled. Please contact support.';
+                break;
+            case 'auth/operation-not-allowed':
+                message = 'This operation is not allowed. Please contact support.';
+                break;
             default:
                 message = 'An unexpected error occurred. Please try again.';
                 console.error('Firebase Auth Error:', err);
                 break;
         }
+    } else if (err.message) {
+        // Handle custom error messages (like email verification)
+        message = err.message;
     }
     setError(message);
   }
@@ -183,16 +194,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await performAuthAction(async () => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCredential.user, { displayName });
+        
+        // Email verification disabled for now
+        // await sendEmailVerification(userCredential.user);
+        
         // The onSnapshot listener will create the user doc, so we don't need to do it here.
         toast({
             title: 'Account Created!',
-            description: 'Welcome to TimeBubble!',
+            description: 'Welcome to TimeBubble! Your account has been created successfully.',
         });
     });
   };
 
   const signIn = async (email: string, password: string) => {
-    await performAuthAction(() => signInWithEmailAndPassword(auth, email, password));
+    await performAuthAction(async () => {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Email verification disabled for now
+      // if (!userCredential.user.emailVerified) {
+      //   await firebaseSignOut(auth);
+      //   throw new Error('Please verify your email address before signing in. Check your inbox for the verification email.');
+      // }
+    });
   };
 
   const signInWithGoogle = async () => {
@@ -226,6 +249,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const sendEmailVerification = async () => {
+    if (!user) return;
+    await performAuthAction(async () => {
+      await sendEmailVerification(user);
+      toast({
+        title: 'Verification Email Sent',
+        description: 'Please check your inbox for the verification email.',
+      });
+    }, false);
+  };
+
   const setGeminiApiKey = async (key: string) => {
     if (!user) return;
     setGeminiApiKeyState(key);
@@ -249,6 +283,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signInWithGoogle,
     signOut,
     sendPasswordReset,
+    sendEmailVerification,
     refreshUserStatus,
   };
 
