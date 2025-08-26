@@ -31,7 +31,7 @@ export function PremiumBubbleIntro({ className }: PremiumBubbleIntroProps) {
       )}>
         {/* Crown Icon with Float Animation */}
         <div className="transition-all duration-700 animate-float-celebration">
-          <Crown className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-6 text-primary" />
+          <Crown className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-6 text-amber-500" />
         </div>
 
         {/* Text with staggered fade-in */}
