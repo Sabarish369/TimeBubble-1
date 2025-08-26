@@ -118,8 +118,9 @@ const dailyInsightsFlow = ai.defineFlow(
     
     // Only proceed to call the AI if there is valid data
     const llm = googleAI.model('gemini-1.5-flash', {apiKey: input.apiKey});
+    // Corrected data structure for the prompt to avoid circular references
     const promptData = {
-        ...input, 
+        apiKey: input.apiKey, 
         dailyData: JSON.stringify({
             ...enhancedData,
             rawTasks: completedBlocks
@@ -130,7 +131,7 @@ const dailyInsightsFlow = ai.defineFlow(
         const { output } = await prompt(promptData, { model: llm });
         return output!;
     } catch (error: any) {
-        if (error.status === 400) {
+        if (error.status === 400 || error.message.includes('API key not valid')) {
             throw new Error("Invalid API Key. Please check your key in the settings.");
         }
         if (error.status === 429) { // Specifically handle "Too Many Requests"

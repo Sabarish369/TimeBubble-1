@@ -179,15 +179,19 @@ const energyOptimizationFlow = ai.defineFlow(
     // Calculate average energy by time of day
     Object.keys(energyAnalysis.timeBasedPatterns).forEach(timeSlot => {
       const patterns = energyAnalysis.timeBasedPatterns[timeSlot];
-      energyAnalysis.timeBasedPatterns[timeSlot] = {
-        avgEnergy: patterns.reduce((sum: number, p: any) => sum + p.energy, 0) / patterns.length,
-        avgMood: patterns.reduce((sum: number, p: any) => sum + p.mood, 0) / patterns.length,
-        taskCount: patterns.length
-      };
+      if (patterns.length > 0) {
+        energyAnalysis.timeBasedPatterns[timeSlot] = {
+          avgEnergy: patterns.reduce((sum: number, p: any) => sum + p.energy, 0) / patterns.length,
+          avgMood: patterns.reduce((sum: number, p: any) => sum + p.mood, 0) / patterns.length,
+          taskCount: patterns.length
+        };
+      } else {
+        energyAnalysis.timeBasedPatterns[timeSlot] = { avgEnergy: 0, avgMood: 0, taskCount: 0 };
+      }
     });
 
     const enhancedInput = {
-      ...input,
+      apiKey: input.apiKey,
       dailyData: JSON.stringify({
         rawTasks: dailyData,
         energyAnalysis,
@@ -206,7 +210,8 @@ const energyOptimizationFlow = ai.defineFlow(
           category: task.category,
           estimatedEnergy: task.category === 'work' ? 4 : task.category === 'study' ? 3 : task.category === 'break' ? 1 : 2
         }))
-      })
+      }),
+      currentTime: input.currentTime
     };
 
     const llm = googleAI.model('gemini-1.5-flash', { apiKey: input.apiKey });
@@ -215,13 +220,16 @@ const energyOptimizationFlow = ai.defineFlow(
       const { output } = await prompt(enhancedInput, { model: llm });
       return output!;
     } catch (error: any) {
-        if (error.status === 400) {
+        if (error.status === 400 || error.message.includes('API key not valid')) {
             throw new Error("Invalid API Key. Please check your key in the settings.");
         }
-      console.warn('First attempt to get energy optimization failed, retrying...', error);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const { output } = await prompt(enhancedInput, { model: llm });
-      return output!;
+      if (error.status === 429) {
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          const { output } = await prompt(enhancedInput, { model: llm });
+          return output!;
+      }
+      console.error('Error getting energy optimization:', error);
+      throw error;
     }
   }
 );

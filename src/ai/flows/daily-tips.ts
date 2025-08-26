@@ -93,7 +93,7 @@ const dailyTipsFlow = ai.defineFlow(
     // Analyze completion patterns
     const completedTasks = scheduleData.filter((task: any) => task.completed);
     const missedTasks = scheduleData.filter((task: any) => !task.completed);
-    const completionRate = Math.round((completedTasks.length / scheduleData.length) * 100);
+    const completionRate = scheduleData.length > 0 ? Math.round((completedTasks.length / scheduleData.length) * 100) : 0;
     
     // Analyze productivity patterns
     const highProductivityTasks = completedTasks.filter((task: any) => 
@@ -112,9 +112,8 @@ const dailyTipsFlow = ai.defineFlow(
     );
 
     const enhancedInput = {
-      ...input,
+      apiKey: input.apiKey,
       schedule: JSON.stringify({
-        ...scheduleData,
         analysis: {
           completionRate,
           completedTasks: completedTasks.length,
@@ -139,10 +138,10 @@ const dailyTipsFlow = ai.defineFlow(
       productivityPatterns: JSON.stringify({
         ...patternsData,
         enhancedAnalysis: {
-          averageProductivity: completedTasks.reduce((sum: number, task: any) => 
-            sum + (task.reflection?.productivity || 0), 0) / completedTasks.length,
-          averageMood: completedTasks.reduce((sum: number, task: any) => 
-            sum + (task.reflection?.mood || 0), 0) / completedTasks.length,
+          averageProductivity: completedTasks.length > 0 ? completedTasks.reduce((sum: number, task: any) => 
+            sum + (task.reflection?.productivity || 0), 0) / completedTasks.length : 0,
+          averageMood: completedTasks.length > 0 ? completedTasks.reduce((sum: number, task: any) => 
+            sum + (task.reflection?.mood || 0), 0) / completedTasks.length : 0,
           peakProductivityTime: highProductivityTasks.length > 0 ? 
             highProductivityTasks[0]?.startTime : null,
           peakMoodTime: positiveMoodTasks.length > 0 ? 
@@ -156,7 +155,7 @@ const dailyTipsFlow = ai.defineFlow(
         const { output } = await prompt(enhancedInput, {model: llm});
         return output!;
     } catch (error: any) {
-        if (error.status === 400) {
+        if (error.status === 400 || error.message.includes('API key not valid')) {
             throw new Error("Invalid API Key. Please check your key in the settings.");
         }
         console.error("Error fetching daily tips:", error);

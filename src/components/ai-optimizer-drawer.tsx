@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Sheet,
   SheetContent,
@@ -39,6 +39,7 @@ type View = 'main' | 'insights' | 'tips' | 'habit' | 'energy';
 export function AIOptimizerDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<View>('main');
+  const [isClient, setIsClient] = useState(false);
   
   const { 
     getDailyTips, 
@@ -55,6 +56,10 @@ export function AIOptimizerDrawer() {
   const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [isHabitStackingOpen, setIsHabitStackingOpen] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleOpen = (e: React.MouseEvent) => {
     if (!isPro) {
@@ -75,19 +80,19 @@ export function AIOptimizerDrawer() {
     }
   }, [isOpen, clearDailyInsights]);
 
-  const handleFetchTips = () => {
+  const handleFetchTips = useCallback(() => {
     if (isPro && geminiApiKey && !dailyTips && !isLoadingTips) {
         getDailyTips();
     }
     setView('tips');
-  }
+  }, [isPro, geminiApiKey, dailyTips, isLoadingTips, getDailyTips]);
   
-  const handleFetchInsights = () => {
+  const handleFetchInsights = useCallback(() => {
     if (isPro && geminiApiKey && !dailyInsights && !isLoadingInsights) {
         getDailyInsights();
     }
     setView('insights');
-  }
+  }, [isPro, geminiApiKey, dailyInsights, isLoadingInsights, getDailyInsights]);
 
   const renderMainView = () => (
     <div className="space-y-6 pt-4">
@@ -325,6 +330,10 @@ export function AIOptimizerDrawer() {
   const renderEnergyView = () => (
     <EnergyTrackingPanel />
   );
+  
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <>

@@ -148,14 +148,15 @@ const habitStackingFlow = ai.defineFlow(
     };
 
     const enhancedInput = {
-      ...input,
+      apiKey: input.apiKey,
+      timeOfDay: input.timeOfDay,
       routineBubbles: JSON.stringify({
         routines: routineBubbles,
         analysis: {
           timeOfDay: input.timeOfDay,
           routineCount: routineBubbles.length,
-          averageDuration: routineBubbles.reduce((sum: number, bubble: any) => 
-            sum + (bubble.duration || 0), 0) / routineBubbles.length,
+          averageDuration: routineBubbles.length > 0 ? routineBubbles.reduce((sum: number, bubble: any) => 
+            sum + (bubble.duration || 0), 0) / routineBubbles.length : 0,
           categories: routineBubbles.reduce((acc: any, bubble: any) => {
             acc[bubble.category] = (acc[bubble.category] || 0) + 1;
             return acc;
@@ -170,8 +171,8 @@ const habitStackingFlow = ai.defineFlow(
           totalHabits: userHabits.length,
           habitTypes: existingHabitTypes,
           gaps: habitGaps,
-          successRate: userHabits.reduce((sum: number, habit: any) => 
-            sum + (habit.successRate || 0), 0) / userHabits.length
+          successRate: userHabits.length > 0 ? userHabits.reduce((sum: number, habit: any) => 
+            sum + (habit.successRate || 0), 0) / userHabits.length : 0,
         }
       })
     };
@@ -182,13 +183,16 @@ const habitStackingFlow = ai.defineFlow(
       const { output } = await prompt(enhancedInput, { model: llm });
       return output!;
     } catch (error: any) {
-        if (error.status === 400) {
+        if (error.status === 400 || error.message.includes('API key not valid')) {
             throw new Error("Invalid API Key. Please check your key in the settings.");
         }
-      console.warn('First attempt to get habit stacking suggestions failed, retrying...', error);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const { output } = await prompt(enhancedInput, { model: llm });
-      return output!;
+        if (error.status === 429) {
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          const { output } = await prompt(enhancedInput, { model: llm });
+          return output!;
+        }
+        console.error('Error getting habit stacking suggestions:', error);
+        throw error;
     }
   }
 );
