@@ -20,11 +20,11 @@ export function PremiumBubbleIntro({ className }: PremiumBubbleIntroProps) {
 
   return (
     <div className={cn(
-      "relative w-full h-64 md:h-72 overflow-hidden",
-      "flex items-center justify-center",
+      "relative w-full overflow-hidden p-8 rounded-2xl",
+      "flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 border border-primary/10 shadow-lg",
       className
     )}>
-      {/* Main content with phase animations */}
+       {/* Main content with phase animations */}
       <div className={cn(
         "relative z-10 text-center transition-all duration-1000",
         isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"
