@@ -12,6 +12,7 @@ import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { useAuth } from '@/context/auth-context';
 import { ProModal } from './pro-modal';
 import { ApiKeyModal } from './api-key-modal';
+import { cn } from '@/lib/utils';
 
 export function DailySidebarTip() {
   const [tip, setTip] = useState<DailySidebarTipType | null>(null);
@@ -190,49 +191,59 @@ export function DailySidebarTip() {
 
   // No hourly auto-refresh; controlled by the 5 scheduled windows only
   
-  // No manual refresh; card is static and not clickable
+  const handleCardClick = () => {
+    if (!isPro) {
+      setIsProModalOpen(true);
+    }
+    // If user is Pro, we could add logic to refresh the tip here if desired
+  };
 
 
   return (
     <>
-    <Card 
-        className="relative overflow-hidden border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background shadow-sm"
+    <div
+      className={cn(!isPro && "cursor-pointer")}
+      onClick={handleCardClick}
     >
-      <CardContent className="p-4">
-        {/* Accent glow */}
-        <div className="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-amber-400/10 blur-2xl" />
-        <div className="flex items-start gap-3">
-          <div className="h-8 w-8 rounded-full bg-amber-500/15 flex items-center justify-center ring-1 ring-amber-400/30">
-            { isPro ? <Lightbulb className="h-4 w-4 text-amber-500" /> : <Star className="h-4 w-4 text-amber-500" /> }
-          </div>
-          <div className="flex-1">
-            <div className="flex justify-between items-center">
-                 <div className="flex items-center gap-2">
-                   <p className="font-semibold text-sm text-primary/90">{isPro ? "Tip of the Day" : "Pro Tip"}</p>
-                 </div>
+      <Card 
+          className="relative overflow-hidden border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background shadow-sm"
+      >
+        <CardContent className="p-4">
+          {/* Accent glow */}
+          <div className="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-amber-400/10 blur-2xl" />
+          <div className="flex items-start gap-3">
+            <div className="h-8 w-8 rounded-full bg-amber-500/15 flex items-center justify-center ring-1 ring-amber-400/30">
+              { isPro ? <Lightbulb className="h-4 w-4 text-amber-500" /> : <Star className="h-4 w-4 text-amber-500" /> }
             </div>
-            {isLoading ? (
-              <div className="space-y-1.5">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
+            <div className="flex-1">
+              <div className="flex justify-between items-center">
+                   <div className="flex items-center gap-2">
+                     <p className="font-semibold text-sm text-primary/90">{isPro ? "Tip of the Day" : "Pro Tip"}</p>
+                   </div>
               </div>
-            ) : error ? (
-              <p className="text-xs text-destructive">{error}</p>
-            ) : isPro ? (
-                isCurrentDay ? (
-                  <p className="text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">
-                    {tip?.tip}
-                  </p>
-                ) : (
-                     <p className='text-sm font-semibold'>Daily tips are available for the current day.</p>
-                )
-            ) : (
-                <p className='text-sm font-semibold'>Upgrade to Pro to unlock daily personalized tips.</p>
-            )}
+              {isLoading ? (
+                <div className="space-y-1.5">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                </div>
+              ) : error ? (
+                <p className="text-xs text-destructive">{error}</p>
+              ) : isPro ? (
+                  isCurrentDay ? (
+                    <p className="text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">
+                      {tip?.tip}
+                    </p>
+                  ) : (
+                       <p className='text-sm font-semibold'>Daily tips are available for the current day.</p>
+                  )
+              ) : (
+                  <p className='text-sm font-semibold'>Upgrade to Pro to unlock daily personalized tips.</p>
+              )}
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
     <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
     <ApiKeyModal isOpen={isApiKeyModalOpen} onClose={() => setIsApiKeyModalOpen(false)} error={error ?? undefined}/>
     </>
