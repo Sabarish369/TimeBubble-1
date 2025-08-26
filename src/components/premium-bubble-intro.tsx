@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -29,13 +30,10 @@ export function PremiumBubbleIntro({ className }: PremiumBubbleIntroProps) {
 
   return (
     <div className={cn(
-      "relative w-full h-64 md:h-80 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-accent/5 to-primary/5 border border-primary/20",
+      "relative w-full h-64 md:h-80 overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 to-slate-800 border border-primary/20",
       "flex items-center justify-center",
       className
     )}>
-      {/* Background atmospheric effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 animate-pulse" />
-      
       {/* Floating premium bubbles */}
       <div className="absolute inset-0">
         {[...Array(8)].map((_, i) => (
@@ -43,16 +41,15 @@ export function PremiumBubbleIntro({ className }: PremiumBubbleIntroProps) {
             key={i}
             className={cn(
               "absolute rounded-full premium-bubble",
-              "animate-float-bubble"
             )}
             style={{
               left: `${15 + (i * 12) % 70}%`,
               top: `${20 + (i * 15) % 60}%`,
-              width: `${20 + (i % 3) * 8}px`,
-              height: `${20 + (i % 3) * 8}px`,
-              background: `hsl(var(--bubble-${['sky-blue', 'lavender', 'peach', 'rose-gold', 'mint'][i % 5]}) / 0.3)`,
-              animationDelay: `${i * 0.3}s`,
-              animationDuration: `${4 + (i % 3) * 2}s`,
+              width: `${20 + (i % 3) * 15}px`,
+              height: `${20 + (i % 3) * 15}px`,
+              background: `hsl(var(--bubble-${['indigo', 'teal', 'amber', 'rose-gold', 'sky-blue'][i % 5]}))`,
+              animationDelay: `${i * 0.5}s`,
+              animationDuration: `${6 + (i % 4) * 2}s`,
             }}
           />
         ))}
@@ -65,16 +62,15 @@ export function PremiumBubbleIntro({ className }: PremiumBubbleIntroProps) {
             key={i}
             className={cn(
               "absolute sparkle-effect",
-              "animate-sparkle-float"
             )}
             style={{
               left: `${10 + (i * 8) % 80}%`,
               top: `${15 + (i * 10) % 70}%`,
-              animationDelay: `${i * 0.2}s`,
-              animationDuration: `${3 + (i % 4) * 1.5}s`,
+              animationDelay: `${i * 0.4}s`,
+              animationDuration: `${5 + (i % 4) * 2}s`,
             }}
           >
-            <Sparkles className="w-3 h-3 text-yellow-400/60" />
+            <Sparkles className="w-3 h-3 text-yellow-400/80" />
           </div>
         ))}
       </div>
@@ -138,8 +134,7 @@ export function PremiumBubbleIntro({ className }: PremiumBubbleIntroProps) {
       </div>
 
       {/* Bottom wave effect */}
-      <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-primary/10 to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-slate-900 to-transparent" />
     </div>
   );
 }
-
