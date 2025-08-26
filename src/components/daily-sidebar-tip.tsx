@@ -8,7 +8,6 @@ import { Lightbulb, Star } from 'lucide-react';
 import { format, isToday } from 'date-fns';
 import type { DailySidebarTip as DailySidebarTipType } from '@/types';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
-// import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { ProModal } from './pro-modal';
 import { ApiKeyModal } from './api-key-modal';
@@ -16,74 +15,24 @@ import { cn } from '@/lib/utils';
 
 export function DailySidebarTip() {
   const [tip, setTip] = useState<DailySidebarTipType | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+  
   const { timeBlocks, currentDate, getNewDailySidebarTip } = useTimeBubbles();
   const { user, isPro, geminiApiKey } = useAuth();
   const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-  const scheduleIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const isCurrentDay = isToday(currentDate);
+  useEffect(() => {
+    // This ensures client-specific code runs only after mounting
+    setIsClient(true);
+  }, []);
 
   const getStorageKey = useCallback(() => {
-    if (!user) return null;
+    if (!user || !isClient) return null;
     return `daily_tip_${user.uid}_${format(currentDate, 'yyyy-MM-dd')}`;
-  }, [user, currentDate]);
-
-  // Refresh meta persistence (per user/day)
-  const getMetaKey = useCallback(() => {
-    if (!user) return null;
-    return `daily_tip_meta_${user.uid}_${format(currentDate, 'yyyy-MM-dd')}`;
-  }, [user, currentDate]);
-
-  type TipMeta = {
-    count: number;
-    nextIndex: number; // index into schedule
-    schedule: string[]; // ISO times for today
-    lastRefresh?: string; // ISO
-  };
-
-  const loadMeta = useCallback((): TipMeta => {
-    const key = getMetaKey();
-    const base: TipMeta = { count: 0, nextIndex: 0, schedule: [] };
-    if (!key) return base;
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) return base;
-      const parsed = JSON.parse(raw);
-      if (!parsed || !Array.isArray(parsed.schedule)) return base;
-      return { ...base, ...parsed } as TipMeta;
-    } catch {
-      return base;
-    }
-  }, [getMetaKey]);
-
-  const saveMeta = useCallback((meta: TipMeta) => {
-    const key = getMetaKey();
-    if (!key) return;
-    localStorage.setItem(key, JSON.stringify(meta));
-  }, [getMetaKey]);
-
-  const isWithinActiveHours = (date: Date) => {
-    const hour = date.getHours();
-    return hour >= 7 && hour < 19; // 7am inclusive to 7pm exclusive
-  };
-
-  const generateSchedule = useCallback((): string[] => {
-    // 5 evenly spaced times between 07:00 and 19:00 (12 hours / 5 = 144 minutes apart)
-    const base = new Date(currentDate);
-    base.setHours(7, 0, 0, 0);
-    const points: string[] = [];
-    for (let i = 0; i < 5; i++) {
-      const t = new Date(base.getTime() + i * 144 * 60 * 1000);
-      points.push(t.toISOString());
-    }
-    return points;
-  }, [currentDate]);
-
-  const [meta, setMeta] = useState<TipMeta>(() => loadMeta());
+  }, [user, currentDate, isClient]);
 
   const fetchTip = useCallback(async (forceRefresh = false) => {
     if (!isPro) {
@@ -134,118 +83,90 @@ export function DailySidebarTip() {
       }
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
     }
   }, [timeBlocks, currentDate, getNewDailySidebarTip, getStorageKey, isPro, geminiApiKey]);
 
-  // Initialize schedule/meta for the day and start scheduler
+  // Fetch tip on initial load and when date changes, but only on the client
   useEffect(() => {
-    if (!isCurrentDay || !isPro || !geminiApiKey) return;
-
-    let currentMeta = loadMeta();
-    if (!currentMeta.schedule || currentMeta.schedule.length !== 5) {
-      currentMeta = { count: 0, nextIndex: 0, schedule: generateSchedule() };
-      saveMeta(currentMeta);
-      setMeta(currentMeta);
-    } else {
-      setMeta(currentMeta);
+    if (isClient) {
+      fetchTip();
     }
+  }, [currentDate, isPro, geminiApiKey, isClient, fetchTip]);
 
-    if (scheduleIntervalRef.current) clearInterval(scheduleIntervalRef.current);
-    scheduleIntervalRef.current = setInterval(() => {
-      const now = new Date();
-      const freshMeta = loadMeta();
-      if (freshMeta.count >= 5) return; // limit reached
-      if (!isWithinActiveHours(now)) return; // outside hours
-      const nextIso = freshMeta.schedule[freshMeta.nextIndex];
-      if (!nextIso) return;
-      const nextDate = new Date(nextIso);
-      if (now >= nextDate) {
-        // fire a refresh
-        setIsRefreshing(true);
-        fetchTip(true).finally(() => {
-          const updated: TipMeta = {
-            ...freshMeta,
-            count: (freshMeta.count || 0) + 1,
-            nextIndex: freshMeta.nextIndex + 1,
-            lastRefresh: new Date().toISOString(),
-          };
-          saveMeta(updated);
-          setMeta(updated);
-        });
-      }
-    }, 30 * 1000); // check every 30s
-
-    return () => {
-      if (scheduleIntervalRef.current) clearInterval(scheduleIntervalRef.current);
-    };
-  }, [isCurrentDay, isPro, geminiApiKey, generateSchedule, loadMeta, saveMeta, fetchTip]);
-
-  // Fetch tip on initial load and when date changes (no auto-forced changes)
-  useEffect(() => {
-    fetchTip();
-  }, [currentDate, isPro, geminiApiKey, fetchTip]);
-  
-  // Remove auto-refresh on schedule edits; only scheduled windows or manual taps will refresh
-
-
-  // No hourly auto-refresh; controlled by the 5 scheduled windows only
-  
   const handleCardClick = () => {
     if (!isPro) {
       setIsProModalOpen(true);
+    } else if (isPro && isToday(currentDate)) {
+        fetchTip(true); // Allow manual refresh only for the current day
     }
-    // If user is Pro, we could add logic to refresh the tip here if desired
   };
 
-
-  return (
-    <>
-    <div
-      className={cn(!isPro && "cursor-pointer")}
-      onClick={handleCardClick}
-    >
-      <Card 
-          className="relative overflow-hidden border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background shadow-sm"
-      >
+  if (!isClient) {
+    // Render a skeleton or placeholder on the server to avoid client/server mismatch
+    return (
+      <Card className="relative overflow-hidden border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background shadow-sm">
         <CardContent className="p-4">
-          {/* Accent glow */}
-          <div className="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-amber-400/10 blur-2xl" />
           <div className="flex items-start gap-3">
             <div className="h-8 w-8 rounded-full bg-amber-500/15 flex items-center justify-center ring-1 ring-amber-400/30">
-              { isPro ? <Lightbulb className="h-4 w-4 text-amber-500" /> : <Star className="h-4 w-4 text-amber-500" /> }
+              <Lightbulb className="h-4 w-4 text-amber-500" />
             </div>
-            <div className="flex-1">
-              <div className="flex justify-between items-center">
-                   <div className="flex items-center gap-2">
-                     <p className="font-semibold text-sm text-primary/90">{isPro ? "Tip of the Day" : "Pro Tip"}</p>
-                   </div>
-              </div>
-              {isLoading ? (
-                <div className="space-y-1.5">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-5/6" />
-                </div>
-              ) : error ? (
-                <p className="text-xs text-destructive">{error}</p>
-              ) : isPro ? (
-                  isCurrentDay ? (
-                    <p className="text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">
-                      {tip?.tip}
-                    </p>
-                  ) : (
-                       <p className='text-sm font-semibold'>Daily tips are available for the current day.</p>
-                  )
-              ) : (
-                  <p className='text-sm font-semibold'>Upgrade to Pro to unlock daily personalized tips.</p>
-              )}
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-1/3" />
+              <Skeleton className="h-4 w-full" />
             </div>
           </div>
         </CardContent>
       </Card>
-    </div>
-    <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
-    <ApiKeyModal isOpen={isApiKeyModalOpen} onClose={() => setIsApiKeyModalOpen(false)} error={error ?? undefined}/>
+    );
+  }
+
+  return (
+    <>
+      <div
+        className={cn((!isPro || isToday(currentDate)) && "cursor-pointer")}
+        onClick={handleCardClick}
+      >
+        <Card 
+            className="relative overflow-hidden border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background shadow-sm"
+        >
+          <CardContent className="p-4">
+            {/* Accent glow */}
+            <div className="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-amber-400/10 blur-2xl" />
+            <div className="flex items-start gap-3">
+              <div className="h-8 w-8 rounded-full bg-amber-500/15 flex items-center justify-center ring-1 ring-amber-400/30">
+                { isPro ? <Lightbulb className="h-4 w-4 text-amber-500" /> : <Star className="h-4 w-4 text-amber-500" /> }
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between items-center">
+                     <div className="flex items-center gap-2">
+                       <p className="font-semibold text-sm text-primary/90">{isPro ? "Tip of the Day" : "Pro Tip"}</p>
+                     </div>
+                </div>
+                {isLoading ? (
+                  <div className="space-y-1.5 pt-1">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
+                  </div>
+                ) : error ? (
+                  <p className="text-xs text-destructive">{error}</p>
+                ) : isPro ? (
+                    isToday(currentDate) ? (
+                      <p className="text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">
+                        {tip?.tip}
+                      </p>
+                    ) : (
+                         <p className='text-sm font-semibold'>Daily tips are available for the current day.</p>
+                    )
+                ) : (
+                    <p className='text-sm font-semibold'>Upgrade to Pro to unlock daily personalized tips.</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
+      <ApiKeyModal isOpen={isApiKeyModalOpen} onClose={() => setIsApiKeyModalOpen(false)} error={error ?? undefined}/>
     </>
   );
 }
