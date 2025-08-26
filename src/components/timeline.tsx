@@ -1,3 +1,4 @@
+
 'use client';
 import type { DragEvent, MouseEvent, RefObject } from 'react';
 import React from 'react';
@@ -164,7 +165,7 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
   return (
     <div
       ref={timelineRef}
-      className="relative bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-200"
+      className="relative transition-all duration-200"
       style={{ height: `${TOTAL_HOURS * hourHeight}px` }}
       onDrop={handleDrop}
       onDragEnter={handleDragEnter}

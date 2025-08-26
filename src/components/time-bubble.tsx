@@ -269,7 +269,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
     }
 
 
-  }, [isDragging, isResizing, pixelsPerMinute, scrollContainerRef, stopAutoScroll, liveStartTime, block, liveDuration]);
+  }, [isDragging, isResizing, pixelsPerMinute, scrollContainerRef, stopAutoScroll, liveStartTime, block, liveDuration, timelineRef]);
 
 
   useEffect(() => {
@@ -413,7 +413,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
                     key={colorName}
                     className={cn("w-6 h-6 rounded-full border", block.color === colorName && "ring-2 ring-ring")}
                     style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
-                    onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBBLE_COLORS })}
+                    onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBble_COLORS })}
                     />
                 ))}
                 </div>
@@ -538,7 +538,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
 // Custom comparison function for React.memo
 const areBubblesEqual = (prevProps: TimeBubbleProps, nextProps: TimeBubbleProps) => {
     // Basic checks first
-    if (prevProps.timelineRef !== nextProps.timelineRef || prevProps.scrollContainerRef !== nextProps.scrollContainerRef) {
+    if (prevProps.timelineRef !== nextProps.timelineRef || prevProps.scrollContainerRef !== nextProps.scrollContainerRef || prevProps.zoomLevel !== nextProps.zoomLevel) {
         return false;
     }
 
@@ -555,9 +555,9 @@ const areBubblesEqual = (prevProps: TimeBubbleProps, nextProps: TimeBubbleProps)
         prevBlock.category === nextBlock.category &&
         prevBlock.completed === nextBlock.completed &&
         prevBlock.actionable === nextBlock.actionable &&
-        prevBlock.description === nextBlock.description
+        prevBlock.description === nextBlock.description &&
+        prevBlock.notified === nextBlock.notified
     );
 };
 
 export const TimeBubble = React.memo(TimeBubbleComponent, areBubblesEqual);
-
