@@ -118,14 +118,16 @@ const dailyInsightsFlow = ai.defineFlow(
     
     // Only proceed to call the AI if there is valid data
     const llm = googleAI.model('gemini-1.5-flash', {apiKey: input.apiKey});
-    try {
-        const { output } = await prompt({ 
-          ...input, 
-          dailyData: JSON.stringify({
+    const promptData = {
+        ...input, 
+        dailyData: JSON.stringify({
             ...enhancedData,
             rawTasks: completedBlocks
-          })
-        }, {model: llm});
+        })
+    };
+
+    try {
+        const { output } = await prompt(promptData, { model: llm });
         return output!;
     } catch (error: any) {
         if (error.status === 400) {
@@ -133,13 +135,7 @@ const dailyInsightsFlow = ai.defineFlow(
         }
         if (error.status === 429) { // Specifically handle "Too Many Requests"
             await new Promise(resolve => setTimeout(resolve, 5000));
-            const { output } = await prompt({ 
-              ...input, 
-              dailyData: JSON.stringify({
-                ...enhancedData,
-                rawTasks: completedBlocks
-              })
-            }, {model: llm});
+            const { output } = await prompt(promptData, { model: llm });
             return output!;
         }
         // Fallback for other errors
