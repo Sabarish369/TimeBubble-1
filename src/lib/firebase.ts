@@ -18,32 +18,42 @@ let auth: Auth;
 let db: Firestore;
 let messaging: Messaging | null = null;
 
-// Check if Firebase config is valid. This is a crucial check.
 if (!firebaseConfig.apiKey) {
     console.error("Firebase config is missing or invalid. Please ensure your NEXT_PUBLIC_FIREBASE environment variables are set correctly in your .env file.");
-    // Provide dummy objects to prevent the app from crashing on the server or during build.
     app = {} as FirebaseApp;
     auth = {} as Auth;
     db = {} as Firestore;
 } else {
-    // Initialize Firebase only if it hasn't been initialized yet.
     app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    auth = getAuth(app)
- ;
-    // Explicitly set persistence to local
- setPersistence(auth, browserLocalPersistence)
- .catch((error) => {
- console.error("Failed to set Firebase Auth persistence:", error);
- });
+    auth = getAuth(app);
     db = getFirestore(app);
- // Enable Firestore offline persistence (optional but recommended)
- enableIndexedDbPersistence(db)
- .catch((err) => console.error("Firestore persistence failed:", err));
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-        try {
-            messaging = getMessaging(app);
-        } catch (error) {
-            console.error("Failed to initialize Firebase Messaging:", error);
+
+    if (typeof window !== 'undefined') {
+        // Set persistence for Auth
+        setPersistence(auth, browserLocalPersistence)
+            .catch((error) => {
+                console.error("Failed to set Firebase Auth persistence:", error);
+            });
+
+        // Enable Firestore offline persistence
+        enableIndexedDbPersistence(db)
+            .catch((err) => {
+                if (err.code === 'failed-precondition') {
+                    console.warn('Firestore persistence failed: Multiple tabs open, persistence can only be enabled in one tab at a time.');
+                } else if (err.code === 'unimplemented') {
+                    console.warn('Firestore persistence failed: The current browser does not support all of the features required to enable persistence.');
+                } else {
+                    console.error("Firestore persistence failed:", err);
+                }
+            });
+
+        // Initialize Messaging
+        if ('Notification' in window && 'serviceWorker' in navigator) {
+            try {
+                messaging = getMessaging(app);
+            } catch (error) {
+                console.error("Failed to initialize Firebase Messaging:", error);
+            }
         }
     }
 }
