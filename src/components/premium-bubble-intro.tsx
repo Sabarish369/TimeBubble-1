@@ -21,7 +21,7 @@ export function PremiumBubbleIntro({ className }: PremiumBubbleIntroProps) {
   return (
     <div className={cn(
       "relative w-full overflow-hidden p-8 rounded-2xl",
-      "flex items-center justify-center bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 shadow-lg",
+      "flex items-center justify-center bg-gradient-to-br from-primary/10 via-accent/5 to-primary/10 animate-pulse border border-primary/20 shadow-lg",
       className
     )}>
        {/* Main content with phase animations */}
