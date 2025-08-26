@@ -22,7 +22,7 @@ const freeFeatures = [
     { text: 'Habit Stacking Suggestions', included: false },
     { text: 'Energy & Chronotype Analysis', included: false },
     { text: 'Powered by Google Gemini API', included: false },
-    { text: 'Priority Support', included: false },
+    { text: 'All Future Pro Features', included: false },
 ];
 
 const proFeatures = [
@@ -35,7 +35,7 @@ const proFeatures = [
     { text: 'Habit Stacking Suggestions', included: true },
     { text: 'Energy & Chronotype Analysis', included: true },
     { text: 'Powered by Google Gemini API', included: true },
-    { text: 'Priority Support & All Future Pro Features', included: true },
+    { text: 'All Future Pro Features', included: true },
 ];
 
 
@@ -77,7 +77,7 @@ function PlanColumn({ title, price, priceSubtitle, description, features, onUpgr
 
 
 export default function UpgradePage() {
-    const { user } = useAuth();
+    const { user, isNewUser } = useAuth();
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
 
@@ -129,11 +129,11 @@ export default function UpgradePage() {
                     </div>
                     
                     <div className="text-center max-w-3xl mx-auto">
-                        <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">Seize Our Limited-Time Lifetime Deal</h1>
+                        <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">
+                            {isNewUser ? "Your New User Exclusive Offer!" : "Seize Our Limited-Time Lifetime Deal"}
+                        </h1>
                         <p className="text-lg md:text-xl text-muted-foreground mb-12">
-                            Become an Early Bird supporter and get TimeBubble Pro forever for a single payment. 
-                            <br/>
-                            <span className="font-semibold">This offer won't last long.</span>
+                            {isNewUser ? "As a new member, you have a short time to get TimeBubble Pro forever for a single payment. This exclusive offer won't last!" : "Become an Early Bird supporter and get TimeBubble Pro forever for a single payment. This offer won't last long."}
                         </p>
                     </div>
 

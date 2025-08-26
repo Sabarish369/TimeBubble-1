@@ -26,6 +26,7 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   isPro: boolean;
+  isNewUser: boolean;
   geminiApiKey: string | null;
   setGeminiApiKey: (key: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
@@ -44,6 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPro, setIsPro] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
   const [geminiApiKey, setGeminiApiKeyState] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const { toast } = useToast();
@@ -74,6 +76,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(user);
     setLoginCookie(!!user);
     if (user) {
+      if (user.metadata.creationTime) {
+        const creationDate = new Date(user.metadata.creationTime);
+        const now = new Date();
+        const sevenDays = 7 * 24 * 60 * 60 * 1000;
+        setIsNewUser(now.getTime() - creationDate.getTime() < sevenDays);
+      } else {
+        setIsNewUser(false);
+      }
+
       // Set up a real-time listener for the user document
       const userDocRef = doc(db, 'users', user.uid);
       const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
@@ -106,6 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       // User logged out, clear state
       setIsPro(false);
+      setIsNewUser(false);
       setGeminiApiKeyState(null);
       setLoading(false);
       return () => {};
@@ -276,6 +288,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loading: loading || isAuthLoading,
     error,
     isPro,
+    isNewUser,
     geminiApiKey,
     setGeminiApiKey,
     signIn,
