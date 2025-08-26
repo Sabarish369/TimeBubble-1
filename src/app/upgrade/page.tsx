@@ -94,14 +94,15 @@ export default function UpgradePage() {
             });
 
             if (!res.ok) {
-                throw new Error('Failed to create checkout session');
+                const errorData = await res.json().catch(() => ({ error: 'An unknown error occurred' }));
+                throw new Error(errorData.error || 'Failed to create checkout session');
             }
 
             const { sessionId } = await res.json();
             // This is a Stripe checkout session ID. In a real app, you would redirect to Stripe.
             // For this simulation, we'll go to the success page.
              router.push('/upgrade/success?session_id=' + sessionId);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
             setIsLoading(false);
             // You might want to show an error toast here
