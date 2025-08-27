@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -13,9 +14,9 @@ interface AtmosphericLightsProps {
 
 export function AtmosphericLights({ 
   className, 
-  count = 8, 
-  speed = 20, 
-  size = 4,
+  count = 12, 
+  speed = 0.5,
+  size = 6,
   colors = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--bubble-sky-blue))', 'hsl(var(--bubble-lavender))']
 }: AtmosphericLightsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -25,109 +26,114 @@ export function AtmosphericLights({
     if (!containerRef.current) return;
 
     const container = containerRef.current;
-    const lights: HTMLDivElement[] = [];
-    type BubbleState = {
+    
+    type ParticleState = {
       el: HTMLDivElement;
-      x: number; // percentage [0,100]
-      y: number; // percentage [0,100]
-      baseX: number;
-      baseY: number;
-      riseSpeed: number; // % per second
-      swayAmp: number; // px
-      swayFreq: number; // radians per second
-      wobbleAmp: number; // px
-      wobbleFreq: number; // radians per second
-      phaseX: number;
-      phaseY: number;
-      pixelSize: number;
-      dirY: number; // -1 upwards, 1 downwards
+      x: number; // pixel position
+      y: number; // pixel position
+      vx: number; // velocity x
+      vy: number; // velocity y
+      wander: number;
+      drag: number;
     };
-    const states: BubbleState[] = [];
+    const states: ParticleState[] = [];
 
-    // Create light particles
-    for (let i = 0; i < count; i++) {
-      const light = document.createElement('div');
-      light.className = 'absolute rounded-full opacity-70';
-      const px = size + Math.random() * size * 1.5;
-      light.style.width = `${px}px`;
-      light.style.height = `${px}px`;
-      light.style.background = colors[i % colors.length];
-      const startX = Math.random() * 100;
-      const startY = Math.random() * 100;
-      light.style.left = `${startX}%`;
-      light.style.top = `${startY}%`;
-      light.style.filter = `blur(${Math.max(0, (6 - px / 2)).toFixed(1)}px)`;
+    const setup = () => {
+      const rect = container.getBoundingClientRect();
+      states.length = 0; // Clear existing states
       
-      container.appendChild(light);
-      lights.push(light);
+      // Clear existing DOM elements
+      while (container.firstChild) {
+          container.removeChild(container.firstChild);
+      }
 
-      const s: BubbleState = {
-        el: light,
-        x: startX,
-        y: startY,
-        baseX: startX,
-        baseY: startY,
-        riseSpeed: (speed * 0.02) + Math.random() * (speed * 0.015), // percent/sec
-        swayAmp: 8 + Math.random() * 16,
-        swayFreq: 0.5 + Math.random() * 0.8,
-        wobbleAmp: 4 + Math.random() * 8,
-        wobbleFreq: 0.8 + Math.random() * 1.2,
-        phaseX: Math.random() * Math.PI * 2,
-        phaseY: Math.random() * Math.PI * 2,
-        pixelSize: px,
-        dirY: -1,
-      };
-      states.push(s);
-    }
+      for (let i = 0; i < count; i++) {
+        const particleSize = size + Math.random() * size;
+        const light = document.createElement('div');
+        light.className = 'absolute rounded-full';
+        light.style.width = `${particleSize}px`;
+        light.style.height = `${particleSize}px`;
+        light.style.background = colors[i % colors.length];
+        light.style.filter = `blur(${Math.max(1, particleSize / 3).toFixed(1)}px)`;
+
+        const x = Math.random() * rect.width;
+        const y = Math.random() * rect.height;
+        
+        container.appendChild(light);
+
+        states.push({
+          el: light,
+          x,
+          y,
+          vx: (Math.random() - 0.5) * speed * 2,
+          vy: (Math.random() - 0.5) * speed * 2,
+          wander: 0.1 + Math.random() * 0.4,
+          drag: 0.9 + Math.random() * 0.05,
+        });
+      }
+    };
 
     let last = performance.now();
     const animate = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000); // cap delta to avoid jumps
-      last = now;
-      const rect = container.getBoundingClientRect();
-      const widthPx = rect.width;
-      const heightPx = rect.height;
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
 
       for (const s of states) {
-        // natural vertical drift with gentle reversal at bounds (no teleport)
-        s.y += s.dirY * s.riseSpeed * dt;
-        if (s.y < -2) {
-          s.y = -2;
-          s.dirY = 1; // start drifting down
-        }
-        if (s.y > 102) {
-          s.y = 102;
-          s.dirY = -1; // start drifting up
-        }
+        // Add wandering behavior
+        s.vx += (Math.random() - 0.5) * s.wander;
+        s.vy += (Math.random() - 0.5) * s.wander;
 
-        // horizontal sway and slight vertical wobble in pixels
-        const t = now / 1000;
-        const swayX = Math.sin(t * s.swayFreq + s.phaseX) * s.swayAmp;
-        const wobbleY = Math.cos(t * s.wobbleFreq + s.phaseY) * s.wobbleAmp;
+        // Apply drag/friction
+        s.vx *= s.drag;
+        s.vy *= s.drag;
+        
+        // Update position with velocity
+        s.x += s.vx;
+        s.y += s.vy;
+        
+        // Gentle bounds checking to steer particles back
+        const steerStrength = 0.01;
+        if (s.x < 0) s.vx += steerStrength;
+        if (s.x > rect.width) s.vx -= steerStrength;
+        if (s.y < 0) s.vy += steerStrength;
+        if (s.y > rect.height) s.vy -= steerStrength;
 
-        // convert percent position to pixels + offsets
-        const xPx = (s.x / 100) * widthPx + swayX;
-        const yPx = (s.y / 100) * heightPx + wobbleY;
+        // Clamp position to stay within view and prevent escape
+        s.x = Math.max(0, Math.min(s.x, rect.width));
+        s.y = Math.max(0, Math.min(s.y, rect.height));
 
-        s.el.style.transform = `translate3d(${xPx}px, ${yPx}px, 0)`;
-        // also adjust opacity subtly based on vertical position
-        const o = 0.35 + 0.35 * Math.sin((t * 0.5) + s.phaseY);
-        s.el.style.opacity = o.toFixed(2);
+        s.el.style.transform = `translate3d(${s.x}px, ${s.y}px, 0)`;
+        
+        // Subtle opacity fade based on velocity
+        const velocityMagnitude = Math.sqrt(s.vx * s.vx + s.vy * s.vy);
+        s.el.style.opacity = (0.2 + Math.min(0.5, velocityMagnitude * 0.5)).toFixed(2);
       }
 
       rafRef.current = requestAnimationFrame(animate);
     };
+
+    setup();
+    
+    // Use a ResizeObserver to re-initialize on container resize smoothly
+    const resizeObserver = new ResizeObserver(() => {
+        // This could be enhanced to reposition particles relative to the new size,
+        // but for now, a simple re-init is safer than complex logic that might jump.
+        // A simple setup call is better than the original logic that caused jumps.
+        setup();
+    });
+    resizeObserver.observe(container);
 
     rafRef.current = requestAnimationFrame(animate);
 
     // Cleanup function
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      lights.forEach(light => {
-        if (light.parentNode) {
-          light.parentNode.removeChild(light);
-        }
-      });
+      resizeObserver.disconnect();
+      if(container) {
+          while (container.firstChild) {
+              container.removeChild(container.firstChild);
+          }
+      }
     };
   }, [count, speed, size, colors]);
 
@@ -140,10 +146,8 @@ export function AtmosphericLights({
       )}
     >
       <style jsx>{`
-        div { will-change: transform, opacity; }
+        div > div { will-change: transform, opacity; }
       `}</style>
     </div>
   );
 }
-
-
