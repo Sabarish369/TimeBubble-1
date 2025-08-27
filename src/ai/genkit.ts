@@ -9,13 +9,4 @@ export const ai = genkit({
   plugins: [
     googleAI(),
   ],
-  // Log developer-friendly errors
-  devMode: true,
-  // Use a simple file-based trace store.
-  traceStore: {
-    type: 'file',
-    options: {
-      path: '.genkit-traces',
-    },
-  },
 });

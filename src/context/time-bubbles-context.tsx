@@ -10,9 +10,9 @@ const fetchDailyInsights = async (input: any) => {
   return fetcher(input);
 };
 
-const getDailyTips = async (input: any) => {
-  const { getDailyTips: fetchDailyTips } = await import('@/ai/flows/daily-tips');
-  return fetchDailyTips(input);
+const fetchDailyTipsFlow = async (input: any) => {
+  const { getDailyTips } = await import('@/ai/flows/daily-tips');
+  return getDailyTips(input);
 };
 
 const getDailySidebarTip = async (input: any) => {
@@ -256,8 +256,8 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
             apiKey: geminiApiKey,
         };
 
-        const result = await getDailyTips(input);
-        setDailyTips(result);
+        const tips = await fetchDailyTipsFlow(input);
+        setDailyTips(tips);
     } catch (error: any) {
         console.error('Error getting AI proactive tip:', error);
         if (error.message && error.message.includes("429")) {
@@ -737,7 +737,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         const newDayKey = getDayKey(newStartTime);
         const targetDayDocRef = doc(db, 'users', user.uid, 'daily_data', newDayKey);
         const targetDocSnap = await getDoc(targetDayDocRef);
-        const blocksForNewDate = targetDocSnap.exists()
+        const blocksForNewDate: TimeBlock[] = targetDocSnap.exists()
             ? targetDocSnap.data().blocks.map((b: any) => ({ ...b, startTime: ensureDateObject(b.startTime) }))
             : [];
 
@@ -746,7 +746,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
         const sourceDayDocRef = doc(db, 'users', user.uid, 'daily_data', sourceDayKey);
         const sourceDocSnap = await getDoc(sourceDayDocRef);
-        const sourceBlocks = sourceDocSnap.exists() ? sourceDocSnap.data().blocks.filter((b: any) => b.id !== id) : [];
+        const sourceBlocks: TimeBlock[] = sourceDocSnap.exists() ? sourceDocSnap.data().blocks.filter((b: any) => b.id !== id) : [];
 
         const batch = writeBatch(db);
         batch.set(targetDayDocRef, { blocks: [...blocksForNewDate.map(b => ({...b, startTime: ensureDateObject(b.startTime).toISOString()})), {...rescheduledBlockData, startTime: rescheduledBlockData.startTime.toISOString()}] }, { merge: true });

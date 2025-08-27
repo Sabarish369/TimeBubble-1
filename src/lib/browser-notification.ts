@@ -10,7 +10,8 @@ export interface BrowserNotificationOptions {
   icon?: string;
   tag?: string;
   requireInteraction?: boolean;
-  actions?: NotificationAction[];
+  // The Notification API type in TS may not include actions in all libs; keep optional and untyped
+  actions?: any;
 }
 
 /**

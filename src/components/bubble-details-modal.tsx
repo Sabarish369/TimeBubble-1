@@ -165,7 +165,7 @@ export function BubbleDetailsModal() {
                                           )}
                                       />
                                   </div>
-                                   <FormMessage>{form.formState.errors.startTime?.message}</FormMessage>
+                                   <FormMessage>{(form.formState.errors as any).startTime?.message}</FormMessage>
                                 </div>
                                 <div className='space-y-2'>
                                     <FormLabel>End Time</FormLabel>
@@ -199,7 +199,7 @@ export function BubbleDetailsModal() {
                                             )}
                                         />
                                     </div>
-                                    <FormMessage>{form.formState.errors.endHour?.message}</FormMessage>
+                                    <FormMessage>{(form.formState.errors as any).endHour?.message}</FormMessage>
                                 </div>
                             </div>
                         )}

@@ -12,7 +12,7 @@ import {
   signOut as firebaseSignOut,
   updateProfile,
   sendPasswordResetEmail,
-  sendEmailVerification,
+  sendEmailVerification as firebaseSendEmailVerification,
   type User,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
@@ -264,7 +264,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const sendEmailVerification = async () => {
     if (!user) return;
     await performAuthAction(async () => {
-      await sendEmailVerification(user);
+      await firebaseSendEmailVerification(user);
       toast({
         title: 'Verification Email Sent',
         description: 'Please check your inbox for the verification email.',
