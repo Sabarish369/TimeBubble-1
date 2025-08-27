@@ -63,8 +63,10 @@ export function ReflectionModal() {
     updateBlock(reflectingBlock.id, {
       completed: true,
       reflection: {
-        ...data,
         completed: true,
+        productivity: data.productivity as 1 | 2 | 3 | 4 | 5,
+        mood: data.mood,
+        notes: data.notes ?? '',
         timestamp: new Date(),
       },
     });

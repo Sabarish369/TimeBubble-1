@@ -135,20 +135,24 @@ export default function TestFCMPage() {
     }
 
     try {
-      const { scheduleNotificationsForBubble } = await import('@/lib/notification-scheduler');
+      const { scheduleNotificationsForBlock } = await import('@/lib/notification-scheduler');
       
       // Create a test task starting in 2 minutes
       const testStartTime = new Date(Date.now() + 2 * 60 * 1000);
       
-      const count = await scheduleNotificationsForBubble(
-        user.uid,
-        'test-bubble-' + Date.now(),
-        'Test Task Scheduling',
-        testStartTime,
-        30 // 30 minute duration
-      );
+      // Build a minimal block for scheduling
+      const testBlock = {
+        id: 'test-bubble-' + Date.now(),
+        title: 'Test Task Scheduling',
+        startTime: testStartTime,
+        duration: 30,
+        color: 'lavender',
+        category: 'work',
+        completed: false,
+      } as any;
+      scheduleNotificationsForBlock(testBlock);
       
-      addTestResult(`✅ Scheduled ${count} test notifications`);
+      addTestResult(`✅ Scheduled test notifications`);
       addTestResult(`Task starts at: ${testStartTime.toLocaleTimeString()}`);
       addTestResult('Notifications: 15min warning, 1min warning, completion alert');
       addTestResult('Note: Notifications will be processed automatically every minute');

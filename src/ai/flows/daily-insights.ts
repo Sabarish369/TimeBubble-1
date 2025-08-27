@@ -96,12 +96,30 @@ const dailyInsightsFlow = ai.defineFlow(
     }
 
     // Enhanced data preprocessing for better AI analysis
+    // Helper to convert mood labels to numeric scores for averaging
+    const moodToScore = (mood: any): number => {
+      switch (mood) {
+        case 'happy':
+          return 5;
+        case 'focused':
+          return 4;
+        case 'neutral':
+          return 3;
+        case 'tired':
+          return 2;
+        case 'stressed':
+          return 1;
+        default:
+          return 0;
+      }
+    };
+
     const enhancedData = {
       totalTasks: blocks.length,
       completedTasks: completedBlocks.length,
       completionRate: Math.round((completedBlocks.length / blocks.length) * 100),
       averageProductivity: completedBlocks.reduce((sum, block) => sum + (block.reflection?.productivity || 0), 0) / completedBlocks.length,
-      averageMood: completedBlocks.reduce((sum, block) => sum + (block.reflection?.mood || 0), 0) / completedBlocks.length,
+      averageMood: completedBlocks.reduce((sum, block) => sum + moodToScore(block.reflection?.mood), 0) / completedBlocks.length,
       tasksByCategory: completedBlocks.reduce((acc, block) => {
         acc[block.category] = (acc[block.category] || 0) + 1;
         return acc;

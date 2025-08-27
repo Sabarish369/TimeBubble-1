@@ -141,8 +141,13 @@ const dailyTipsFlow = ai.defineFlow(
         const { output } = await prompt(enhancedInput, {model: llm});
         return output!;
     } catch (error: any) {
-        if (error.status === 400 || error.message.includes('API key not valid')) {
+        if (error.status === 400 || (error.message && error.message.includes('API key not valid'))) {
             throw new Error("Invalid API Key. Please check your key in the settings.");
+        }
+        if (error.status === 429) {
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            const { output } = await prompt(enhancedInput, { model: llm });
+            return output!;
         }
         console.error("Error fetching daily tips:", error);
         throw error;

@@ -307,7 +307,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
     height: `${height}px`,
     transform: isDragging ? `scale(1.02) rotate(${Math.sin(Date.now() * 0.001) * 0.5}deg)` : isHovering ? 'scale(1.01)' : 'scale(1)',
     transition: isDragging || isResizing ? 'none' : 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-    '--glow-color': `var(--bubble-${block.color})`,
+    ['--glow-color' as any]: `var(--bubble-${block.color})`,
     zIndex: isDragging ? 40 : isHovering ? 20 : 'auto',
     filter: isDragging ? 'drop-shadow(0 10px 25px rgba(0, 0, 0, 0.3))' : 'none',
     overflow: 'hidden'
@@ -413,7 +413,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
                     key={colorName}
                     className={cn("w-6 h-6 rounded-full border", block.color === colorName && "ring-2 ring-ring")}
                     style={{ backgroundColor: `hsl(var(--bubble-${colorName}))` }}
-                    onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBble_COLORS })}
+                    onClick={() => updateBlock(block.id, { color: colorName as keyof typeof BUBBLE_COLORS })}
                     />
                 ))}
                 </div>
@@ -538,7 +538,8 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
 // Custom comparison function for React.memo
 const areBubblesEqual = (prevProps: TimeBubbleProps, nextProps: TimeBubbleProps) => {
     // Basic checks first
-    if (prevProps.timelineRef !== nextProps.timelineRef || prevProps.scrollContainerRef !== nextProps.scrollContainerRef || prevProps.zoomLevel !== nextProps.zoomLevel) {
+    // zoomLevel is not part of TimeBubbleProps; compare only defined props
+    if (prevProps.timelineRef !== nextProps.timelineRef || prevProps.scrollContainerRef !== nextProps.scrollContainerRef) {
         return false;
     }
 

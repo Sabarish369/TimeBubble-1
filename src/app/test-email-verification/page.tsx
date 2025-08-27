@@ -23,7 +23,7 @@ export default function TestEmailVerificationPage() {
 
     setStatus('sending');
     try {
-      await sendEmailVerification(email);
+      await sendEmailVerification();
       setMessage('Verification email sent successfully! Check your inbox and spam folder.');
       setStatus('success');
     } catch (error: any) {
