@@ -5,9 +5,9 @@ import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react';
 import type { TimeBlock, BubbleTemplate, DailyInsights, DailyTips, DailySidebarTip, DailySidebarTipInput, UserPreferences, HabitSuggestion, EnergyTracking, EnergyLevel } from '@/types';
 // Dynamic imports to avoid SSR issues
-const getDailyInsights = async (input: any) => {
-  const { getDailyInsights: fetchDailyInsights } = await import('@/ai/flows/daily-insights');
-  return fetchDailyInsights(input);
+const fetchDailyInsights = async (input: any) => {
+  const { getDailyInsights: fetcher } = await import('@/ai/flows/daily-insights');
+  return fetcher(input);
 };
 
 const getDailyTips = async (input: any) => {
@@ -799,7 +799,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
       }
       
       incrementAiCallCount();
-             const result = await getDailyInsights({ dailyData, apiKey: geminiApiKey });
+             const result = await fetchDailyInsights({ dailyData, apiKey: geminiApiKey });
       setDailyInsights(result);
     } catch (error: any) {
       console.error('Error getting AI insights:', error);
