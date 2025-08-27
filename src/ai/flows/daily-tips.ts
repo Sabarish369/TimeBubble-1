@@ -23,7 +23,6 @@ const prompt = ai.definePrompt({
 
 **ANALYSIS CONTEXT:**
 - Previous Day's Schedule: {{{schedule}}}
-- Historical Productivity & Mood Patterns: {{{productivityPatterns}}}
 
 **ANALYSIS FRAMEWORK:**
 1. **Completion Pattern Analysis**: Identify which tasks were completed vs. missed and why
@@ -88,7 +87,6 @@ const dailyTipsFlow = ai.defineFlow(
   async (input) => {
     // Enhanced data preprocessing for better tip generation
     const scheduleData = JSON.parse(input.schedule);
-    const patternsData = JSON.parse(input.productivityPatterns);
     
     // Analyze completion patterns
     const completedTasks = scheduleData.filter((task: any) => task.completed);
@@ -135,19 +133,7 @@ const dailyTipsFlow = ai.defineFlow(
           }))
         }
       }),
-      productivityPatterns: JSON.stringify({
-        ...patternsData,
-        enhancedAnalysis: {
-          averageProductivity: completedTasks.length > 0 ? completedTasks.reduce((sum: number, task: any) => 
-            sum + (task.reflection?.productivity || 0), 0) / completedTasks.length : 0,
-          averageMood: completedTasks.length > 0 ? completedTasks.reduce((sum: number, task: any) => 
-            sum + (task.reflection?.mood || 0), 0) / completedTasks.length : 0,
-          peakProductivityTime: highProductivityTasks.length > 0 ? 
-            highProductivityTasks[0]?.startTime : null,
-          peakMoodTime: positiveMoodTasks.length > 0 ? 
-            positiveMoodTasks[0]?.startTime : null
-        }
-      })
+      productivityPatterns: "{}", // Pass empty object as historical patterns are no longer used.
     };
 
     const llm = googleAI.model('gemini-1.5-flash', {apiKey: input.apiKey});
