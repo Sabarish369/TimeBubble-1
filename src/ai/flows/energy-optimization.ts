@@ -8,6 +8,7 @@
 
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
+import { withAiRetry, normalizeAiError } from './_utils';
 import { EnergyOptimizationInputSchema, EnergyOptimizationOutputSchema, type EnergyOptimizationInput, type EnergyOptimizationOutput } from '@/types/ai-types';
 
 export async function getEnergyOptimizationSuggestions(input: EnergyOptimizationInput): Promise<EnergyOptimizationOutput> {
@@ -217,19 +218,11 @@ const energyOptimizationFlow = ai.defineFlow(
     const llm = googleAI.model('gemini-1.5-flash', { apiKey: input.apiKey });
     
     try {
-      const { output } = await prompt(enhancedInput, { model: llm });
+      const { output } = await withAiRetry(() => prompt(enhancedInput, { model: llm }), { retries: 2, initialDelayMs: 1500 });
       return output!;
     } catch (error: any) {
-        if (error.status === 400 || error.message.includes('API key not valid')) {
-            throw new Error("Invalid API Key. Please check your key in the settings.");
-        }
-      if (error.status === 429) {
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          const { output } = await prompt(enhancedInput, { model: llm });
-          return output!;
-      }
       console.error('Error getting energy optimization:', error);
-      throw error;
+      throw normalizeAiError(error);
     }
   }
 );

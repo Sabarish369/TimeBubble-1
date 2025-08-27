@@ -5,17 +5,21 @@
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 
+const isProd = process.env.NODE_ENV === 'production';
+
 export const ai = genkit({
   plugins: [
     googleAI(),
   ],
-  // Log developer-friendly errors
-  devMode: true,
-  // Use a simple file-based trace store.
-  traceStore: {
-    type: 'file',
-    options: {
-      path: '.genkit-traces',
+  // Enable developer-friendly errors only in non-production
+  devMode: !isProd,
+  // Avoid filesystem trace store in production/serverless to prevent runtime errors
+  ...(isProd ? {} : {
+    traceStore: {
+      type: 'file',
+      options: {
+        path: '.genkit-traces',
+      },
     },
-  },
+  }),
 });

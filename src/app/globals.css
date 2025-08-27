@@ -2380,4 +2380,71 @@ body {
     position: relative !important;
     overflow: visible !important;
   }
+
+  /* Ultra-Smooth Peaceful Bubbles - No flickering */
+  .ultra-smooth-bubbles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .ultra-smooth-bubble {
+    position: absolute;
+    bottom: -8vh;
+    left: var(--x, 10%);
+    width: var(--size, 80px);
+    height: var(--size, 80px);
+    opacity: 0.25;
+    animation: ultraSmoothFloat var(--rise, 60s) linear var(--delay, 0s) infinite;
+    will-change: transform;
+  }
+
+  .ultra-smooth-bubble::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at center, var(--color, rgba(20,184,166,0.10)) 0%, transparent 70%);
+    filter: blur(8px);
+    box-shadow: 
+      0 0 20px var(--color, rgba(20,184,166,0.12)),
+      0 0 35px var(--color, rgba(20,184,166,0.06));
+  }
+
+  @keyframes ultraSmoothFloat {
+    0%   { 
+      transform: translateY(0) scale(1); 
+    }
+    100% { 
+      transform: translateY(-95vh) scale(1.02); 
+    }
+  }
+
+  /* Bubble variations with different positions and timing */
+  .ultra-smooth-bubbles .ultra-smooth-bubble:nth-child(1) { 
+    --x: 18%; --size: 85px; --rise: 65s; --delay: 0s; 
+    --color: rgba(20,184,166,0.10); /* Teal-blue */
+  }
+  .ultra-smooth-bubbles .ultra-smooth-bubble:nth-child(2) { 
+    --x: 65%; --size: 70px; --rise: 70s; --delay: 8s; 
+    --color: rgba(168,85,247,0.08); /* Purple */
+  }
+  .ultra-smooth-bubbles .ultra-smooth-bubble:nth-child(3) { 
+    --x: 42%; --size: 55px; --rise: 75s; --delay: 16s; 
+    --color: rgba(236,72,153,0.06); /* Pink */
+  }
+  .ultra-smooth-bubbles .ultra-smooth-bubble:nth-child(4) { 
+    --x: 12%; --size: 90px; --rise: 68s; --delay: 4s; 
+    --color: rgba(59,130,246,0.08); /* Blue */
+  }
+  .ultra-smooth-bubbles .ultra-smooth-bubble:nth-child(5) { 
+    --x: 78%; --size: 65px; --rise: 72s; --delay: 12s; 
+    --color: rgba(251,191,36,0.06); /* Amber */
+  }
+  .ultra-smooth-bubbles .ultra-smooth-bubble:nth-child(6) { 
+    --x: 30%; --size: 75px; --rise: 78s; --delay: 20s; 
+    --color: rgba(34,197,94,0.06); /* Green */
+  }
 }

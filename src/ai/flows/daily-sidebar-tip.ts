@@ -8,6 +8,7 @@
 
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
+import { withAiRetry, normalizeAiError } from './_utils';
 import { DailySidebarTipInputSchema, DailySidebarTipOutputSchema, type DailySidebarTip, type DailySidebarTipInput } from '@/types/ai-types';
 
 export async function getDailySidebarTip(input: DailySidebarTipInput): Promise<DailySidebarTip> {
@@ -50,25 +51,11 @@ const dailySidebarTipFlow = ai.defineFlow(
     const llm = googleAI.model('gemini-1.5-flash', {apiKey: input.apiKey});
     
     try {
-      const { output } = await prompt(input, { model: llm });
+      const { output } = await withAiRetry(() => prompt(input, { model: llm }), { retries: 2, initialDelayMs: 1500 });
       return output!;
     } catch (error: any) {
-      // Check for invalid API key error
-      if (error.status === 400) {
-        throw new Error("Invalid API Key. Please check your key in the settings.");
-      }
-      
-      // Improved retry mechanism for transient errors, especially rate limiting
-      if (error.status === 429) { // Specifically handle "Too Many Requests"
-        console.warn('Rate limit hit, retrying in 60 seconds...', error);
-        await new Promise(resolve => setTimeout(resolve, 60000));
-      } else {
-        console.warn('First attempt to get daily tip failed, retrying in 5 seconds...', error);
-        await new Promise(resolve => setTimeout(resolve, 5000));
-      }
-      
-      const { output } = await prompt(input, { model: llm });
-      return output!;
+      console.warn('Failed to get daily sidebar tip:', error);
+      throw normalizeAiError(error);
     }
   }
 );

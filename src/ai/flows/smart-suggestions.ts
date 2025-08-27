@@ -9,6 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {googleAI} from '@genkit-ai/googleai';
+import { withAiRetry, normalizeAiError } from './_utils';
 import {z} from 'genkit';
 import { SmartSuggestionsInputSchema, SmartSuggestionsOutputSchema, type SmartSuggestionsInput, type SmartSuggestionsOutput } from '@/types/ai-types';
 
@@ -39,7 +40,11 @@ const smartSuggestionsFlow = ai.defineFlow(
   },
   async input => {
     const llm = googleAI.model('gemini-1.5-flash', {apiKey: input.apiKey});
-    const {output} = await prompt(input, {model: llm});
-    return output!;
+    try {
+      const {output} = await withAiRetry(() => prompt(input, {model: llm}), { retries: 2, initialDelayMs: 1500 });
+      return output!;
+    } catch (error: any) {
+      throw normalizeAiError(error);
+    }
   }
 );

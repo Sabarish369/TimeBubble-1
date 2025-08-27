@@ -113,6 +113,20 @@ export default function UpgradePage() {
     return (
     <AuthGuard>
         <div className="flex flex-col min-h-screen bg-background text-foreground">
+             {/* Simple bubble background */}
+             <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+               <div className="absolute inset-0 bg-[radial-gradient(45rem_45rem_at_50%_-10%,rgba(99,102,241,0.15),transparent)]" />
+               <div className="absolute inset-0 bg-[radial-gradient(35rem_35rem_at_80%_10%,rgba(236,72,153,0.12),transparent)]" />
+               <div className="absolute -left-20 top-20 w-72 h-72 rounded-full bg-primary/8 blur-3xl animate-pulse" />
+               <div className="absolute right-10 top-1/3 w-64 h-64 rounded-full bg-accent/8 blur-3xl animate-[pulse_6s_ease-in-out_infinite]" />
+               <div className="absolute -right-24 bottom-10 w-96 h-96 rounded-full bg-amber-300/8 blur-3xl animate-[pulse_8s_ease-in-out_infinite]" />
+               {/* Ultra-smooth bubble container */}
+               <div className="ultra-smooth-bubbles">
+                 {Array.from({ length: 6 }).map((_, i) => (
+                   <div key={i} className="ultra-smooth-bubble" />
+                 ))}
+               </div>
+             </div>
              <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-lg">
                 <div className="container mx-auto flex items-center justify-between p-4">
                     <Link href="/app"><TimeBubbleLogo className="h-6 w-auto" /></Link>
@@ -147,8 +161,8 @@ export default function UpgradePage() {
                         />
                          <PlanColumn 
                             title="Lifetime Pro"
-                            price="$49"
-                            priceSubtitle="One-time payment"
+                            price="$29"
+                            priceSubtitle="Limited-time launch price (one-time)"
                             description="Unlock every feature, forever, powered by the Google Gemini API."
                             features={proFeatures}
                             onUpgrade={handleUpgrade}

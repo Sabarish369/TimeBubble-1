@@ -8,6 +8,7 @@
 
 import { ai } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
+import { withAiRetry, normalizeAiError } from './_utils';
 import { z } from 'genkit';
 import { DailyInsightsInputSchema, DailyInsightsOutputSchema, type DailyInsights, type DailyInsightsInput } from '@/types/ai-types';
 import { TimeBlock } from '@/types';
@@ -128,20 +129,11 @@ const dailyInsightsFlow = ai.defineFlow(
     };
 
     try {
-        const { output } = await prompt(promptData, { model: llm });
+        const { output } = await withAiRetry(() => prompt(promptData, { model: llm }), { retries: 2, initialDelayMs: 1500 });
         return output!;
     } catch (error: any) {
-        if (error.status === 400 || error.message.includes('API key not valid')) {
-            throw new Error("Invalid API Key. Please check your key in the settings.");
-        }
-        if (error.status === 429) { // Specifically handle "Too Many Requests"
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            const { output } = await prompt(promptData, { model: llm });
-            return output!;
-        }
-        // Fallback for other errors
         console.error("Error fetching daily insights:", error);
-        throw error;
+        throw normalizeAiError(error);
     }
   }
 );
