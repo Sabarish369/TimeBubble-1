@@ -81,11 +81,11 @@ export function AIOptimizerDrawer() {
   }, [isOpen, clearDailyInsights]);
 
   const handleFetchTips = useCallback(() => {
-    if (isPro && geminiApiKey && !dailyTips && !isLoadingTips) {
+    if (isPro && geminiApiKey) {
         getDailyTips();
     }
     setView('tips');
-  }, [isPro, geminiApiKey, dailyTips, isLoadingTips, getDailyTips]);
+  }, [isPro, geminiApiKey, getDailyTips]);
   
   const handleFetchInsights = useCallback(() => {
     if (isPro && geminiApiKey && !dailyInsights && !isLoadingInsights) {
