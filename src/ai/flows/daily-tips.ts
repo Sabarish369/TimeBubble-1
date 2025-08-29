@@ -124,14 +124,14 @@ const dailyTipsFlow = ai.defineFlow(
             acc[task.category] = (acc[task.category] || 0) + 1;
             return acc;
           }, {}),
-          tasksByTime: completedTasks.map((task: any) => ({
+        },
+        rawTasks: completedTasks.map((task: any) => ({
             title: task.title,
             startTime: task.startTime,
             category: task.category,
             productivity: task.reflection?.productivity || 0,
             mood: task.reflection?.mood || 0
           }))
-        }
       }),
       productivityPatterns: "{}", // Pass empty object as historical patterns are no longer used.
     };
