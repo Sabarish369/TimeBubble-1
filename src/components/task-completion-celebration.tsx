@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, CheckCircle, Star, Zap } from 'lucide-react';
 
 interface TaskCompletionCelebrationProps {
   isVisible: boolean;
@@ -10,263 +9,160 @@ interface TaskCompletionCelebrationProps {
   position?: { x: number; y: number };
 }
 
-interface Particle {
+interface ConfettiBubble {
   id: number;
   x: number;
   y: number;
   vx: number;
   vy: number;
+  size: number;
+  color: string;
   life: number;
   maxLife: number;
-  type: 'sparkle' | 'star' | 'zap' | 'bubble';
-  size: number;
   rotation: number;
   rotationSpeed: number;
 }
 
+// Move colors outside component to prevent recreation on every render
+const CONFETTI_COLORS = [
+  '#FF6B6B', // Coral
+  '#4ECDC4', // Turquoise
+  '#45B7D1', // Sky Blue
+  '#96CEB4', // Mint
+  '#FECA57', // Yellow
+  '#FF9FF3', // Pink
+  '#54A0FF', // Blue
+  '#5F27CD', // Purple
+  '#00D2D3', // Cyan
+  '#FF9F43'  // Orange
+];
+
 export function TaskCompletionCelebration({ 
   isVisible, 
-  onComplete, 
-  position = { x: 0, y: 0 } 
+  onComplete
 }: TaskCompletionCelebrationProps) {
-  const [particles, setParticles] = useState<Particle[]>([]);
-  const [showMainCelebration, setShowMainCelebration] = useState(false);
+  const [confetti, setConfetti] = useState<ConfettiBubble[]>([]);
 
   useEffect(() => {
-    if (isVisible) {
-      // Create initial burst of particles
-      const newParticles: Particle[] = [];
-      
-      // Sparkles
-      for (let i = 0; i < 12; i++) {
-        const angle = (i / 12) * Math.PI * 2;
-        const speed = 2 + Math.random() * 3;
-        newParticles.push({
-          id: i,
-          x: position.x,
-          y: position.y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          life: 0,
-          maxLife: 60 + Math.random() * 30,
-          type: 'sparkle',
-          size: 8 + Math.random() * 8,
-          rotation: Math.random() * 360,
-          rotationSpeed: (Math.random() - 0.5) * 20
-        });
-      }
-
-      // Stars
-      for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2 + Math.PI / 8;
-        const speed = 1.5 + Math.random() * 2;
-        newParticles.push({
-          id: 100 + i,
-          x: position.x,
-          y: position.y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          life: 0,
-          maxLife: 80 + Math.random() * 40,
-          type: 'star',
-          size: 12 + Math.random() * 8,
-          rotation: Math.random() * 360,
-          rotationSpeed: (Math.random() - 0.5) * 15
-        });
-      }
-
-      // Zap effects
-      for (let i = 0; i < 6; i++) {
-        const angle = (i / 6) * Math.PI * 2 + Math.PI / 6;
-        const speed = 3 + Math.random() * 2;
-        newParticles.push({
-          id: 200 + i,
-          x: position.x,
-          y: position.y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          life: 0,
-          maxLife: 50 + Math.random() * 20,
-          type: 'zap',
-          size: 10 + Math.random() * 6,
-          rotation: Math.random() * 360,
-          rotationSpeed: (Math.random() - 0.5) * 25
-        });
-      }
-
-      // Floating bubbles
-      for (let i = 0; i < 4; i++) {
-        const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
-        const speed = 0.8 + Math.random() * 1.2;
-        newParticles.push({
-          id: 300 + i,
-          x: position.x,
-          y: position.y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          life: 0,
-          maxLife: 100 + Math.random() * 50,
-          type: 'bubble',
-          size: 16 + Math.random() * 12,
-          rotation: Math.random() * 360,
-          rotationSpeed: (Math.random() - 0.5) * 10
-        });
-      }
-
-      setParticles(newParticles);
-      setShowMainCelebration(true);
-
-      // Auto-hide after animation
-      const timer = setTimeout(() => {
-        setShowMainCelebration(false);
-        setTimeout(() => {
-          if (onComplete) onComplete();
-        }, 500);
-      }, 3000);
-
-      return () => clearTimeout(timer);
+    if (!isVisible) {
+      setConfetti([]);
+      return;
     }
-  }, [isVisible, position.x, position.y, onComplete]);
 
+    // Create confetti bubbles that float around the bubble
+    const createConfetti = () => {
+      const newConfetti: ConfettiBubble[] = [];
+      
+      // Create bubbles around the perimeter of the time bubble
+      for (let i = 0; i < 20; i++) {
+        const angle = (i / 20) * Math.PI * 2;
+        const radius = 80 + Math.random() * 40; // Start outside the bubble
+        const speed = 1 + Math.random() * 2;
+        
+        newConfetti.push({
+          id: Date.now() + i,
+          x: Math.cos(angle) * radius,
+          y: Math.sin(angle) * radius,
+          vx: (Math.random() - 0.5) * speed,
+          vy: -Math.abs(Math.random()) * speed - 1, // Always float upward
+          size: 8 + Math.random() * 16,
+          color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+          life: 0,
+          maxLife: 180 + Math.random() * 120, // 3-5 seconds
+          rotation: Math.random() * 360,
+          rotationSpeed: (Math.random() - 0.5) * 8
+        });
+      }
+      
+      setConfetti(newConfetti);
+    };
+
+    createConfetti();
+
+    // Clean up after animation
+    const cleanup = setTimeout(() => {
+      setConfetti([]);
+      if (onComplete) onComplete();
+    }, 4000);
+
+    return () => clearTimeout(cleanup);
+  }, [isVisible, onComplete]);
+
+  // Animate confetti bubbles
   useEffect(() => {
-    if (particles.length === 0) return;
+    if (confetti.length === 0) return;
 
     const interval = setInterval(() => {
-      setParticles(prev => 
-        prev.map(particle => ({
-          ...particle,
-          x: particle.x + particle.vx,
-          y: particle.y + particle.vy,
-          life: particle.life + 1,
-          rotation: particle.rotation + particle.rotationSpeed * 0.1,
-          vy: particle.vy + 0.05, // Gravity effect
-          vx: particle.vx * 0.99, // Air resistance
-        })).filter(particle => particle.life < particle.maxLife)
+      setConfetti(prev => 
+        prev.map(bubble => {
+          const progress = bubble.life / bubble.maxLife;
+          const opacity = progress < 0.1 ? progress * 10 : 
+                         progress > 0.8 ? (1 - progress) * 5 : 1;
+          
+          return {
+            ...bubble,
+            x: bubble.x + bubble.vx,
+            y: bubble.y + bubble.vy,
+            life: bubble.life + 1,
+            rotation: bubble.rotation + bubble.rotationSpeed,
+            // Add slight air resistance and gentle floating motion
+            vx: bubble.vx * 0.99 + (Math.random() - 0.5) * 0.1,
+            vy: bubble.vy * 0.99 - 0.05, // Constant upward drift
+          };
+        }).filter(bubble => bubble.life < bubble.maxLife)
       );
     }, 16); // 60fps
 
     return () => clearInterval(interval);
-  }, [particles]);
+  }, [confetti]);
 
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-50">
-      {/* Main celebration overlay */}
-      <AnimatePresence>
-        {showMainCelebration && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.2 }}
-            className="absolute inset-0 flex items-center justify-center"
-          >
-            {/* Central celebration */}
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 200, 
-                damping: 15,
-                delay: 0.2
-              }}
-              className="relative"
-            >
-                             <div className="w-24 h-24 bg-gradient-to-br from-green-400 via-emerald-500 to-teal-600 rounded-full flex items-center justify-center shadow-2xl">
-                 <CheckCircle className="w-12 h-12 text-white" style={{ strokeWidth: 2 }} />
-               </div>
-              
-                             {/* Ripple effect */}
-               <motion.div
-                 initial={{ scale: 0, opacity: 1 }}
-                 animate={{ scale: 3, opacity: 0 }}
-                 transition={{ duration: 1.5, repeat: 2, ease: "easeOut" }}
-                 className="absolute inset-0 border-2 border-green-400 rounded-full"
-                 style={{ filter: 'drop-shadow(0 0 2px rgba(34, 197, 94, 0.8))' }}
-               />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Particle animations */}
-      {particles.map(particle => {
-        const progress = particle.life / particle.maxLife;
-        const opacity = 1 - progress;
-        const scale = 1 - progress * 0.5;
-
+    <div className="absolute inset-0 pointer-events-none z-40 overflow-visible">
+      {/* Floating confetti bubbles */}
+      {confetti.map(bubble => {
+        const progress = bubble.life / bubble.maxLife;
+        const opacity = progress < 0.1 ? progress * 10 : 
+                       progress > 0.8 ? (1 - progress) * 5 : 1;
+        const scale = 0.8 + Math.sin(bubble.life * 0.1) * 0.2; // Gentle pulsing
+        
         return (
           <motion.div
-            key={particle.id}
-            initial={{ 
-              x: position.x, 
-              y: position.y, 
-              scale: 0, 
-              opacity: 0 
-            }}
-            animate={{ 
-              x: particle.x, 
-              y: particle.y, 
-              scale: scale, 
-              opacity: opacity,
-              rotate: particle.rotation
-            }}
-            transition={{ duration: 0.1 }}
+            key={bubble.id}
             className="absolute"
             style={{
-              width: particle.size,
-              height: particle.size,
+              left: '50%',
+              top: '50%',
+              width: bubble.size,
+              height: bubble.size,
+              marginLeft: -(bubble.size / 2),
+              marginTop: -(bubble.size / 2),
+              transform: `translate(${bubble.x}px, ${bubble.y}px) rotate(${bubble.rotation}deg) scale(${scale})`,
+              opacity: opacity * 0.8
             }}
           >
-                         {particle.type === 'sparkle' && (
-               <Sparkles 
-                 className="w-full h-full text-yellow-400" 
-                 style={{ 
-                   filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 1))',
-                   strokeWidth: 1.5
-                 }}
-               />
-             )}
-             {particle.type === 'star' && (
-               <Star 
-                 className="w-full h-full text-blue-400" 
-                 style={{ 
-                   filter: 'drop-shadow(0 0 4px rgba(96, 165, 250, 1))',
-                   strokeWidth: 1.5
-                 }}
-               />
-             )}
-             {particle.type === 'zap' && (
-               <Zap 
-                 className="w-full h-full text-purple-400" 
-                 style={{ 
-                   filter: 'drop-shadow(0 0 4px rgba(168, 85, 247, 1))',
-                   strokeWidth: 1.5
-                 }}
-               />
-             )}
-             {particle.type === 'bubble' && (
-               <div 
-                 className="w-full h-full rounded-full bg-gradient-to-br from-pink-400 to-rose-500"
-                 style={{ 
-                   filter: 'drop-shadow(0 0 4px rgba(236, 72, 153, 1))',
-                   background: `radial-gradient(circle, rgba(236, 72, 153, 1) 0%, rgba(244, 63, 94, 0.9) 100%)`
-                 }}
-               />
-             )}
+            <div
+              className="w-full h-full rounded-full"
+              style={{
+                backgroundColor: bubble.color,
+                boxShadow: `0 0 ${bubble.size * 0.5}px ${bubble.color}40, inset 0 2px 4px rgba(255, 255, 255, 0.3)`,
+                border: '2px solid rgba(255, 255, 255, 0.6)'
+              }}
+            />
           </motion.div>
         );
       })}
 
-      {/* Background glow effect */}
+      {/* Simple success indicator */}
       <AnimatePresence>
-        {showMainCelebration && (
+        {isVisible && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-gradient-to-r from-green-500/5 via-emerald-500/5 to-teal-500/5"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 bg-green-400/10 rounded-lg border border-green-400/30"
           />
         )}
       </AnimatePresence>

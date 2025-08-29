@@ -2,7 +2,6 @@
 'use client';
 
 import { format } from 'date-fns';
-import { useState } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Menu, Sparkles } from 'lucide-react';
 import {
   Popover,
@@ -17,20 +16,20 @@ import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { cn } from '@/lib/utils';
 import { UserProfile } from './user-profile';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { AIOptimizerDrawer } from './ai-optimizer-drawer';
+
 import { AiQuotaIndicator } from './ai-quota-indicator';
 import { UpgradeBadge } from './upgrade-badge';
 import { ProBadge } from './pro-badge';
 import { useAuth } from '@/context/auth-context';
 import { AtmosphericLights } from './atmospheric-lights';
-import { WeeklyAnalysis } from './weekly-analysis';
 import { BarChart3 } from 'lucide-react';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
+  onOpenWeeklyAnalysis?: () => void;
 }
 
-export function Header({ onToggleSidebar }: HeaderProps) {
+export function Header({ onToggleSidebar, onOpenWeeklyAnalysis }: HeaderProps) {
   const {
     currentDate,
     setCurrentDate,
@@ -40,15 +39,14 @@ export function Header({ onToggleSidebar }: HeaderProps) {
   } = useTimeBubbles();
   const isMobile = useIsMobile();
   const { isPro } = useAuth();
-  const [isWeeklyAnalysisOpen, setIsWeeklyAnalysisOpen] = useState(false);
 
   return (
     <header className={cn(
-      "relative flex items-center justify-between p-2 md:p-4 border-b shrink-0 bg-background touch-friendly",
+      "relative flex items-center justify-between p-3 md:p-6 border-b border-border/40 shrink-0 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 touch-friendly",
       isPro && "pro-gradient-background"
     )}>
-      {/* Atmospheric moving lights behind header content */}
-      <AtmosphericLights className="z-0" count={12} speed={18} size={6} />
+      {/* Atmospheric floating bubbles behind header content */}
+      <AtmosphericLights className="z-0" count={8} speed={0.5} size={14} />
       <div className="flex items-center gap-2 md:gap-4 relative z-10">
         {isMobile && (
           <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="mobile-friendly-tap">
@@ -62,11 +60,21 @@ export function Header({ onToggleSidebar }: HeaderProps) {
         </div>
       </div>
       <div id="date-navigation" className="flex-1 flex justify-center items-center gap-1 md:gap-2 relative z-10">
-        <Button variant="outline" size={isMobile ? 'sm' : 'default'} onClick={goToToday}>
+        <Button 
+          variant="outline" 
+          size={isMobile ? 'sm' : 'default'} 
+          onClick={goToToday}
+          className="font-semibold hover:bg-primary/10 hover:border-primary/30 transition-colors shadow-sm border-border/50"
+        >
           Today
         </Button>
-        <div className="flex items-center gap-1 rounded-md border p-1 bg-background/50">
-          <Button variant="ghost" size="icon" className={cn("h-7 w-7", isMobile && "mobile-friendly-tap h-9 w-9")} onClick={goToPreviousDay}>
+        <div className="flex items-center gap-1 rounded-2xl border border-border/50 bg-background/80 backdrop-blur-sm p-1.5 shadow-sm hover:shadow-md transition-all">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className={cn("h-9 w-9 rounded-xl hover:bg-primary/10 transition-colors", isMobile && "mobile-friendly-tap h-11 w-11")} 
+            onClick={goToPreviousDay}
+          >
             <ChevronLeft className="h-5 w-5" />
             <span className="sr-only">Previous day</span>
           </Button>
@@ -75,7 +83,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
               <Button
                 variant={'ghost'}
                 className={cn(
-                  'w-[150px] md:w-[200px] justify-center text-center font-semibold text-base md:text-lg px-1',
+                  'w-[180px] md:w-[240px] justify-center text-center font-bold text-base md:text-lg px-3 rounded-xl hover:bg-primary/5 transition-colors',
                    isMobile && 'w-auto text-sm'
                 )}
               >
@@ -83,16 +91,22 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                 {currentDate ? format(currentDate, isMobile ? 'MMM d, yy' : 'MMMM do, yyyy') : "Loading..."}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
+            <PopoverContent className="w-auto p-0 border-0 shadow-xl rounded-2xl">
               <Calendar
                 mode="single"
                 selected={currentDate}
                 onSelect={(date) => date && setCurrentDate(date)}
                 initialFocus
+                className="rounded-2xl border-0"
               />
             </PopoverContent>
           </Popover>
-          <Button variant="ghost" size="icon" className={cn("h-7 w-7", isMobile && "mobile-friendly-tap h-9 w-9")} onClick={goToNextDay}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className={cn("h-9 w-9 rounded-xl hover:bg-primary/10 transition-colors", isMobile && "mobile-friendly-tap h-11 w-11")} 
+            onClick={goToNextDay}
+          >
             <ChevronRight className="h-5 w-5" />
             <span className="sr-only">Next day</span>
           </Button>
@@ -105,7 +119,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             variant="ghost"
             size="icon"
             className="relative h-9 w-9 rounded-full hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary/40"
-            onClick={() => setIsWeeklyAnalysisOpen(true)}
+            onClick={onOpenWeeklyAnalysis}
           >
             <BarChart3 className="h-5 w-5 text-primary" />
             <span className="absolute -top-1 -right-1 text-[9px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary/80">Beta</span>
@@ -115,14 +129,8 @@ export function Header({ onToggleSidebar }: HeaderProps) {
           <UpgradeBadge />
         <ThemeToggle />
         <UserProfile />
-        <AIOptimizerDrawer />
+
       </div>
-      {isPro && (
-        <WeeklyAnalysis
-          isOpen={isWeeklyAnalysisOpen}
-          onClose={() => setIsWeeklyAnalysisOpen(false)}
-        />
-      )}
     </header>
   );
 }

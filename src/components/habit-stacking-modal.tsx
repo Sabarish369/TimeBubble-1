@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,17 +23,33 @@ export function HabitStackingModal({ isOpen, onClose, routineBubbles }: HabitSta
   const [suggestions, setSuggestions] = useState<HabitSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
+  const hasFetchedRef = useRef(false); // Track if we've already fetched for this session
   const { addBlockOnDate, currentDate } = useTimeBubbles();
   const { geminiApiKey } = useAuth();
 
   useEffect(() => {
-    if (isOpen && routineBubbles.length > 0 && geminiApiKey) {
+    if (isOpen && routineBubbles.length > 0 && geminiApiKey && !hasFetchedRef.current) {
+      hasFetchedRef.current = true;
       fetchHabitSuggestions();
     }
-  }, [isOpen, routineBubbles, geminiApiKey]);
+  }, [isOpen, geminiApiKey]); // Remove routineBubbles from dependencies to prevent infinite loop
+
+  // Reset fetch flag when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      hasFetchedRef.current = false;
+      setSuggestions([]);
+      setSelectedSuggestions(new Set());
+    }
+  }, [isOpen]);
 
   const fetchHabitSuggestions = async () => {
-    if (!geminiApiKey) return;
+    if (!geminiApiKey || routineBubbles.length === 0) return;
+
+    // Prevent multiple simultaneous calls
+    if (isLoading) {
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -65,6 +81,7 @@ export function HabitStackingModal({ isOpen, onClose, routineBubbles }: HabitSta
       })));
     } catch (error) {
       console.error('Failed to fetch habit suggestions:', error);
+      setSuggestions([]); // Clear suggestions on error
     } finally {
       setIsLoading(false);
     }
@@ -78,6 +95,14 @@ export function HabitStackingModal({ isOpen, onClose, routineBubbles }: HabitSta
       newSelected.add(suggestionId);
     }
     setSelectedSuggestions(newSelected);
+  };
+
+  const handleRefresh = () => {
+    if (isLoading) return; // Prevent multiple simultaneous refreshes
+    hasFetchedRef.current = false;
+    setSuggestions([]);
+    setSelectedSuggestions(new Set());
+    fetchHabitSuggestions();
   };
 
   const handleApplySelected = async () => {
@@ -178,14 +203,34 @@ export function HabitStackingModal({ isOpen, onClose, routineBubbles }: HabitSta
             <div className="text-center py-8 text-muted-foreground">
               <Target className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p>No habit suggestions found for your current routines.</p>
-              <p className="text-sm">Try adding more routine bubbles to get personalized suggestions.</p>
+              <p className="text-sm mb-4">Try adding more routine bubbles to get personalized suggestions.</p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleRefresh}
+                className="mt-2"
+              >
+                Refresh Suggestions
+              </Button>
             </div>
           )}
 
           <div className="flex justify-between pt-4 border-t">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              {suggestions.length > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                >
+                  🔄 Refresh
+                </Button>
+              )}
+            </div>
             <Button 
               onClick={handleApplySelected}
               disabled={selectedSuggestions.size === 0 || isLoading}

@@ -337,16 +337,19 @@ export function AIOptimizerDrawer() {
 
   return (
     <>
-      <div id="ai-tips-drawer-trigger" className={cn("fixed top-1/2 -translate-y-1/2 right-0 z-40 transition-transform duration-500", isOpen && "translate-x-[-384px]")}>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="rounded-r-none rounded-l-full h-16 w-10 border-r-0 pulse-glow"
-            onClick={handleOpen}
-          >
-              <Sparkles className="h-5 w-5 text-amber-400" />
-          </Button>
-      </div>
+      <button 
+        id="ai-tips-drawer-trigger"
+        onClick={handleOpen}
+        className={cn(
+          "ai-button-trigger",
+          isOpen && "open"
+        )}
+        aria-label="Open AI Optimizer"
+      >
+        <Sparkles 
+          className="h-6 w-6 text-white drop-shadow-sm" 
+        />
+      </button>
 
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetContent className="ai-optimizer-sheet">

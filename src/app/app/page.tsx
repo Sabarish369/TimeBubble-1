@@ -20,6 +20,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useNotifications } from "@/hooks/use-notifications";
 import { EnhancedProWelcomeModal } from "@/components/enhanced-pro-welcome-modal";
 import { ApiKeyModal } from "@/components/api-key-modal";
+import { AIOptimizerDrawer } from "@/components/ai-optimizer-drawer";
+import { WeeklyAnalysis } from "@/components/weekly-analysis";
 
 
 const TUTORIAL_STORAGE_KEY = 'timebubble_tutorial_completed_interactive_v2';
@@ -49,6 +51,7 @@ export default function AppPage() {
   const isMobile = useIsMobile();
   const [isProWelcomeModalOpen, setIsProWelcomeModalOpen] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [isWeeklyAnalysisOpen, setIsWeeklyAnalysisOpen] = useState(false);
 
   useEffect(() => {
     // This logic might be redundant if AuthGuard is used, but can be a fallback.
@@ -142,7 +145,10 @@ export default function AppPage() {
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground font-body overflow-hidden">
-      <Header onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+      <Header 
+        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        onOpenWeeklyAnalysis={() => setIsWeeklyAnalysisOpen(true)}
+      />
       <div className="flex flex-1 overflow-hidden relative">
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
         <main 
@@ -182,6 +188,13 @@ export default function AppPage() {
         isOpen={isApiKeyModalOpen}
         onClose={() => setIsApiKeyModalOpen(false)}
       />
+      {isPro && (
+        <WeeklyAnalysis
+          isOpen={isWeeklyAnalysisOpen}
+          onClose={() => setIsWeeklyAnalysisOpen(false)}
+        />
+      )}
+      <AIOptimizerDrawer />
     </div>
   );
 }
