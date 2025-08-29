@@ -15,30 +15,21 @@ import { cn } from '@/lib/utils';
 
 export function DailySidebarTip() {
   const [tip, setTip] = useState<DailySidebarTipType | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start with loading true
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
-  const hasFetchedRef = useRef(false); // Track if we've already fetched for this date
-  const isLoadingRef = useRef(false); // Track loading state to prevent race conditions
   
   const { timeBlocks, currentDate, getNewDailySidebarTip } = useTimeBubbles();
   const { user, isPro, geminiApiKey } = useAuth();
   const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
-  useEffect(() => {
-    // This ensures client-specific code runs only after mounting
-    setIsClient(true);
-  }, []);
-
   const getStorageKey = useCallback(() => {
-    if (!user || !isClient) return null;
+    if (!user) return null;
     return `daily_tip_${user.uid}_${format(currentDate, 'yyyy-MM-dd')}`;
-  }, [user?.uid, currentDate, isClient]); // Use user.uid instead of user object
+  }, [user, currentDate]);
 
   const fetchTip = useCallback(async (forceRefresh = false) => {
-    console.log('fetchTip called:', { isPro, geminiApiKey: !!geminiApiKey, forceRefresh, isLoading });
-    
     if (!isPro) {
       setIsLoading(false);
       setError(null);
@@ -50,45 +41,27 @@ export function DailySidebarTip() {
       return;
     }
 
-    // Prevent multiple simultaneous calls
-    if (isLoadingRef.current && !forceRefresh) {
-      console.log('Already loading, skipping...');
-      return;
-    }
-
-    isLoadingRef.current = true;
     setIsLoading(true);
     setError(null);
     
     const storageKey = getStorageKey();
-    console.log('Storage key:', storageKey);
 
     try {
       if (storageKey && !forceRefresh) {
         const cachedTip = localStorage.getItem(storageKey);
         if (cachedTip) {
-          try {
-            const parsedTip = JSON.parse(cachedTip);
-            console.log('Using cached tip:', parsedTip);
-            setTip(parsedTip);
-            setIsLoading(false);
-            return;
-          } catch(e) {
-            console.warn("Could not parse cached tip, fetching new one.");
-            localStorage.removeItem(storageKey);
-          }
+          setTip(JSON.parse(cachedTip));
+          setIsLoading(false);
+          return;
         }
       }
 
       const scheduleString = JSON.stringify(timeBlocks.map(b => ({ title: b.title, category: b.category, duration: b.duration })));
-      console.log('Calling API with schedule:', scheduleString);
       const result = await getNewDailySidebarTip({ scheduleData: scheduleString });
-      console.log('API result:', result);
       setTip(result);
 
       if (storageKey && result) {
         localStorage.setItem(storageKey, JSON.stringify(result));
-        console.log('Cached tip for future use');
       }
     } catch (err: any) {
       console.error('Failed to fetch daily tip:', err);
@@ -101,42 +74,32 @@ export function DailySidebarTip() {
         setError('Could not load a tip. Click to retry.');
       }
     } finally {
-      console.log('fetchTip completed, setting loading to false');
-      isLoadingRef.current = false;
       setIsLoading(false);
     }
-  }, [getStorageKey, timeBlocks, getNewDailySidebarTip, isPro, geminiApiKey]); // Removed isLoading to prevent circular dependency
+  }, [getStorageKey, timeBlocks, getNewDailySidebarTip, isPro, geminiApiKey]);
 
-  // Fetch tip on initial load and when date changes, but only on the client
+  // Combined effect for client-side logic
   useEffect(() => {
-    console.log('Daily tips useEffect triggered:', { isClient, isPro, geminiApiKey: !!geminiApiKey, hasFetched: hasFetchedRef.current, currentDate });
-    if (isClient && isPro && geminiApiKey && !hasFetchedRef.current && isToday(currentDate)) {
-      console.log('Triggering fetchTip...');
-      hasFetchedRef.current = true;
+    setIsClient(true);
+    
+    // Only run fetch logic on the client
+    if (isToday(currentDate)) {
       fetchTip();
+    } else {
+      setIsLoading(false);
+      setTip(null);
+      setError(null);
     }
-  }, [currentDate, isClient, isPro, geminiApiKey]); // Remove fetchTip from dependencies to prevent infinite loop
-
-  // Reset fetch flag when date changes
-  useEffect(() => {
-    console.log('Date changed, resetting fetch flag:', currentDate);
-    hasFetchedRef.current = false;
-    setTip(null);
-    setError(null);
+    
+    // This effect should run once when the date changes.
   }, [currentDate]);
+
 
   const handleCardClick = () => {
     if (!isPro) {
       setIsProModalOpen(true);
     } else if (isPro && isToday(currentDate)) {
-      if (error) {
-        // If there's an error, retry the fetch
-        hasFetchedRef.current = false;
-        fetchTip(true);
-      } else {
-        // Otherwise, force refresh
-        fetchTip(true);
-      }
+      fetchTip(true); // Always force a refresh on click
     }
   };
 
