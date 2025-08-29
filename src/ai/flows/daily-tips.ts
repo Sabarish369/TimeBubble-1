@@ -19,26 +19,25 @@ const prompt = ai.definePrompt({
   name: 'dailyTipsPrompt',
   input: { schema: DailyTipsInputSchema },
   output: { schema: DailyTipsOutputSchema },
-  prompt: `You are an expert productivity coach and behavioral psychologist specializing in personalized time management strategies. Your role is to analyze a user's patterns and provide highly specific, actionable tips that address their unique challenges and opportunities.
+  prompt: `You are an expert productivity coach and behavioral psychologist specializing in personalized time management strategies. Your role is to analyze a user's patterns from their completed tasks on the previous day and provide highly specific, actionable tips for today.
 
 **ANALYSIS CONTEXT:**
-- Previous Day's Schedule: {{{schedule}}}
+- Previous Day's Completed Tasks: {{{schedule}}}
 
 **ANALYSIS FRAMEWORK:**
-1. **Completion Pattern Analysis**: Identify which tasks were completed vs. missed and why
-2. **Energy & Mood Correlation**: Find connections between task types, timing, and user's energy/mood
-3. **Productivity Peaks & Valleys**: Identify when the user performs best and struggles
-4. **Task Category Performance**: Analyze which types of tasks lead to success or stress
-5. **Barrier Identification**: Spot common obstacles (time management, energy, motivation, etc.)
+1. **Completion Pattern Analysis**: Identify which tasks were completed and look for patterns in the reflection data (mood, productivity scores).
+2. **Energy & Mood Correlation**: Find connections between task types, timing, and the user's reported energy/mood.
+3. **Productivity Peaks & Valleys**: Based on productivity scores, identify when the user performs best.
+4. **Task Category Performance**: Analyze which types of tasks lead to higher productivity or better moods.
 
 **TIP GENERATION STRATEGY:**
 Generate 5-7 highly specific tips that directly address the user's patterns. Each tip should be:
 
 **REQUIRED ELEMENTS:**
-- **Specific**: Reference their actual tasks, times, and patterns
-- **Actionable**: Provide concrete steps they can take immediately
-- **Evidence-based**: Connect to their actual data and patterns
-- **Timely**: Relevant to their current situation and upcoming day
+- **Specific**: Reference their actual tasks, times, and reflection data.
+- **Actionable**: Provide concrete steps they can take immediately.
+- **Evidence-based**: Connect to their data (e.g., "Since your 'Deep Work' sessions scored 5/5 productivity...").
+- **Forward-looking**: The advice should be for the upcoming day.
 
 **TIP CATEGORIES & EXAMPLES:**
 
@@ -52,7 +51,7 @@ Generate 5-7 highly specific tips that directly address the user's patterns. Eac
 
 **Mindfulness & Focus Tips:**
 - "You felt most focused when working in 90-minute blocks with no interruptions. Try scheduling your phone on Do Not Disturb during your next work session."
-- "Creative tasks consistently boosted your mood by 2 points. Start your day with a creative task to set a positive tone."
+- "Creative tasks consistently boosted your mood. Start your day with a creative task to set a positive tone."
 
 **Efficiency Tips:**
 - "You had 4 similar 'email' tasks scattered throughout the day. Try batching all email work into one 30-minute block to reduce context switching."
@@ -63,17 +62,17 @@ Generate 5-7 highly specific tips that directly address the user's patterns. Eac
 - "Your mood improved significantly after social interactions. Consider scheduling a coffee chat or team meeting early in your day."
 
 **CONTEXTUAL ADAPTATION:**
-- If they had a low-completion day: Focus on recovery and setting achievable goals
-- If they had a high-productivity day: Build on that momentum with similar strategies
-- If they're stressed: Prioritize wellness and stress-management tips
-- If they're unmotivated: Focus on small wins and habit-building
+- If they had a low-completion day: Focus on recovery and setting achievable goals.
+- If they had a high-productivity day: Build on that momentum with similar strategies.
+- If they reported stress: Prioritize wellness and stress-management tips.
+- If they were unmotivated: Focus on small wins and habit-building.
 
 **TONE GUIDELINES:**
-- Be encouraging but honest about patterns
-- Use specific numbers and percentages when possible
-- Reference their actual task names and times
-- Focus on solutions, not just problems
-- Celebrate wins while identifying opportunities
+- Be encouraging but honest about patterns.
+- Use specific numbers and percentages when possible.
+- Reference their actual task names and times.
+- Focus on solutions, not just problems.
+- Celebrate wins while identifying opportunities.
 
 Generate tips that are immediately applicable and directly tied to their unique patterns and needs.`,
 });
@@ -85,60 +84,11 @@ const dailyTipsFlow = ai.defineFlow(
     outputSchema: DailyTipsOutputSchema,
   },
   async (input) => {
-    // Enhanced data preprocessing for better tip generation
-    const scheduleData = JSON.parse(input.schedule);
-    
-    // Analyze completion patterns
-    const completedTasks = scheduleData.filter((task: any) => task.completed);
-    const missedTasks = scheduleData.filter((task: any) => !task.completed);
-    const completionRate = scheduleData.length > 0 ? Math.round((completedTasks.length / scheduleData.length) * 100) : 0;
-    
-    // Analyze productivity patterns
-    const highProductivityTasks = completedTasks.filter((task: any) => 
-      task.reflection && task.reflection.productivity >= 4
-    );
-    const lowProductivityTasks = completedTasks.filter((task: any) => 
-      task.reflection && task.reflection.productivity <= 2
-    );
-    
-    // Analyze mood patterns
-    const positiveMoodTasks = completedTasks.filter((task: any) => 
-      task.reflection && task.reflection.mood >= 4
-    );
-    const negativeMoodTasks = completedTasks.filter((task: any) => 
-      task.reflection && task.reflection.mood <= 2
-    );
-
-    const enhancedInput = {
-      apiKey: input.apiKey,
-      schedule: JSON.stringify({
-        analysis: {
-          completionRate,
-          completedTasks: completedTasks.length,
-          missedTasks: missedTasks.length,
-          highProductivityTasks: highProductivityTasks.length,
-          lowProductivityTasks: lowProductivityTasks.length,
-          positiveMoodTasks: positiveMoodTasks.length,
-          negativeMoodTasks: negativeMoodTasks.length,
-          tasksByCategory: completedTasks.reduce((acc: any, task: any) => {
-            acc[task.category] = (acc[task.category] || 0) + 1;
-            return acc;
-          }, {}),
-        },
-        rawTasks: completedTasks.map((task: any) => ({
-            title: task.title,
-            startTime: task.startTime,
-            category: task.category,
-            productivity: task.reflection?.productivity || 0,
-            mood: task.reflection?.mood || 0
-          }))
-      }),
-      productivityPatterns: "{}", // Pass empty object as historical patterns are no longer used.
-    };
-
-    const llm = googleAI.model('gemini-1.5-flash', {apiKey: input.apiKey});
+    // The input 'schedule' is already a JSON string of the relevant completed tasks.
+    // No further complex processing is needed here. The prompt is designed to handle this directly.
+    const llm = googleAI.model('gemini-1.5-flash', { apiKey: input.apiKey });
     try {
-        const { output } = await prompt(enhancedInput, {model: llm});
+        const { output } = await prompt(input, { model: llm });
         return output!;
     } catch (error: any) {
         if (error.status === 400 || error.message.includes('API key not valid')) {
