@@ -41,11 +41,11 @@ export function Header({ onToggleSidebar, onOpenWeeklyAnalysis }: HeaderProps) {
 
   return (
     <header className={cn(
-      "relative flex items-center justify-between p-3 md:p-6 border-b border-border/40 shrink-0 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 touch-friendly",
+      "relative flex items-center justify-between p-3 md:p-6 border-b border-border/40 shrink-0 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 touch-friendly overflow-hidden isolation",
       isPro && "pro-gradient-background"
     )}>
       {/* Atmospheric floating bubbles behind header content */}
-      <AtmosphericLights className="z-0" count={8} speed={0.5} size={14} />
+      <AtmosphericLights className="z-0 absolute inset-0" count={8} speed={0.5} size={14} />
       <div className="flex items-center gap-2 md:gap-4 relative z-10">
         {isMobile && (
           <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="mobile-friendly-tap">

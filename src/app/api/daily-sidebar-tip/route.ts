@@ -7,12 +7,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { scheduleData, apiKey }: DailySidebarTipInput = body;
 
-    // Use provided API key or fall back to environment variables
-    const effectiveApiKey = apiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-
-    if (!effectiveApiKey) {
+    // Require user to provide their own API key
+    if (!apiKey) {
       return NextResponse.json(
-        { error: 'API key is required. Please provide an API key or set the GEMINI_API_KEY environment variable.' },
+        { error: 'API key is required. Please provide your own Gemini API key in the settings.' },
         { status: 400 }
       );
     }
@@ -26,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     const result = await getDailySidebarTip({
       scheduleData,
-      apiKey: effectiveApiKey
+      apiKey
     });
 
     return NextResponse.json(result);

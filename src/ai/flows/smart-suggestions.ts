@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -39,9 +38,9 @@ const smartSuggestionsFlow = ai.defineFlow(
     outputSchema: SmartSuggestionsOutputSchema,
   },
   async input => {
-    // Get the effective API key (user provided or environment variable)
-    const effectiveApiKey = getApiKey(input.apiKey);
-    const llm = googleAI.model('gemini-1.5-flash', { apiKey: effectiveApiKey });
+    // Get the API key (must be user-provided, no fallbacks)
+    const userApiKey = getApiKey(input.apiKey);
+    const llm = googleAI.model('gemini-1.5-flash', { apiKey: userApiKey });
     try {
       const {output} = await withAiRetry(() => prompt(input, {model: llm}), { retries: 2, initialDelayMs: 1500 });
       return output!;

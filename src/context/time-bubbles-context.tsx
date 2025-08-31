@@ -23,7 +23,7 @@ const fetchDailyInsights = async (input: any) => {
   return await response.json();
 };
 
-const getDailyTips = async (input: any) => {
+const callDailyTipsAPI = async (input: any) => {
   const response = await fetch('/api/daily-tips', {
     method: 'POST',
     headers: {
@@ -308,7 +308,10 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   }, [user]);
 
   const getDailyTips = useCallback(async () => {
+    console.log('AI Optimizer getDailyTips called with:', { isPro, geminiApiKey: !!geminiApiKey, currentDate: format(currentDate, 'yyyy-MM-dd') });
+    
     if (!geminiApiKey) {
+      console.log('No Gemini API key found');
       toast({
         title: 'API Key Required',
         description: 'Please set your Gemini API key in settings to use daily tips.',
@@ -321,18 +324,21 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     setDailyTips(null);
     
     try {
-      const yesterday = subDays(currentDate, 1);
-      const previousDayBlocks = await getBlocksForDate(yesterday);
+      // Use current date blocks instead of yesterday to work with any date
+      const currentDayBlocks = await getBlocksForDate(currentDate);
+      console.log('Current day blocks found:', currentDayBlocks.length);
+      
       const last7DaysBlocks = await getLast7DaysBlocks();
       const userPreferences = await getUserTipPreferences();
       const previousTipsFeedback = await getPreviousTipsFeedback();
       const userGoals = await getUserGoals();
 
-      // Check for minimum data requirements
-      if (previousDayBlocks.length === 0) {
+      // Check for minimum data requirements - use current day blocks
+      if (currentDayBlocks.length === 0) {
+        console.log('No blocks found for current date, showing message to user');
         toast({
           title: 'Not enough data for tips',
-          description: 'Once you complete a day with task reflections, AI tips will be generated for you here.',
+          description: 'Add some time blocks for today to get AI-powered tips.',
         });
         setIsLoadingTips(false);
         return;
@@ -341,15 +347,17 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
       // Check cache first
       const cacheKey = `daily_tips_${format(currentDate, 'yyyy-MM-dd')}`;
       const cachedTips = getCachedTips(cacheKey);
+      console.log('Cache check:', { cacheKey, hasCachedTips: !!cachedTips });
       
       if (cachedTips && !isCacheExpired(cachedTips.timestamp)) {
+        console.log('Using cached tips');
         setDailyTips(cachedTips.data);
         setIsLoadingTips(false);
         return;
       }
 
       // Prepare enhanced input data
-      const schedule = JSON.stringify(previousDayBlocks);
+      const schedule = JSON.stringify(currentDayBlocks);
       const historicalPatterns = JSON.stringify({
         weeklyTrends: analyzeWeeklyTrends(last7DaysBlocks),
         monthlyPatterns: analyzeMonthlyPatterns(last7DaysBlocks),
@@ -360,10 +368,10 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
       const contextualData = JSON.stringify({
         dayOfWeek: format(currentDate, 'EEEE'),
         timeOfDay: new Date().getHours(),
-        recentActivity: previousDayBlocks.slice(-3),
+        recentActivity: currentDayBlocks.slice(-3),
       });
 
-      const input = {
+      const requestBody = {
         schedule,
         historicalPatterns,
         userPreferences: JSON.stringify(userPreferences),
@@ -373,9 +381,15 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         apiKey: geminiApiKey,
       };
 
-      const result = await getDailyTips(input);
+      console.log('Calling AI API with request body keys:', Object.keys(requestBody));
+      
+      // Call the API route
+      const result = await callDailyTipsAPI(requestBody);
+      console.log('API result:', { success: result.success, hasData: !!result.data, error: result.error });
+
       
       if (result.success) {
+        console.log('Successfully generated tips:', result.data.tips?.length || 0);
         setDailyTips(result.data);
         // Cache the successful result
         setCachedTips(cacheKey, result.data);
@@ -385,24 +399,46 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
           description: `Generated ${result.data.tips.length} personalized tips for you.`,
         });
       } else {
+        console.error('API returned error:', result.error);
         // Handle error response
         handleTipsError(result.error);
         
         // If fallback data is available, use it
         if (result.fallbackData) {
-          const fallbackTips = generateLocalFallbackTips(previousDayBlocks);
+          const fallbackTips = generateLocalFallbackTips(currentDayBlocks);
           setDailyTips(fallbackTips);
         }
       }
     } catch (error: any) {
       console.error('Error getting daily tips:', error);
+      
+      // Provide more specific error messages
+      if (error.message?.includes('429')) {
+        toast({
+          title: 'Rate Limit Exceeded',
+          description: 'You\'ve reached your API limit. Please try again later or update your API key.',
+          variant: 'destructive',
+        });
+      } else if (error.message?.includes('Invalid API')) {
+        toast({
+          title: 'Invalid API Key',
+          description: 'Your API key is invalid. Please update it in settings.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Tips Generation Failed',
+          description: error.message || 'Unable to generate tips. Please try again.',
+          variant: 'destructive',
+        });
+      }
+      
       handleGenericTipsError(error);
       
       // Generate local fallback tips
       try {
-        const yesterday = subDays(currentDate, 1);
-        const previousDayBlocks = await getBlocksForDate(yesterday);
-        const fallbackTips = generateLocalFallbackTips(previousDayBlocks);
+        const currentDayBlocks = await getBlocksForDate(currentDate);
+        const fallbackTips = generateLocalFallbackTips(currentDayBlocks);
         setDailyTips(fallbackTips);
       } catch (fallbackError) {
         console.error('Failed to generate fallback tips:', fallbackError);

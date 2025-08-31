@@ -110,7 +110,8 @@ export function DailySidebarTip() {
   // Fetch tip on initial load and when date changes, but only on the client
   useEffect(() => {
     console.log('Daily tips useEffect triggered:', { isClient, isPro, geminiApiKey: !!geminiApiKey, hasFetched: hasFetchedRef.current, currentDate });
-    if (isClient && isPro && geminiApiKey && !hasFetchedRef.current && isToday(currentDate)) {
+    // Allow tips for any date, not just today
+    if (isClient && isPro && geminiApiKey && !hasFetchedRef.current) {
       console.log('Triggering fetchTip...');
       hasFetchedRef.current = true;
       fetchTip();
@@ -128,7 +129,7 @@ export function DailySidebarTip() {
   const handleCardClick = () => {
     if (!isPro) {
       setIsProModalOpen(true);
-    } else if (isPro && isToday(currentDate)) {
+    } else if (isPro) {
       if (error) {
         // If there's an error, retry the fetch
         hasFetchedRef.current = false;
@@ -162,7 +163,7 @@ export function DailySidebarTip() {
   return (
     <>
       <div
-        className={cn((!isPro || isToday(currentDate)) && "cursor-pointer")}
+        className={cn((!isPro || (isPro && geminiApiKey)) && "cursor-pointer")}
         onClick={handleCardClick}
       >
         <Card 
@@ -189,12 +190,14 @@ export function DailySidebarTip() {
                 ) : error ? (
                   <p className="text-xs text-destructive">{error}</p>
                 ) : isPro ? (
-                    isToday(currentDate) ? (
+                    tip?.tip ? (
                       <p className="text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">
-                        {tip?.tip}
+                        {tip.tip}
                       </p>
                     ) : (
-                         <p className='text-sm font-semibold'>Daily tips are available for the current day.</p>
+                      <p className="text-xs text-muted-foreground">
+                        Click to load daily tips for {format(currentDate, 'MMM d')}
+                      </p>
                     )
                 ) : (
                     <p className='text-sm font-semibold'>Upgrade to Pro to unlock daily personalized tips.</p>

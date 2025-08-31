@@ -559,7 +559,7 @@ async function generateTipsWithRetry(processedData: any, dataQuality: number, ap
         processedData: JSON.stringify(processedData),
         dataQuality,
         attempt,
-        apiKey: apiKey || process.env.GOOGLE_AI_API_KEY || ''
+        apiKey: apiKey || ''
       });
       
       // Validate result quality

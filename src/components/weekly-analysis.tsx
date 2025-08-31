@@ -628,13 +628,6 @@ export function WeeklyAnalysis({ isOpen, onClose }: WeeklyAnalysisProps) {
                                 )}>
                                   {Math.round(pct)}%
                                 </div>
-                                
-                                {/* Hours indicator */}
-                                {totalHours > 0 && (
-                                  <div className="text-[10px] text-muted-foreground">
-                                    {Math.round(totalHours * 10) / 10}h
-                                  </div>
-                                )}
                               </div>
                             );
                           }) : (
