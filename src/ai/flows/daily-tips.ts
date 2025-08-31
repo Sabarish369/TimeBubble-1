@@ -18,7 +18,7 @@
  * - Analytics and feedback integration
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, getApiKey } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { z } from 'genkit';
 import { 
@@ -863,7 +863,7 @@ const enhancedDailyTipsFlow = ai.defineFlow(
     try {
       // Use the Google AI model with enhanced configuration
       const llm = googleAI.model('gemini-1.5-pro', {
-        apiKey: input.apiKey,
+        apiKey: getApiKey(input.apiKey),
         generationConfig: {
           temperature: 0.7, // Balanced creativity and consistency
           topP: 0.9,

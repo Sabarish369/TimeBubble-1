@@ -6,7 +6,7 @@
  * - getDailyInsights - A function that analyzes daily data and returns actionable insights.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, getApiKey } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { withAiRetry, normalizeAiError } from './_utils';
 import { z } from 'genkit';
@@ -102,7 +102,15 @@ const dailyInsightsFlow = ai.defineFlow(
       completedTasks: completedBlocks.length,
       completionRate: Math.round((completedBlocks.length / blocks.length) * 100),
       averageProductivity: completedBlocks.reduce((sum, block) => sum + (block.reflection?.productivity || 0), 0) / completedBlocks.length,
-      averageMood: completedBlocks.reduce((sum, block) => sum + (block.reflection?.mood || 0), 0) / completedBlocks.length,
+      averageMood: completedBlocks.reduce((sum, block) => {
+        const moodValue = typeof block.reflection?.mood === 'number' ? block.reflection.mood : 
+          block.reflection?.mood === 'happy' ? 5 :
+          block.reflection?.mood === 'focused' ? 4 :
+          block.reflection?.mood === 'neutral' ? 3 :
+          block.reflection?.mood === 'stressed' ? 2 :
+          block.reflection?.mood === 'tired' ? 1 : 0;
+        return sum + moodValue;
+      }, 0) / completedBlocks.length,
       tasksByCategory: completedBlocks.reduce((acc, block) => {
         acc[block.category] = (acc[block.category] || 0) + 1;
         return acc;
@@ -118,10 +126,11 @@ const dailyInsightsFlow = ai.defineFlow(
     };
     
     // Only proceed to call the AI if there is valid data
-    const llm = googleAI.model('gemini-1.5-flash', {apiKey: input.apiKey});
+    const effectiveApiKey = getApiKey(input.apiKey);
+    const llm = googleAI.model('gemini-1.5-flash', { apiKey: effectiveApiKey });
     // Corrected data structure for the prompt to avoid circular references
     const promptData = {
-        apiKey: input.apiKey, 
+        apiKey: effectiveApiKey, 
         dailyData: JSON.stringify({
             ...enhancedData,
             rawTasks: completedBlocks

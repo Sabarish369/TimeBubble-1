@@ -7,9 +7,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { dailyData, userPreferences, apiKey }: SmartSuggestionsInput = body;
 
-    if (!apiKey) {
+    // Use provided API key or fall back to environment variables
+    const effectiveApiKey = apiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+
+    if (!effectiveApiKey) {
       return NextResponse.json(
-        { error: 'API key is required' },
+        { error: 'API key is required. Please provide an API key or set the GEMINI_API_KEY environment variable.' },
         { status: 400 }
       );
     }
@@ -24,7 +27,7 @@ export async function POST(request: NextRequest) {
     const result = await getSmartSuggestions({
       dailyData,
       userPreferences,
-      apiKey
+      apiKey: effectiveApiKey
     });
 
     return NextResponse.json(result);
