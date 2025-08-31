@@ -11,12 +11,12 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from './ui/button';
 import { useTimeBubbles, type MissedTaskGroup } from '@/context/time-bubbles-context';
-import { ChevronLeft, Lightbulb, Zap, HeartPulse, BrainCircuit, Rocket, Star, Sparkles, Target, Battery, Activity } from 'lucide-react';
+import { ChevronLeft, Lightbulb, Zap, HeartPulse, BrainCircuit, Rocket, Star, Sparkles, Target, Battery, Activity, MessageCircle, ThumbsUp } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { cn } from '@/lib/utils';
-import type { DailyTips } from '@/types';
+import type { DailyTips, EnhancedTip } from '@/types';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from './ui/carousel';
 import { Card, CardContent } from './ui/card';
 import { useAuth } from '@/context/auth-context';
@@ -25,6 +25,8 @@ import { ApiKeyModal } from './api-key-modal';
 import { SmartSuggestions } from './smart-suggestions';
 import { HabitStackingModal } from './habit-stacking-modal';
 import { EnergyTrackingPanel } from './energy-tracking-panel';
+import { TipFeedbackModal } from './tip-feedback-modal';
+import { tipTrackingSystem, trackTipView } from '@/lib/tip-tracking-system';
 
 const tipIcons: Record<string, LucideIcon> = {
   Productivity: Zap,
@@ -40,6 +42,8 @@ export function AIOptimizerDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<View>('main');
   const [isClient, setIsClient] = useState(false);
+  const [selectedTipForFeedback, setSelectedTipForFeedback] = useState<EnhancedTip | null>(null);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   
   const { 
     getDailyTips, 
@@ -81,11 +85,11 @@ export function AIOptimizerDrawer() {
   }, [isOpen, clearDailyInsights]);
 
   const handleFetchTips = useCallback(() => {
-    if (isPro && geminiApiKey && !dailyTips && !isLoadingTips) {
-        getDailyTips();
+    if (isPro && geminiApiKey) {
+      getDailyTips();
     }
     setView('tips');
-  }, [isPro, geminiApiKey, dailyTips, isLoadingTips, getDailyTips]);
+  }, [isPro, geminiApiKey, getDailyTips]);
   
   const handleFetchInsights = useCallback(() => {
     if (isPro && geminiApiKey && !dailyInsights && !isLoadingInsights) {
@@ -264,64 +268,224 @@ export function AIOptimizerDrawer() {
 
   const renderTipsView = () => (
     <div>
-      
       {isLoadingTips && (
         <div className="space-y-4 pt-4">
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center space-x-2 text-amber-400">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-400"></div>
+              <span className="text-sm font-medium">Analyzing your patterns...</span>
+            </div>
+          </div>
           <div className="h-40 w-full bg-slate-700/50 rounded animate-pulse" />
           <div className="flex justify-center gap-4">
-            <div className="h-8 w-16 bg-slate-700/50 rounded animate-pulse" />
-            <div className="h-8 w-16 bg-slate-700/50 rounded animate-pulse" />
+            <div className="h-8 w-24 bg-slate-700/50 rounded animate-pulse" />
+            <div className="h-8 w-20 bg-slate-700/50 rounded animate-pulse" />
+            <div className="h-8 w-28 bg-slate-700/50 rounded animate-pulse" />
+          </div>
+          <div className="text-center">
+            <div className="h-4 w-3/4 mx-auto bg-slate-700/50 rounded animate-pulse" />
           </div>
         </div>
       )}
-      {!isLoadingTips && dailyTips && dailyTips.tips.length > 0 && (
-        <div className='relative px-8'>
+      
+      {!isLoadingTips && dailyTips && dailyTips.tips && dailyTips.tips.length > 0 && (
+        <div className='relative'>
+          {/* Tips Summary Section */}
+          {dailyTips.summary && (
+            <div className="mb-6 p-4 rounded-lg bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-500/20">
+              <h4 className="text-sm font-semibold text-blue-400 mb-2">
+                {dailyTips.summary.overallTheme}
+              </h4>
+              <p className="text-xs text-slate-300 mb-3">
+                {dailyTips.summary.encouragement}
+              </p>
+              {dailyTips.summary.keyInsights && dailyTips.summary.keyInsights.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {dailyTips.summary.keyInsights.slice(0, 2).map((insight, idx) => (
+                    <span key={idx} className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded">
+                      {insight}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Tips Carousel */}
+          <div className='px-8'>
             <Carousel className="w-full" opts={{ loop: true }}>
-            <CarouselContent>
-                {dailyTips.tips.map((tip, index) => (
-                <CarouselItem key={index}>
-                    <div className="p-1">
-                    <div className="rounded-xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 p-6 aspect-square relative backdrop-blur-sm">
-                        <div className="absolute top-3 right-3 flex space-x-1">
-                          <Sparkles className="h-3 w-3 text-amber-400" />
-                          <Sparkles className="h-3 w-3 text-blue-400" />
-                        </div>
-                        <div className="flex flex-col items-center text-center h-full justify-center space-y-4">
-                          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
-                            {tipIcons[tip.type] ? React.createElement(tipIcons[tip.type], { className: "h-6 w-6 text-white" }) : <Lightbulb className="h-6 w-6 text-white" />}
+              <CarouselContent>
+                {dailyTips.tips.map((tip, index) => {
+                  // Track tip view when it's displayed
+                  React.useEffect(() => {
+                    if (tip.id) {
+                      trackTipView(tip.id);
+                    }
+                  }, [tip.id]);
+                  
+                  return (
+                    <CarouselItem key={tip.id || index}>
+                      <div className="p-1">
+                        <div className="rounded-xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 p-6 aspect-square relative backdrop-blur-sm hover:border-amber-400/30 transition-all duration-300">
+                          {/* Priority and Difficulty Indicators */}
+                          <div className="absolute top-3 left-3 flex space-x-1">
+                            {tip.priority === 'high' && (
+                              <div className="w-2 h-2 bg-red-400 rounded-full" title="High Priority" />
+                            )}
+                            {tip.priority === 'medium' && (
+                              <div className="w-2 h-2 bg-yellow-400 rounded-full" title="Medium Priority" />
+                            )}
+                            {tip.priority === 'low' && (
+                              <div className="w-2 h-2 bg-green-400 rounded-full" title="Low Priority" />
+                            )}
                           </div>
-                          <div>
-                            <p className='text-xs font-medium text-amber-400 mb-2'>{tip.type}</p>
-                            <p className="text-sm text-slate-300 leading-relaxed">{tip.suggestion}</p>
+                          
+                          <div className="absolute top-3 right-3 flex space-x-1">
+                            <Sparkles className="h-3 w-3 text-amber-400" />
+                            {tip.personalizedScore > 80 && (
+                              <Sparkles className="h-3 w-3 text-blue-400" />
+                            )}
+                            {tip.personalizedScore > 90 && (
+                              <Sparkles className="h-3 w-3 text-purple-400" />
+                            )}
+                          </div>
+                          
+                          <div className="flex flex-col h-full">
+                            {/* Icon and Type */}
+                            <div className="flex items-center justify-center mb-4">
+                              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
+                                {tipIcons[tip.type] ? React.createElement(tipIcons[tip.type], { className: "h-6 w-6 text-white" }) : <Lightbulb className="h-6 w-6 text-white" />}
+                              </div>
+                            </div>
+                            
+                            {/* Content */}
+                            <div className="flex-1 text-center space-y-3">
+                              <div>
+                                <p className='text-xs font-medium text-amber-400 mb-1'>{tip.type}</p>
+                                {tip.title && (
+                                  <h5 className="text-sm font-semibold text-white mb-2">{tip.title}</h5>
+                                )}
+                                <p className="text-sm text-slate-300 leading-relaxed">{tip.suggestion}</p>
+                              </div>
+                              
+                              {/* Additional Info */}
+                              {tip.expectedImpact && (
+                                <div className="mt-3 pt-3 border-t border-slate-600/30">
+                                  <p className="text-xs text-slate-400">
+                                    <span className="text-green-400">Expected:</span> {tip.expectedImpact}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {/* Time Investment */}
+                              {tip.estimatedDuration && (
+                                <div className="flex items-center justify-center space-x-2 text-xs text-slate-400">
+                                  <span>⏱️</span>
+                                  <span>{tip.estimatedDuration}</span>
+                                  <span>•</span>
+                                  <span className="capitalize">{tip.difficulty}</span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Feedback Button */}
+                            <div className="mt-4 flex justify-center">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedTipForFeedback(tip);
+                                  setIsFeedbackModalOpen(true);
+                                  tipTrackingSystem.trackTipInteraction(tip.id, 'expanded');
+                                }}
+                                className="bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-600/50 text-xs px-3 py-1"
+                              >
+                                <MessageCircle className="h-3 w-3 mr-1" />
+                                Rate Tip
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                    </div>
-                    </div>
-                </CarouselItem>
-                ))}
-            </CarouselContent>
-            <CarouselPrevious className='bg-slate-800/80 border-slate-700/50 text-white hover:bg-slate-700/80 -left-2' />
-            <CarouselNext className='bg-slate-800/80 border-slate-700/50 text-white hover:bg-slate-700/80 -right-2' />
+                      </div>
+                    </CarouselItem>
+                  );
+                })}
+              </CarouselContent>
+              <CarouselPrevious className='bg-slate-800/80 border-slate-700/50 text-white hover:bg-slate-700/80 -left-2' />
+              <CarouselNext className='bg-slate-800/80 border-slate-700/50 text-white hover:bg-slate-700/80 -right-2' />
             </Carousel>
+          </div>
+          
+          {/* Analytics Summary */}
+          {dailyTips.analytics && (
+            <div className="mt-6 p-4 rounded-lg bg-slate-800/30 border border-slate-700/30">
+              <h4 className="text-sm font-semibold text-slate-300 mb-3 flex items-center">
+                <Activity className="h-4 w-4 mr-2" />
+                Your Insights
+              </h4>
+              <div className="space-y-2 text-xs text-slate-400">
+                {dailyTips.analytics.completionRateAnalysis && (
+                  <p>📊 {dailyTips.analytics.completionRateAnalysis}</p>
+                )}
+                {dailyTips.analytics.productivityTrends && (
+                  <p>📈 {dailyTips.analytics.productivityTrends}</p>
+                )}
+                {dailyTips.analytics.strengths && dailyTips.analytics.strengths.length > 0 && (
+                  <p>💪 Strengths: {dailyTips.analytics.strengths.slice(0, 2).join(', ')}</p>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* Metadata */}
+          {dailyTips.metadata && (
+            <div className="mt-4 text-center">
+              <div className="flex items-center justify-center space-x-4 text-xs text-slate-500">
+                <span>Quality: {dailyTips.metadata.dataQuality}/100</span>
+                <span>•</span>
+                <span>Personalization: {dailyTips.metadata.personalizationLevel}/100</span>
+              </div>
+              {dailyTips.metadata.suggestedReviewTime && (
+                <p className="text-xs text-slate-400 mt-1">
+                  💡 Best reviewed {dailyTips.metadata.suggestedReviewTime}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
-      {!isLoadingTips && (!dailyTips || dailyTips.tips.length === 0) && (
+      
+      {!isLoadingTips && (!dailyTips || !dailyTips.tips || dailyTips.tips.length === 0) && (
         <div className="text-center py-8">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
             <Lightbulb className="h-8 w-8 text-slate-400" />
           </div>
-          <p className="text-slate-400 text-sm">
-            Once you complete a day's schedule, refresh to get tips for tomorrow.
+          <h4 className="text-lg font-semibold text-white mb-2">Ready for Daily Tips?</h4>
+          <p className="text-slate-400 text-sm mb-4">
+            Complete tasks with reflections to get personalized AI-powered tips for tomorrow.
           </p>
+          <div className="space-y-2 text-xs text-slate-500">
+            <p>• Complete at least 3 tasks</p>
+            <p>• Add mood and productivity reflections</p>
+            <p>• Get insights based on your patterns</p>
+          </div>
         </div>
       )}
+      
       <div className="mt-6 text-center">
         <Button 
           className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-medium px-6 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl" 
           onClick={getDailyTips} 
           disabled={isLoadingTips}
         >
-          {isLoadingTips ? "Optimizing..." : "Refresh Tips"}
+          {isLoadingTips ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Analyzing...
+            </>
+          ) : (
+            "Generate Tips"
+          )}
         </Button>
       </div>
     </div>
@@ -395,11 +559,25 @@ export function AIOptimizerDrawer() {
 
       <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
       <ApiKeyModal isOpen={isApiKeyModalOpen} onClose={() => setIsApiKeyModalOpen(false)} />
-       {isPro && (
+      {isPro && (
         <HabitStackingModal 
           isOpen={isHabitStackingOpen} 
           onClose={() => setIsHabitStackingOpen(false)}
           routineBubbles={timeBlocks.filter(b => b.category === 'personal' || b.title.toLowerCase().includes('routine'))}
+        />
+      )}
+      {selectedTipForFeedback && (
+        <TipFeedbackModal
+          isOpen={isFeedbackModalOpen}
+          onClose={() => {
+            setIsFeedbackModalOpen(false);
+            setSelectedTipForFeedback(null);
+          }}
+          tip={selectedTipForFeedback}
+          onFeedbackSubmitted={() => {
+            // Optionally refresh tips or show success message
+            console.log('Feedback submitted for tip:', selectedTipForFeedback.id);
+          }}
         />
       )}
     </>

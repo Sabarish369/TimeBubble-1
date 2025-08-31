@@ -17,7 +17,6 @@ import { cn } from '@/lib/utils';
 import { UserProfile } from './user-profile';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-import { AiQuotaIndicator } from './ai-quota-indicator';
 import { UpgradeBadge } from './upgrade-badge';
 import { ProBadge } from './pro-badge';
 import { useAuth } from '@/context/auth-context';
@@ -113,18 +112,19 @@ export function Header({ onToggleSidebar, onOpenWeeklyAnalysis }: HeaderProps) {
         </div>
       </div>
       <div id="header-actions" className="flex items-center gap-2 md:gap-4 relative z-10">
-        <AiQuotaIndicator />
         {isPro && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative h-9 w-9 rounded-full hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary/40"
-            onClick={onOpenWeeklyAnalysis}
-          >
-            <BarChart3 className="h-5 w-5 text-primary" />
-            <span className="absolute -top-1 -right-1 text-[9px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary/80">Beta</span>
-            <span className="sr-only">Open Weekly Analysis</span>
-          </Button>
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary/40"
+              onClick={onOpenWeeklyAnalysis}
+            >
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <span className="sr-only">Open Weekly Analysis</span>
+            </Button>
+            <span className="absolute -top-0.5 -right-0.5 text-[8px] px-1 py-0.5 rounded-full bg-primary/20 text-primary font-medium border border-primary/30 shadow-sm">Beta</span>
+          </div>
         )}
           <UpgradeBadge />
         <ThemeToggle />
