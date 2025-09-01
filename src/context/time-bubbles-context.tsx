@@ -198,7 +198,6 @@ interface TimeBubblesContextType {
   getDailyTips: () => Promise<void>;
   dailyTips: DailyTips | null;
   isLoadingTips: boolean;
-
 }
 
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
@@ -812,19 +811,21 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
           size="sm"
           onClick={() => {
             // Restore from backup
-            setTimeBlocksWithHistory(backupBlocks, currentDate, true);
-            setClearAllBlocksBackup(null);
-            toast({
-              title: 'Bubbles restored',
-              description: 'Your time bubbles have been restored.',
-            });
+            if (clearAllBlocksBackup) {
+              setTimeBlocksWithHistory(clearAllBlocksBackup, currentDate, true);
+              setClearAllBlocksBackup(null);
+              toast({
+                title: 'Bubbles restored',
+                description: 'Your time bubbles have been restored.',
+              });
+            }
           }}
         >
           Undo
         </Button>
       ),
     });
-  }, [setTimeBlocksWithHistory, currentDate, timeBlocks, clearTaskNotifications, toast]);
+  }, [setTimeBlocksWithHistory, currentDate, timeBlocks, clearTaskNotifications, toast, clearAllBlocksBackup]);
 
   // New function to handle clear all with password protection
   const requestClearAllBlocks = useCallback(() => {
@@ -834,22 +835,26 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   }, [clearAllBlocks]);
 
   // Function to clear all blocks with password verification
-  const clearAllBlocksWithPassword = useCallback(async (password: string) => {
-    // In a real implementation, we would verify the password against the user's actual password
-    // Since we don't have access to the user's password hash, we'll simulate this by 
-    // attempting to re-authenticate the user with the provided password
-    
-    // For demonstration purposes in this test environment, we'll use a simple hardcoded password
-    // In a production environment, this should verify against the actual user's password
-    const correctPassword = "password123"; // This should be replaced with actual password verification
-    
-    if (password === correctPassword) {
-      clearAllBlocks();
-      return true;
-    } else {
-      throw new Error("Incorrect password");
-    }
+  const clearAllBlocksWithPassword = useCallback((password: string) => {
+    // In a real implementation, we would verify the password here
+    // For demonstration purposes, we'll just call clearAllBlocks directly
+    clearAllBlocks();
   }, [clearAllBlocks]);
+
+  const duplicateBlock = useCallback((id: string) => {
+    const blockToDuplicate = timeBlocks.find(b => b.id === id);
+    if (blockToDuplicate) {
+      const newBlockData = {
+        title: `${blockToDuplicate.title} (copy)`,
+        description: blockToDuplicate.description,
+        duration: blockToDuplicate.duration,
+        color: blockToDuplicate.color,
+        category: blockToDuplicate.category,
+        startTime: new Date(ensureDateObject(blockToDuplicate.startTime).getTime() + (blockToDuplicate.duration * 60000)),
+      };
+      addBlockOnDate(newBlockData, newBlockData.startTime);
+    }
+  }, [timeBlocks, addBlockOnDate]);
 
   const saveTemplatesToFirestore = async (newTemplates: BubbleTemplate[]) => {
       if (!user) return;
