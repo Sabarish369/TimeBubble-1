@@ -544,7 +544,6 @@ export function AIOptimizerDrawer() {
           <div className="ai-magic-bubble-5" />
           
           <SheetHeader className='mb-6'>
-            <SheetTitle asChild>
                 <div className='relative flex items-center justify-center'>
                     {view !== 'main' && (
                         <Button variant="ghost" size="sm" onClick={() => setView('main')} className="ai-back-button">
@@ -556,15 +555,10 @@ export function AIOptimizerDrawer() {
                         <div className="ai-title-glow" />
                         <Sparkles className="h-8 w-8 text-amber-400 relative z-10"/>
                       </div>
-                      <span className="ai-title-text">AI Optimizer</span>
+                      <SheetTitle asChild><span className="ai-title-text">AI Optimizer</span></SheetTitle>
                     </div>
                 </div>
-            </SheetTitle>
-            <SheetDescription asChild>
-                <p className="ai-sheet-description">
-                    Your hub for AI-powered productivity features.
-                </p>
-            </SheetDescription>
+            <SheetDescription asChild><p className="ai-sheet-description">Your hub for AI-powered productivity features.</p></SheetDescription>
           </SheetHeader>
           
           <div className="h-full overflow-y-auto pb-20 no-scrollbar">
