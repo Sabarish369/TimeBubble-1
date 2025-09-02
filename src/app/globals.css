@@ -1424,67 +1424,138 @@ body {
   /* Ghost Bubble Animations */
   .ghost-bubble-visible {
     animation: ghostBubbleAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    /* Add vendor prefixes for better browser support */
+    -webkit-animation: ghostBubbleAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    -moz-animation: ghostBubbleAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
   @keyframes ghostBubbleAppear {
     0% {
       opacity: 0;
       transform: translate(-50%, -50%) scale(0.8) rotate(-5deg);
+      -webkit-transform: translate(-50%, -50%) scale(0.8) rotate(-5deg);
     }
     50% {
       opacity: 0.7;
       transform: translate(-50%, -50%) scale(1.05) rotate(2deg);
+      -webkit-transform: translate(-50%, -50%) scale(1.05) rotate(2deg);
     }
     100% {
       opacity: 1;
       transform: translate(-50%, -50%) scale(1) rotate(0deg);
+      -webkit-transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    }
+  }
+
+  @-webkit-keyframes ghostBubbleAppear {
+    0% {
+      opacity: 0;
+      -webkit-transform: translate(-50%, -50%) scale(0.8) rotate(-5deg);
+    }
+    50% {
+      opacity: 0.7;
+      -webkit-transform: translate(-50%, -50%) scale(1.05) rotate(2deg);
+    }
+    100% {
+      opacity: 1;
+      -webkit-transform: translate(-50%, -50%) scale(1) rotate(0deg);
     }
   }
 
   .ghost-bubble-background {
     animation: ghostBubbleGlow 2s ease-in-out infinite;
+    -webkit-animation: ghostBubbleGlow 2s ease-in-out infinite;
   }
 
   @keyframes ghostBubbleGlow {
     0%, 100% {
       opacity: 0.8;
       transform: scale(1);
+      -webkit-transform: scale(1);
     }
     50% {
       opacity: 1;
       transform: scale(1.02);
+      -webkit-transform: scale(1.02);
+    }
+  }
+
+  @-webkit-keyframes ghostBubbleGlow {
+    0%, 100% {
+      opacity: 0.8;
+      -webkit-transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      -webkit-transform: scale(1.02);
     }
   }
 
   .ghost-particle {
     animation: ghostParticleFloat 3s ease-in-out infinite;
+    -webkit-animation: ghostParticleFloat 3s ease-in-out infinite;
     filter: blur(0.5px);
   }
 
   @keyframes ghostParticleFloat {
     0%, 100% {
       transform: translate(0, 0) scale(1);
+      -webkit-transform: translate(0, 0) scale(1);
       opacity: 0.4;
     }
     25% {
       transform: translate(3px, -5px) scale(1.2);
+      -webkit-transform: translate(3px, -5px) scale(1.2);
       opacity: 0.8;
     }
     50% {
       transform: translate(-2px, -8px) scale(0.8);
+      -webkit-transform: translate(-2px, -8px) scale(0.8);
       opacity: 0.6;
     }
     75% {
       transform: translate(4px, -3px) scale(1.1);
+      -webkit-transform: translate(4px, -3px) scale(1.1);
+      opacity: 0.9;
+    }
+  }
+
+  @-webkit-keyframes ghostParticleFloat {
+    0%, 100% {
+      -webkit-transform: translate(0, 0) scale(1);
+      opacity: 0.4;
+    }
+    25% {
+      -webkit-transform: translate(3px, -5px) scale(1.2);
+      opacity: 0.8;
+    }
+    50% {
+      -webkit-transform: translate(-2px, -8px) scale(0.8);
+      opacity: 0.6;
+    }
+    75% {
+      -webkit-transform: translate(4px, -3px) scale(1.1);
       opacity: 0.9;
     }
   }
 
   .ghost-drop-zone {
     animation: ghostDropZonePulse 1.5s ease-in-out infinite;
+    -webkit-animation: ghostDropZonePulse 1.5s ease-in-out infinite;
   }
 
   @keyframes ghostDropZonePulse {
+    0%, 100% {
+      opacity: 0;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    50% {
+      opacity: 0.6;
+      border-color: rgba(255, 255, 255, 0.7);
+    }
+  }
+
+  @-webkit-keyframes ghostDropZonePulse {
     0%, 100% {
       opacity: 0;
       border-color: rgba(255, 255, 255, 0.3);
@@ -1500,16 +1571,30 @@ body {
     opacity: 1;
     border-color: rgba(255, 255, 255, 0.9);
     animation: ghostDropZoneActive 0.8s ease-in-out infinite;
+    -webkit-animation: ghostDropZoneActive 0.8s ease-in-out infinite;
   }
 
   @keyframes ghostDropZoneActive {
     0%, 100% {
       border-width: 2px;
       transform: scale(1);
+      -webkit-transform: scale(1);
     }
     50% {
       border-width: 3px;
       transform: scale(1.02);
+      -webkit-transform: scale(1.02);
+    }
+  }
+
+  @-webkit-keyframes ghostDropZoneActive {
+    0%, 100% {
+      border-width: 2px;
+      -webkit-transform: scale(1);
+    }
+    50% {
+      border-width: 3px;
+      -webkit-transform: scale(1.02);
     }
   }
 
@@ -1517,14 +1602,27 @@ body {
   .ghost-bubble-visible {
     animation: ghostBubbleAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
                ghostBubbleFloat 3s ease-in-out infinite;
+    -webkit-animation: ghostBubbleAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+                       ghostBubbleFloat 3s ease-in-out infinite;
   }
 
   @keyframes ghostBubbleFloat {
     0%, 100% {
       transform: translate(-50%, -50%) translateY(0px);
+      -webkit-transform: translate(-50%, -50%) translateY(0px);
     }
     50% {
       transform: translate(-50%, -50%) translateY(-2px);
+      -webkit-transform: translate(-50%, -50%) translateY(-2px);
+    }
+  }
+
+  @-webkit-keyframes ghostBubbleFloat {
+    0%, 100% {
+      -webkit-transform: translate(-50%, -50%) translateY(0px);
+    }
+    50% {
+      -webkit-transform: translate(-50%, -50%) translateY(-2px);
     }
   }
 
@@ -1532,15 +1630,20 @@ body {
   .ghost-particle:nth-child(odd) {
     animation-duration: 2.5s;
     animation-direction: reverse;
+    -webkit-animation-duration: 2.5s;
+    -webkit-animation-direction: reverse;
   }
 
   .ghost-particle:nth-child(3n) {
     animation-duration: 3.5s;
+    -webkit-animation-duration: 3.5s;
   }
 
   .ghost-particle:nth-child(4n) {
     animation-duration: 2.8s;
     animation-direction: reverse;
+    -webkit-animation-duration: 2.8s;
+    -webkit-animation-direction: reverse;
   }
 
   /* Premium Bubble Intro Animations */

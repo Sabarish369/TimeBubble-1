@@ -2,33 +2,24 @@
 'use client';
 
 import { Undo2, Redo2, Trash2 } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { ZoomControls } from './zoom-controls';
 import { SIDEBAR_WIDTH } from '@/lib/constants';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { DeleteAllBubblesModal } from './delete-all-bubbles-modal';
+import { useState } from 'react';
 
 export function FloatingToolbar() {
   const {
-    clearAllBlocks,
     undo,
     redo,
     canUndo,
     canRedo,
   } = useTimeBubbles();
   const isMobile = useIsMobile();
+  const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
 
   return (
     <div 
@@ -53,29 +44,19 @@ export function FloatingToolbar() {
         <div className='w-px h-6 bg-border mx-1'></div>
         <ZoomControls />
         <div className='w-px h-6 bg-border mx-1'></div>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="ghost-destructive" size="icon">
-              <Trash2 className="h-5 w-5" />
-              <span className="sr-only">Clear all bubbles</span>
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete all time bubbles for the selected day. This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={clearAllBlocks}>
-                Yes, clear all
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <Button 
+          variant="ghost-destructive" 
+          size="icon"
+          onClick={() => setIsDeleteAllModalOpen(true)}
+        >
+          <Trash2 className="h-5 w-5" />
+          <span className="sr-only">Clear all bubbles</span>
+        </Button>
       </div>
+      <DeleteAllBubblesModal 
+        isOpen={isDeleteAllModalOpen} 
+        onClose={() => setIsDeleteAllModalOpen(false)} 
+      />
     </div>
   );
 }

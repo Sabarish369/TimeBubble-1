@@ -1,4 +1,3 @@
-
 'use client';
 import type { DragEvent, MouseEvent, RefObject } from 'react';
 import React from 'react';
@@ -137,10 +136,14 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
     if (timelineRef.current && currentDragTemplate.current) {
       timelineRef.current.classList.add('drag-over-active');
       
-      // Update ghost bubble position
+      // Update ghost bubble position with better cross-browser compatibility
       const rect = timelineRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const scrollX = window.scrollX || window.pageXOffset;
+      const scrollY = window.scrollY || window.pageYOffset;
+      
+      // Use clientX/clientY with page offsets for better positioning
+      const x = e.clientX + scrollX;
+      const y = e.clientY + scrollY;
       
       setGhostBubble(prev => prev ? {
         ...prev,
@@ -162,6 +165,19 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
     }
   };
 
+  // Track mouse movement for smoother ghost bubble following
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (ghostBubble && currentDragTemplate.current) {
+      const scrollX = window.scrollX || window.pageXOffset;
+      const scrollY = window.scrollY || window.pageYOffset;
+      
+      const x = e.clientX + scrollX;
+      const y = e.clientY + scrollY;
+      
+      setGhostBubble(prev => prev ? { ...prev, position: { x, y } } : null);
+    }
+  };
+
   return (
     <div
       ref={timelineRef}
@@ -172,16 +188,7 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
       onDragOver={handleDragOver}
       onDoubleClick={handleDoubleClick}
       onDragLeave={handleDragLeave}
-      onMouseMove={ghostBubble ? (e) => {
-        if (currentDragTemplate.current) {
-          const rect = timelineRef.current?.getBoundingClientRect();
-          if (rect) {
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            setGhostBubble(prev => prev ? { ...prev, position: { x, y } } : null);
-          }
-        }
-      } : undefined}
+      onMouseMove={handleMouseMove}
     >
       <TimelineGrid />
       <CurrentTimeIndicator />

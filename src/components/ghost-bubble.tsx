@@ -46,37 +46,39 @@ export function GhostBubble({ template, position, isVisible, onDrop }: GhostBubb
   return (
     <div
       className={cn(
-        "absolute pointer-events-none z-50 transition-all duration-300 ease-out",
+        "fixed pointer-events-none z-[100] transition-all duration-300 ease-out",
         isAnimating && "ghost-bubble-visible",
         !isVisible && "opacity-0 scale-95"
       )}
       style={{
         left: position.x,
         top: position.y,
-        width: 'calc(100% - 120px)', // Account for left margin
+        width: '280px', // Fixed width for consistency
         height: `${height}px`,
         transform: 'translate(-50%, -50%)',
+        marginLeft: '0', // Reset any inherited margin
+        marginTop: '0', // Reset any inherited margin
       }}
     >
       {/* Ghost bubble background with glow effect */}
       <div 
         className={cn(
-          "absolute inset-0 rounded-lg border-2 border-dashed transition-all duration-300",
+          "absolute inset-0 rounded-xl border-2 border-dashed transition-all duration-300",
           "ghost-bubble-background"
         )}
         style={{
           background: `linear-gradient(135deg, 
-            hsl(var(--bubble-${template.color}) / 0.15) 0%, 
-            hsl(var(--bubble-${template.color}) / 0.08) 50%, 
-            hsl(var(--bubble-${template.color}) / 0.12) 100%)`,
-          borderColor: `hsl(var(--bubble-${template.color}) / 0.4)`,
-          boxShadow: `0 0 20px hsl(var(--bubble-${template.color}) / 0.3), 
-                       inset 0 1px 0 hsl(var(--bubble-${template.color}) / 0.2)`,
+            hsl(var(--bubble-${template.color}) / 0.2) 0%, 
+            hsl(var(--bubble-${template.color}) / 0.1) 50%, 
+            hsl(var(--bubble-${template.color}) / 0.15) 100%)`,
+          borderColor: `hsl(var(--bubble-${template.color}) / 0.5)`,
+          boxShadow: `0 0 25px hsl(var(--bubble-${template.color}) / 0.4), 
+                       inset 0 1px 0 hsl(var(--bubble-${template.color}) / 0.3)`,
         }}
       />
 
       {/* Floating particles around the ghost bubble */}
-      <div className="absolute inset-0 overflow-hidden rounded-lg">
+      <div className="absolute inset-0 overflow-hidden rounded-xl">
         {[...Array(6)].map((_, i) => (
           <div
             key={i}
@@ -86,7 +88,7 @@ export function GhostBubble({ template, position, isVisible, onDrop }: GhostBubb
               top: `${30 + (i * 20) % 40}%`,
               width: `${4 + (i % 3)}px`,
               height: `${4 + (i % 3)}px`,
-              background: `hsl(var(--bubble-${template.color}) / 0.6)`,
+              background: `hsl(var(--bubble-${template.color}) / 0.7)`,
               animationDelay: `${i * 0.2}s`,
             }}
           />
@@ -94,20 +96,20 @@ export function GhostBubble({ template, position, isVisible, onDrop }: GhostBubb
       </div>
 
       {/* Content */}
-      <div className="relative z-10 p-3 text-center">
+      <div className="relative z-10 p-4 text-center">
         <div className="flex items-center justify-center gap-2 mb-2">
-          <IconComponent className="h-4 w-4 text-white/80" />
-          <span className="text-sm font-medium text-white/90 truncate">
+          <IconComponent className="h-5 w-5 text-white/90" />
+          <span className="text-sm font-semibold text-white truncate">
             {template.title}
           </span>
         </div>
-        <div className="text-xs text-white/70">
+        <div className="text-xs text-white/80">
           {template.duration} min
         </div>
       </div>
 
       {/* Drop zone indicator */}
-      <div className="absolute inset-0 rounded-lg border-2 border-dashed border-white/30 opacity-0 transition-opacity duration-300 ghost-drop-zone" />
+      <div className="absolute inset-0 rounded-xl border-2 border-dashed border-white/40 opacity-0 transition-opacity duration-300 ghost-drop-zone" />
     </div>
   );
 }

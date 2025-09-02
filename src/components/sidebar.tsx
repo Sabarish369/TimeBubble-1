@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { DragEvent } from 'react';
@@ -102,55 +101,58 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     target.style.transition = 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
     target.classList.add('dragging-source');
 
-    // Create enhanced custom drag image with better visual feedback
-    const dragImage = target.cloneNode(true) as HTMLElement;
+    // Create a simpler, more compatible drag image
+    const dragImage = document.createElement('div');
     dragImage.style.cssText = `
-      position: absolute !important;
-      top: -3000px !important;
-      left: -3000px !important;
-      width: ${target.offsetWidth}px !important;
-      height: ${target.offsetHeight}px !important;
-      opacity: 0.95 !important;
-      pointer-events: none !important;
-      transform: scale(1.1) rotate(3deg) !important;
-      filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.35)) brightness(1.1) !important;
-      border: 2px solid rgba(255, 255, 255, 0.6) !important;
-      border-radius: 14px !important;
-      z-index: 10000 !important;
-      transition: none !important;
-      background: linear-gradient(135deg, hsl(var(--bubble-${template.color})) 0%, hsl(var(--bubble-${template.color})) 70%, rgba(255,255,255,0.3) 100%) !important;
+      position: absolute;
+      top: -1000px;
+      left: -1000px;
+      width: 280px;
+      height: ${Math.max(60, template.duration)}px;
+      background: linear-gradient(135deg, 
+        hsl(var(--bubble-${template.color}) / 0.3) 0%, 
+        hsl(var(--bubble-${template.color}) / 0.2) 50%, 
+        hsl(var(--bubble-${template.color}) / 0.25) 100%);
+      border: 2px dashed hsl(var(--bubble-${template.color}) / 0.6);
+      border-radius: 12px;
+      box-shadow: 0 0 20px hsl(var(--bubble-${template.color}) / 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 500;
+      font-size: 14px;
+      text-align: center;
+      padding: 10px;
+      z-index: 10000;
+      pointer-events: none;
     `;
-
-    dragImage.classList.add('enhanced-drag-ghost');
-    dragImage.setAttribute('data-color', template.color);
-
-    // Add magical trail effect
-    const trail = document.createElement('div');
-    trail.style.cssText = `
-      position: absolute !important;
-      inset: -4px !important;
-      background: linear-gradient(45deg, 
-        transparent 0%, 
-        hsl(var(--bubble-${template.color}) / 0.4) 25%, 
-        hsl(var(--bubble-${template.color}) / 0.6) 50%, 
-        hsl(var(--bubble-${template.color}) / 0.4) 75%, 
-        transparent 100%) !important;
-      border-radius: 16px !important;
-      filter: blur(2px) !important;
-      animation: trailShimmer 1.5s infinite ease-in-out !important;
-      z-index: -1 !important;
+    
+    dragImage.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center;">
+        <div>${template.title}</div>
+        <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">${template.duration} min</div>
+      </div>
     `;
-    dragImage.appendChild(trail);
-
+    
     document.body.appendChild(dragImage);
-    e.dataTransfer.setDragImage(dragImage, target.offsetWidth / 2, target.offsetHeight / 2);
+    
+    // For better cross-browser compatibility, we'll use the element itself as the drag image
+    // but with a fallback for browsers that don't support custom drag images properly
+    try {
+      e.dataTransfer.setDragImage(dragImage, dragImage.offsetWidth / 2, dragImage.offsetHeight / 2);
+    } catch (error) {
+      // Fallback: Some browsers (like Brave) might not support custom drag images properly
+      // In this case, we'll rely on the browser's default ghost image
+      console.warn('Custom drag image not supported, using browser default');
+    }
 
-    // Enhanced cleanup with smoother transitions
+    // Clean up the drag image after a short delay
     setTimeout(() => {
-        if(document.body.contains(dragImage)) {
-            document.body.removeChild(dragImage);
-        }
-    }, 50);
+      if (document.body.contains(dragImage)) {
+        document.body.removeChild(dragImage);
+      }
+    }, 100);
   };
 
   const handleDragEnd = (e: DragEvent<HTMLDivElement>) => {
