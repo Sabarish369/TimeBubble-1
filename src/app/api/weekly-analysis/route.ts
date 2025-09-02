@@ -6,9 +6,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { weekData, previousWeekData, apiKey } = body;
 
+    // Require user to provide their own API key
     if (!apiKey) {
       return NextResponse.json(
-        { error: 'API key is required' },
+        { error: 'API key is required. Please provide your own Gemini API key in the settings.' },
         { status: 400 }
       );
     }

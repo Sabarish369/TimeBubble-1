@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -7,7 +6,7 @@
  * - getSmartSuggestions - A function that suggests planning improvements.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, getApiKey} from '@/ai/genkit';
 import {googleAI} from '@genkit-ai/googleai';
 import { withAiRetry, normalizeAiError } from './_utils';
 import {z} from 'genkit';
@@ -39,7 +38,9 @@ const smartSuggestionsFlow = ai.defineFlow(
     outputSchema: SmartSuggestionsOutputSchema,
   },
   async input => {
-    const llm = googleAI.model('gemini-1.5-flash', {apiKey: input.apiKey});
+    // Get the API key (must be user-provided, no fallbacks)
+    const userApiKey = getApiKey(input.apiKey);
+    const llm = googleAI.model('gemini-1.5-flash', { apiKey: userApiKey });
     try {
       const {output} = await withAiRetry(() => prompt(input, {model: llm}), { retries: 2, initialDelayMs: 1500 });
       return output!;

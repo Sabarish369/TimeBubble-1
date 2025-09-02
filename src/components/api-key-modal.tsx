@@ -75,7 +75,7 @@ export function ApiKeyModal({ isOpen, onClose, error }: ApiKeyModalProps) {
                 </DialogDescription>
               )}
                <DialogDescription>
-                To use the AI-powered features, you'll need a free Google Gemini API key. Follow the steps below—it takes just a minute!
+                To use the AI-powered features, you <strong>must</strong> provide your own Google Gemini API key. Follow the steps below—it takes just a minute!
               </DialogDescription>
             </DialogHeader>
 

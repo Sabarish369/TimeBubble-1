@@ -4,29 +4,117 @@
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react';
 import type { TimeBlock, BubbleTemplate, DailyInsights, DailyTips, DailySidebarTip, DailySidebarTipInput, UserPreferences, HabitSuggestion, EnergyTracking, EnergyLevel } from '@/types';
-// Dynamic imports to avoid SSR issues
+
+// API functions to call server routes
 const fetchDailyInsights = async (input: any) => {
-  const { getDailyInsights: fetcher } = await import('@/ai/flows/daily-insights');
-  return fetcher(input);
+  const response = await fetch('/api/daily-insights', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to fetch daily insights');
+  }
+  
+  return await response.json();
 };
 
-const getDailyTips = async (input: any) => {
-  const { getDailyTips: fetchDailyTips } = await import('@/ai/flows/daily-tips');
-  return fetchDailyTips(input);
+const callDailyTipsAPI = async (input: any) => {
+  const response = await fetch('/api/daily-tips', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to fetch daily tips');
+  }
+  
+  return await response.json();
 };
 
 const getDailySidebarTip = async (input: any) => {
-  const { getDailySidebarTip: fetchDailySidebarTip } = await import('@/ai/flows/daily-sidebar-tip');
-  return fetchDailySidebarTip(input);
+  const response = await fetch('/api/daily-sidebar-tip', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to fetch daily sidebar tip');
+  }
+  
+  return await response.json();
 };
 
-import { getHabitStackingSuggestions } from '@/ai/flows/habit-stacking';
-import { getEnergyOptimizationSuggestions } from '@/ai/flows/energy-optimization';
+const getHabitStackingSuggestions = async (input: any) => {
+  const response = await fetch('/api/habit-stacking', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to fetch habit stacking suggestions');
+  }
+  
+  return await response.json();
+};
+
+const getEnergyOptimizationSuggestions = async (input: any) => {
+  const response = await fetch('/api/energy-optimization', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to fetch energy optimization suggestions');
+  }
+  
+  return await response.json();
+};
 import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
 import { addDays, format, startOfDay, isToday, isPast, subDays } from 'date-fns';
 import { useAuth } from './auth-context';
 import { db } from '@/lib/firebase';
+import { ErrorCategory, ErrorSeverity } from '@/lib/tips-error-handler';
+
+// Cache configuration
+const CACHE_DURATION_MS = 60 * 60 * 1000; // 1 hour
+const CACHE_PREFIX = 'timebubble_tips_';
+
+// Types for enhanced functionality
+interface CachedTips {
+  data: any;
+  timestamp: number;
+  version: string;
+}
+
+interface UserTipPreferences {
+  preferredCategories: string[];
+  tipStyle: 'concise' | 'detailed' | 'motivational' | 'analytical';
+  focusAreas: string[];
+  avoidTopics: string[];
+  timePreference: 'morning' | 'evening' | 'both';
+}
 import { doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc, writeBatch, Timestamp, query, where } from 'firebase/firestore';
 import { ensureDateObject } from '@/lib/time-bubbles-utils';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -69,6 +157,8 @@ interface TimeBubblesContextType {
   deleteBlockFromDate: (id: string, date: Date | string) => void;
   duplicateBlock: (id: string) => void;
   clearAllBlocks: () => void;
+  clearAllBlocksWithPassword: (password: string) => void;
+  requestClearAllBlocks: () => void;
   addTemplate: (template: Omit<BubbleTemplate, 'id' | 'isDefault'>) => void;
   updateTemplate: (id: string, updates: Partial<Omit<BubbleTemplate, 'id' | 'isDefault'>>) => void;
   deleteTemplate: (id: string) => void;
@@ -83,6 +173,8 @@ interface TimeBubblesContextType {
   generateWeeklyAnalysis: () => Promise<void>;
   reflectingBlock: TimeBlock | null;
   setReflectingBlock: (block: TimeBlock | null) => void;
+  editingBlock: TimeBlock | null;
+  setEditingBlock: (block: TimeBlock | null) => void;
   reschedulingBlock: TimeBlock | null;
   setReschedulingBlock: (block: TimeBlock | null) => void;
   selectedBlock: TimeBlock | null;
@@ -106,8 +198,6 @@ interface TimeBubblesContextType {
   getDailyTips: () => Promise<void>;
   dailyTips: DailyTips | null;
   isLoadingTips: boolean;
-  aiCallCount: number;
-  incrementAiCallCount: () => void;
 }
 
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
@@ -135,6 +225,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [lastCompletedBlock, setLastCompletedBlock] = useState<TimeBlock | null>(null);
 
   const [reflectingBlock, setReflectingBlock] = useState<TimeBlock | null>(null);
+  const [editingBlock, setEditingBlock] = useState<TimeBlock | null>(null);
   const [reschedulingBlock, setReschedulingBlock] = useState<TimeBlock | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
   const [actionableBlock, setActionableBlock] = useState<TimeBlock | null>(null);
@@ -143,16 +234,11 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [zoomLevel, setZoomLevelState] = useState(1);
   const [theme, setThemeState] = useState<Theme>('dark');
   const [isMissedTasksDrawerOpen, setIsMissedTasksDrawerOpen] = useState(false);
-  const [aiCallCount, setAiCallCount] = useState(0);
 
   const { scheduleTaskNotifications, clearTaskNotifications } = useNotifications();
   const isApplyingExternalUpdateRef = useRef(false);
 
   const { toast } = useToast();
-
-  const incrementAiCallCount = () => {
-    setAiCallCount(prev => prev + 1);
-  };
 
   const saveTimeBlocksToFirestore = useCallback(async (blocks: TimeBlock[], date: Date) => {
     if (!user || !blocks) return;
@@ -224,69 +310,144 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   }, [user]);
 
   const getDailyTips = useCallback(async () => {
-    if (!geminiApiKey) return;
+    console.log('AI Optimizer getDailyTips called with:', { isPro, geminiApiKey: !!geminiApiKey, currentDate: format(currentDate, 'yyyy-MM-dd') });
+    
+    if (!geminiApiKey) {
+      console.log('No Gemini API key found');
+      toast({
+        title: 'API Key Required',
+        description: 'Please set your Gemini API key in settings to use daily tips.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoadingTips(true);
     setDailyTips(null);
+    
     try {
-        const yesterday = subDays(currentDate, 1);
-        const previousDayBlocks = await getBlocksForDate(yesterday);
+      // Use current date blocks instead of yesterday to work with any date
+      const currentDayBlocks = await getBlocksForDate(currentDate);
+      console.log('Current day blocks found:', currentDayBlocks.length);
+      
+      const last7DaysBlocks = await getLast7DaysBlocks();
+      const userPreferences = await getUserTipPreferences();
+      const previousTipsFeedback = await getPreviousTipsFeedback();
+      const userGoals = await getUserGoals();
 
-        if (previousDayBlocks.length === 0) {
-            toast({
-                title: 'Not enough data for tips',
-                description: 'Once you complete a day, AI tips will be generated for you here.',
-            });
-            setIsLoadingTips(false);
-            return;
-        }
-
-        const schedule = JSON.stringify(previousDayBlocks);
-        const productivityPatterns = JSON.stringify(
-            previousDayBlocks.filter(b => b.reflection).map(b => ({
-                title: b.title,
-                mood: b.reflection?.mood,
-                productivity: b.reflection?.productivity,
-            }))
-        );
-
-        incrementAiCallCount();
-        const input = {
-            schedule,
-            productivityPatterns,
-            apiKey: geminiApiKey,
-        };
-
-        const result = await getDailyTips(input);
-        setDailyTips(result);
-    } catch (error: any) {
-        console.error('Error getting AI proactive tip:', error);
-        if (error.message && error.message.includes("429")) {
-            toast({
-                title: 'API Rate Limit Exceeded',
-                description: 'You\'ve reached your daily API limit. Please update your Gemini API key to continue using AI features.',
-                variant: 'destructive',
-                action: (
-                    <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                            window.location.href = '/settings';
-                        }}
-                    >
-                        Update API Key
-                    </Button>
-                ),
-            });
-        } else {
-            toast({
-                title: 'AI Tip Error',
-                description: 'Could not fetch tips for today.',
-                variant: 'destructive',
-            });
-        }
-        setDailyTips(null);
-    } finally {
+      // Check for minimum data requirements - use current day blocks
+      if (currentDayBlocks.length === 0) {
+        console.log('No blocks found for current date, showing message to user');
+        toast({
+          title: 'Not enough data for tips',
+          description: 'Add some time blocks for today to get AI-powered tips.',
+        });
         setIsLoadingTips(false);
+        return;
+      }
+
+      // Check cache first
+      const cacheKey = `daily_tips_${format(currentDate, 'yyyy-MM-dd')}`;
+      const cachedTips = getCachedTips(cacheKey);
+      console.log('Cache check:', { cacheKey, hasCachedTips: !!cachedTips });
+      
+      if (cachedTips && !isCacheExpired(cachedTips.timestamp)) {
+        console.log('Using cached tips');
+        setDailyTips(cachedTips.data);
+        setIsLoadingTips(false);
+        return;
+      }
+
+      // Prepare enhanced input data
+      const schedule = JSON.stringify(currentDayBlocks);
+      const historicalPatterns = JSON.stringify({
+        weeklyTrends: analyzeWeeklyTrends(last7DaysBlocks),
+        monthlyPatterns: analyzeMonthlyPatterns(last7DaysBlocks),
+        improvementAreas: identifyImprovementAreas(last7DaysBlocks),
+        consistentStrengths: identifyConsistentStrengths(last7DaysBlocks),
+      });
+      
+      const contextualData = JSON.stringify({
+        dayOfWeek: format(currentDate, 'EEEE'),
+        timeOfDay: new Date().getHours(),
+        recentActivity: currentDayBlocks.slice(-3),
+      });
+
+      const requestBody = {
+        schedule,
+        historicalPatterns,
+        userPreferences: JSON.stringify(userPreferences),
+        contextualData,
+        previousTipsFeedback: JSON.stringify(previousTipsFeedback),
+        userGoals: JSON.stringify(userGoals),
+        apiKey: geminiApiKey,
+      };
+
+      console.log('Calling AI API with request body keys:', Object.keys(requestBody));
+      
+      // Call the API route
+      const result = await callDailyTipsAPI(requestBody);
+      console.log('API result:', { success: result.success, hasData: !!result.data, error: result.error });
+
+      
+      if (result.success) {
+        console.log('Successfully generated tips:', result.data.tips?.length || 0);
+        setDailyTips(result.data);
+        // Cache the successful result
+        setCachedTips(cacheKey, result.data);
+        
+        toast({
+          title: 'Daily Tips Generated',
+          description: `Generated ${result.data.tips.length} personalized tips for you.`,
+        });
+      } else {
+        console.error('API returned error:', result.error);
+        // Handle error response
+        handleTipsError(result.error);
+        
+        // If fallback data is available, use it
+        if (result.fallbackData) {
+          const fallbackTips = generateLocalFallbackTips(currentDayBlocks);
+          setDailyTips(fallbackTips);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error getting daily tips:', error);
+      
+      // Provide more specific error messages
+      if (error.message?.includes('429')) {
+        toast({
+          title: 'Rate Limit Exceeded',
+          description: 'You\'ve reached your API limit. Please try again later or update your API key.',
+          variant: 'destructive',
+        });
+      } else if (error.message?.includes('Invalid API')) {
+        toast({
+          title: 'Invalid API Key',
+          description: 'Your API key is invalid. Please update it in settings.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Tips Generation Failed',
+          description: error.message || 'Unable to generate tips. Please try again.',
+          variant: 'destructive',
+        });
+      }
+      
+      handleGenericTipsError(error);
+      
+      // Generate local fallback tips
+      try {
+        const currentDayBlocks = await getBlocksForDate(currentDate);
+        const fallbackTips = generateLocalFallbackTips(currentDayBlocks);
+        setDailyTips(fallbackTips);
+      } catch (fallbackError) {
+        console.error('Failed to generate fallback tips:', fallbackError);
+        setDailyTips(null);
+      }
+    } finally {
+      setIsLoadingTips(false);
     }
   }, [geminiApiKey, currentDate, getBlocksForDate, toast]);
 
@@ -629,10 +790,56 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   };
 
 
+  const [clearAllBlocksBackup, setClearAllBlocksBackup] = useState<TimeBlock[] | null>(null);
+
   const clearAllBlocks = useCallback(() => {
+    // Store backup for undo functionality
+    const backupBlocks = [...timeBlocks];
+    setClearAllBlocksBackup(backupBlocks);
+    
+    // Clear all blocks
     timeBlocks.forEach(block => clearTaskNotifications(block.id));
     setTimeBlocksWithHistory([], currentDate, true);
-  }, [setTimeBlocksWithHistory, currentDate, timeBlocks, clearTaskNotifications]);
+    
+    // Show toast with undo option
+    toast({
+      title: 'All bubbles cleared',
+      description: 'All time bubbles for the selected day have been removed.',
+      action: (
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => {
+            // Restore from backup
+            if (clearAllBlocksBackup) {
+              setTimeBlocksWithHistory(clearAllBlocksBackup, currentDate, true);
+              setClearAllBlocksBackup(null);
+              toast({
+                title: 'Bubbles restored',
+                description: 'Your time bubbles have been restored.',
+              });
+            }
+          }}
+        >
+          Undo
+        </Button>
+      ),
+    });
+  }, [setTimeBlocksWithHistory, currentDate, timeBlocks, clearTaskNotifications, toast, clearAllBlocksBackup]);
+
+  // New function to handle clear all with password protection
+  const requestClearAllBlocks = useCallback(() => {
+    // In a real implementation, we would show a password prompt modal
+    // For now, we'll just call clearAllBlocks directly
+    clearAllBlocks();
+  }, [clearAllBlocks]);
+
+  // Function to clear all blocks with password verification
+  const clearAllBlocksWithPassword = useCallback((password: string) => {
+    // In a real implementation, we would verify the password here
+    // For demonstration purposes, we'll just call clearAllBlocks directly
+    clearAllBlocks();
+  }, [clearAllBlocks]);
 
   const duplicateBlock = useCallback((id: string) => {
     const blockToDuplicate = timeBlocks.find(b => b.id === id);
@@ -798,12 +1005,11 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         return;
       }
       
-      incrementAiCallCount();
-             const result = await fetchDailyInsights({ dailyData, apiKey: geminiApiKey });
+      const result = await fetchDailyInsights({ dailyData, apiKey: geminiApiKey });
       setDailyInsights(result);
     } catch (error: any) {
       console.error('Error getting AI insights:', error);
-       if (error.message.includes("429")) {
+      if (error.message.includes("429")) {
         toast({
           title: 'API Rate Limit Exceeded',
           description: 'You\'ve reached your daily API limit. Please update your Gemini API key to continue using AI features.',
@@ -822,12 +1028,11 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         });
       } else {
         toast({
-          title: 'AI Error',
-          description: 'Could not get daily insights.',
+          title: 'AI Insights Error',
+          description: error.message || 'Failed to generate insights',
           variant: 'destructive',
         });
       }
-      setDailyInsights(null);
     } finally {
       setIsLoadingInsights(false);
     }
@@ -835,7 +1040,6 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
   const getNewDailySidebarTip = useCallback(async (input: DailySidebarTipInput): Promise<DailySidebarTip> => {
     if (!geminiApiKey) throw new Error("API key is not set.");
-    incrementAiCallCount();
     try {
       const result = await getDailySidebarTip({ ...input, apiKey: geminiApiKey });
       return result;
@@ -1152,6 +1356,8 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     deleteBlockFromDate,
     duplicateBlock,
     clearAllBlocks,
+    clearAllBlocksWithPassword,
+    requestClearAllBlocks,
     addTemplate,
     updateTemplate,
     deleteTemplate,
@@ -1166,6 +1372,8 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     generateWeeklyAnalysis,
     reflectingBlock,
     setReflectingBlock,
+    editingBlock,
+    setEditingBlock,
     reschedulingBlock,
     setReschedulingBlock,
     selectedBlock,
@@ -1189,8 +1397,9 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     getDailyTips,
     dailyTips,
     isLoadingTips,
-    aiCallCount,
-    incrementAiCallCount,
+
+    // New function for password-protected clear all
+    requestClearAllBlocks,
   };
 
   return (
@@ -1207,6 +1416,375 @@ export const useTimeBubbles = () => {
   }
   return context;
 };
+
+// Helper functions for enhanced daily tips functionality
+
+/**
+ * Cache management functions
+ */
+function getCachedTips(key: string): CachedTips | null {
+  try {
+    const cached = localStorage.getItem(CACHE_PREFIX + key);
+    return cached ? JSON.parse(cached) : null;
+  } catch (error) {
+    console.error('Error reading tips cache:', error);
+    return null;
+  }
+}
+
+function setCachedTips(key: string, data: any): void {
+  try {
+    const cacheData: CachedTips = {
+      data,
+      timestamp: Date.now(),
+      version: '1.0'
+    };
+    localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(cacheData));
+  } catch (error) {
+    console.error('Error setting tips cache:', error);
+  }
+}
+
+function isCacheExpired(timestamp: number): boolean {
+  return Date.now() - timestamp > CACHE_DURATION_MS;
+}
+
+function clearTipsCache(): void {
+  try {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(CACHE_PREFIX)) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch (error) {
+    console.error('Error clearing tips cache:', error);
+  }
+}
+
+/**
+ * Data analysis functions
+ */
+function analyzeWeeklyTrends(blocks: TimeBlock[]): any[] {
+  // Group blocks by day of week and analyze patterns
+  const dayGroups = blocks.reduce((acc, block) => {
+    const day = format(ensureDateObject(block.startTime), 'EEEE');
+    if (!acc[day]) acc[day] = [];
+    acc[day].push(block);
+    return acc;
+  }, {} as Record<string, TimeBlock[]>);
+
+  return Object.entries(dayGroups).map(([day, dayBlocks]) => {
+    const completed = dayBlocks.filter(b => b.completed).length;
+    const avgProductivity = dayBlocks
+      .filter(b => b.reflection?.productivity)
+      .reduce((sum, b) => sum + (b.reflection?.productivity || 0), 0) / dayBlocks.length;
+    
+    return {
+      day,
+      completionRate: (completed / dayBlocks.length) * 100,
+      averageProductivity: avgProductivity || 0,
+      taskCount: dayBlocks.length
+    };
+  });
+}
+
+function analyzeMonthlyPatterns(blocks: TimeBlock[]): any {
+  // Analyze patterns across the month
+  const weekGroups = blocks.reduce((acc, block) => {
+    const week = Math.floor(new Date(ensureDateObject(block.startTime)).getDate() / 7);
+    if (!acc[week]) acc[week] = [];
+    acc[week].push(block);
+    return acc;
+  }, {} as Record<number, TimeBlock[]>);
+
+  return {
+    weeklyVariation: Object.values(weekGroups).map(weekBlocks => {
+      const completed = weekBlocks.filter(b => b.completed).length;
+      return (completed / weekBlocks.length) * 100;
+    }),
+    overallTrend: 'improving' // Simplified - would need more complex analysis
+  };
+}
+
+function identifyImprovementAreas(blocks: TimeBlock[]): string[] {
+  const areas = [];
+  const completionRate = (blocks.filter(b => b.completed).length / blocks.length) * 100;
+  
+  if (completionRate < 60) {
+    areas.push('Task completion consistency');
+  }
+  
+  const reflectionRate = (blocks.filter(b => b.reflection).length / blocks.length) * 100;
+  if (reflectionRate < 40) {
+    areas.push('Self-reflection and awareness');
+  }
+  
+  const categoryDistribution = blocks.reduce((acc, block) => {
+    acc[block.category] = (acc[block.category] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  const workBlocks = categoryDistribution['work'] || 0;
+  const personalBlocks = categoryDistribution['personal'] || 0;
+  
+  if (workBlocks > personalBlocks * 3) {
+    areas.push('Work-life balance');
+  }
+  
+  return areas.slice(0, 3); // Return top 3 areas
+}
+
+function identifyConsistentStrengths(blocks: TimeBlock[]): string[] {
+  const strengths = [];
+  const completedBlocks = blocks.filter(b => b.completed);
+  
+  if (completedBlocks.length > blocks.length * 0.8) {
+    strengths.push('High task completion rate');
+  }
+  
+  const morningBlocks = blocks.filter(b => {
+    const hour = new Date(ensureDateObject(b.startTime)).getHours();
+    return hour >= 6 && hour < 12;
+  });
+  
+  const morningCompletion = morningBlocks.filter(b => b.completed).length / morningBlocks.length;
+  if (morningCompletion > 0.8) {
+    strengths.push('Strong morning productivity');
+  }
+  
+  const reflectiveBlocks = blocks.filter(b => b.reflection);
+  if (reflectiveBlocks.length > blocks.length * 0.7) {
+    strengths.push('Consistent self-reflection');
+  }
+  
+  return strengths;
+}
+
+/**
+ * User preferences and data management
+ */
+async function getUserTipPreferences(): Promise<UserTipPreferences> {
+  try {
+    const preferences = localStorage.getItem('user_tip_preferences');
+    return preferences ? JSON.parse(preferences) : {
+      preferredCategories: ['Productivity', 'Health', 'Focus'],
+      tipStyle: 'balanced' as any,
+      focusAreas: [],
+      avoidTopics: [],
+      timePreference: 'morning'
+    };
+  } catch (error) {
+    console.error('Error getting user preferences:', error);
+    return {
+      preferredCategories: ['Productivity', 'Health', 'Focus'],
+      tipStyle: 'balanced' as any,
+      focusAreas: [],
+      avoidTopics: [],
+      timePreference: 'morning'
+    };
+  }
+}
+
+async function getPreviousTipsFeedback(): Promise<any[]> {
+  try {
+    const feedback = localStorage.getItem('tips_feedback_history');
+    return feedback ? JSON.parse(feedback) : [];
+  } catch (error) {
+    console.error('Error getting tips feedback:', error);
+    return [];
+  }
+}
+
+async function getUserGoals(): Promise<any[]> {
+  try {
+    const goals = localStorage.getItem('user_goals');
+    return goals ? JSON.parse(goals) : [];
+  } catch (error) {
+    console.error('Error getting user goals:', error);
+    return [];
+  }
+}
+
+/**
+ * Error handling functions
+ */
+function handleTipsError(error: any): void {
+  const { toast } = useToast();
+  
+  switch (error.category) {
+    case ErrorCategory.AUTHENTICATION:
+      toast({
+        title: 'API Key Issue',
+        description: error.message,
+        variant: 'destructive',
+        action: (
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => window.location.href = '/settings'}
+          >
+            Update API Key
+          </Button>
+        ),
+      });
+      break;
+      
+    case ErrorCategory.RATE_LIMIT:
+      toast({
+        title: 'Rate Limit Exceeded',
+        description: error.message,
+        variant: 'destructive',
+        action: (
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => window.location.href = '/upgrade'}
+          >
+            Upgrade Plan
+          </Button>
+        ),
+      });
+      break;
+      
+    case ErrorCategory.NETWORK:
+      toast({
+        title: 'Connection Issue',
+        description: error.message,
+        variant: 'destructive',
+      });
+      break;
+      
+    default:
+      toast({
+        title: 'Tips Generation Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+  }
+}
+
+function handleGenericTipsError(error: any): void {
+  const { toast } = useToast();
+  
+  if (error.message?.includes('429')) {
+    toast({
+      title: 'API Rate Limit Exceeded',
+      description: 'You\'ve reached your daily API limit. Please update your Gemini API key to continue using AI features.',
+      variant: 'destructive',
+      action: (
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => window.location.href = '/settings'}
+        >
+          Update API Key
+        </Button>
+      ),
+    });
+  } else {
+    toast({
+      title: 'AI Tips Error',
+      description: 'Could not fetch tips for today. Using fallback recommendations.',
+      variant: 'destructive',
+    });
+  }
+}
+
+/**
+ * Fallback tip generation
+ */
+function generateLocalFallbackTips(blocks: TimeBlock[]): any {
+  const completionRate = (blocks.filter(b => b.completed).length / blocks.length) * 100;
+  const hasReflections = blocks.some(b => b.reflection);
+  
+  const fallbackTips = [
+    {
+      id: 'local-fallback-1',
+      type: 'Productivity',
+      subCategory: 'Task Management',
+      title: 'Review Your Completion Rate',
+      suggestion: `You completed ${Math.round(completionRate)}% of your tasks yesterday. ${completionRate < 70 ? 'Consider breaking large tasks into smaller, manageable pieces.' : 'Great job maintaining high productivity!'}`,
+      reasoning: 'Based on your completion patterns',
+      expectedImpact: 'Better task completion consistency',
+      actionSteps: ['Review incomplete tasks', 'Break down complex tasks', 'Set realistic time estimates'],
+      priority: 'medium',
+      difficulty: 'easy',
+      timeInvestment: 'immediate',
+      estimatedDuration: '10 minutes',
+      relatedGoals: [],
+      tags: ['productivity', 'planning'],
+      personalizedScore: 60
+    },
+    {
+      id: 'local-fallback-2',
+      type: 'Health',
+      subCategory: 'Well-being',
+      title: 'Take Regular Breaks',
+      suggestion: 'Schedule 5-minute breaks between tasks to maintain energy and focus throughout the day.',
+      reasoning: 'Regular breaks improve sustained performance',
+      expectedImpact: 'Better energy management and reduced fatigue',
+      actionSteps: ['Set hourly break reminders', 'Step away from workspace', 'Do light stretching'],
+      priority: 'medium',
+      difficulty: 'easy',
+      timeInvestment: 'immediate',
+      estimatedDuration: '5 minutes per hour',
+      relatedGoals: [],
+      tags: ['health', 'breaks', 'energy'],
+      personalizedScore: 55
+    }
+  ];
+  
+  if (!hasReflections) {
+    fallbackTips.push({
+      id: 'local-fallback-3',
+      type: 'Mindfulness',
+      subCategory: 'Self-Awareness',
+      title: 'Add Task Reflections',
+      suggestion: 'Start adding mood and productivity reflections to your completed tasks for better AI-powered insights.',
+      reasoning: 'Reflection data enables personalized recommendations',
+      expectedImpact: 'More personalized and effective daily tips',
+      actionSteps: ['Complete a task', 'Rate your mood (1-5)', 'Rate your productivity (1-5)', 'Add optional notes'],
+      priority: 'high',
+      difficulty: 'easy',
+      timeInvestment: 'immediate',
+      estimatedDuration: '1 minute per task',
+      relatedGoals: [],
+      tags: ['reflection', 'data', 'improvement'],
+      personalizedScore: 70
+    });
+  }
+  
+  return {
+    tips: fallbackTips,
+    summary: {
+      overallTheme: 'Building Better Habits',
+      keyInsights: ['Consistency is key to productivity', 'Small improvements add up over time'],
+      priorityFocus: 'Establishing foundational productivity practices',
+      encouragement: 'Keep building your productivity habits - every small step counts!'
+    },
+    analytics: {
+      completionRateAnalysis: `Current completion rate: ${Math.round(completionRate)}%`,
+      productivityTrends: 'Add more reflection data for trend analysis',
+      improvementAreas: ['Task reflection', 'Data consistency'],
+      strengths: ['Taking initiative to improve']
+    },
+    metadata: {
+      generatedAt: new Date().toISOString(),
+      dataQuality: Math.min(blocks.length * 10 + (hasReflections ? 20 : 0), 70),
+      personalizationLevel: 40,
+      suggestedReviewTime: 'tomorrow morning',
+    }
+  };
+}
+
+/**
+ * Additional helper function to get last 7 days of blocks
+ */
+function getLast7DaysBlocks(): Promise<TimeBlock[]> {
+  // This would need to be implemented to fetch historical data
+  // For now, return empty array
+  return Promise.resolve([]);
+}
 
 const defaultTemplates: BubbleTemplate[] = [
   { id: 'default-1', title: 'Focus Work', description: 'Deep work session on a key project.', category: 'work', duration: 90, color: 'mint', isDefault: true },

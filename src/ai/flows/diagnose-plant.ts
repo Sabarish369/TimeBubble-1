@@ -6,7 +6,7 @@
  * - diagnosePlant - A function that handles the plant diagnosis process.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, getApiKey} from '@/ai/genkit';
 import {googleAI} from '@genkit-ai/googleai';
 import { withAiRetry, normalizeAiError } from './_utils';
 import {z} from 'genkit';
@@ -37,7 +37,7 @@ const diagnosePlantFlow = ai.defineFlow(
     outputSchema: DiagnosePlantOutputSchema,
   },
   async input => {
-    const llm = googleAI.model('gemini-1.5-flash', {apiKey: input.apiKey});
+    const llm = googleAI.model('gemini-1.5-flash', { apiKey: getApiKey(input.apiKey) });
     try {
       const {output} = await withAiRetry(() => prompt(input, {model: llm}), { retries: 2, initialDelayMs: 1500 });
       return output!;

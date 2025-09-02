@@ -6,7 +6,7 @@
  * - getHabitStackingSuggestions - Suggests small habits to stack with existing routines
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, getApiKey } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { HabitStackingInputSchema, HabitStackingOutputSchema, type HabitStackingInput, type HabitStackingOutput } from '@/types/ai-types';
 
@@ -177,7 +177,7 @@ const habitStackingFlow = ai.defineFlow(
       })
     };
 
-    const llm = googleAI.model('gemini-1.5-flash', { apiKey: input.apiKey });
+    const llm = googleAI.model('gemini-1.5-flash', { apiKey: getApiKey(input.apiKey) });
     
     try {
       const { output } = await prompt(enhancedInput, { model: llm });
