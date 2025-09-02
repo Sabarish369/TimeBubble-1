@@ -93,84 +93,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     if (isMobile) {
       onClose();
     }
-
-    const target = e.currentTarget;
-
-    // Add drag start animation to original element
-    target.style.transform = 'scale(0.95) rotate(-2deg)';
-    target.style.opacity = '0.6';
-    target.style.transition = 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
-    target.classList.add('dragging-source');
-
-    // Create enhanced custom drag image with better visual feedback
-    const dragImage = target.cloneNode(true) as HTMLElement;
-    dragImage.style.cssText = `
-      position: absolute !important;
-      top: -3000px !important;
-      left: -3000px !important;
-      width: ${target.offsetWidth}px !important;
-      height: ${target.offsetHeight}px !important;
-      opacity: 0.95 !important;
-      pointer-events: none !important;
-      transform: scale(1.1) rotate(3deg) !important;
-      filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.35)) brightness(1.1) !important;
-      border: 2px solid rgba(255, 255, 255, 0.6) !important;
-      border-radius: 14px !important;
-      z-index: 10000 !important;
-      transition: none !important;
-      background: linear-gradient(135deg, hsl(var(--bubble-${template.color})) 0%, hsl(var(--bubble-${template.color})) 70%, rgba(255,255,255,0.3) 100%) !important;
-    `;
-
-    dragImage.classList.add('enhanced-drag-ghost');
-    dragImage.setAttribute('data-color', template.color);
-
-    // Add magical trail effect
-    const trail = document.createElement('div');
-    trail.style.cssText = `
-      position: absolute !important;
-      inset: -4px !important;
-      background: linear-gradient(45deg, 
-        transparent 0%, 
-        hsl(var(--bubble-${template.color}) / 0.4) 25%, 
-        hsl(var(--bubble-${template.color}) / 0.6) 50%, 
-        hsl(var(--bubble-${template.color}) / 0.4) 75%, 
-        transparent 100%) !important;
-      border-radius: 16px !important;
-      filter: blur(2px) !important;
-      animation: trailShimmer 1.5s infinite ease-in-out !important;
-      z-index: -1 !important;
-    `;
-    dragImage.appendChild(trail);
-
-    document.body.appendChild(dragImage);
-    e.dataTransfer.setDragImage(dragImage, target.offsetWidth / 2, target.offsetHeight / 2);
-
-    // Enhanced cleanup with smoother transitions
-    setTimeout(() => {
-        if(document.body.contains(dragImage)) {
-            document.body.removeChild(dragImage);
-        }
-    }, 50);
   };
 
   const handleDragEnd = (e: DragEvent<HTMLDivElement>) => {
-    const target = e.currentTarget;
-    target.classList.remove('dragging-source');
-
-    // Enhanced bounce-back animation
-    target.style.transform = 'scale(1.05)';
-    target.style.opacity = '1';
-    target.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-
-    setTimeout(() => {
-      target.style.transform = 'scale(1.02)';
-    }, 100);
-
-    setTimeout(() => {
-      target.style.transform = '';
-      target.style.opacity = '';
-      target.style.transition = '';
-    }, 400);
+    // No specific action needed on drag end for now,
+    // as the timeline component will handle the drop.
   };
 
   const handleOpenCreateTemplateModal = () => {
