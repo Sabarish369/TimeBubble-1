@@ -101,7 +101,7 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
   };
 
   const handleDoubleClick = (e: MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('[data-bubble-id]')) return;
+    if ((e.target as HTMLElement).closest('[class*="absolute left-[80px]"]')) return;
     if (!timelineRef.current) return;
 
     const rect = timelineRef.current.getBoundingClientRect();
