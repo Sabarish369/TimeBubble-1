@@ -11,6 +11,7 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 import { isToday } from "date-fns";
 import { ActionPromptModal } from "@/components/action-prompt-modal";
 import { BubbleCreateModal } from "@/components/bubble-create-modal";
+import { BubbleEditModal } from "@/components/bubble-edit-modal";
 import { cn } from "@/lib/utils";
 import { FloatingToolbar } from "@/components/floating-toolbar";
 import { LoginModal } from "@/components/login-modal";
@@ -174,6 +175,7 @@ export default function AppPage() {
         onClose={() => setIsBubbleCreateModalOpen(false)}
         startTime={newBubbleStartTime}
       />
+      <BubbleEditModal />
       {/* Fallback login modal, though AuthGuard should prevent this view */}
       <LoginModal 
         isOpen={isLoginModalOpen}

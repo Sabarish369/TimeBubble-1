@@ -6,7 +6,7 @@
  * - getEnergyOptimizationSuggestions - Suggests optimal timing based on inferred energy patterns from reflections
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, getApiKey } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { withAiRetry, normalizeAiError } from './_utils';
 import { EnergyOptimizationInputSchema, EnergyOptimizationOutputSchema, type EnergyOptimizationInput, type EnergyOptimizationOutput } from '@/types/ai-types';
@@ -215,7 +215,7 @@ const energyOptimizationFlow = ai.defineFlow(
       currentTime: input.currentTime
     };
 
-    const llm = googleAI.model('gemini-1.5-flash', { apiKey: input.apiKey });
+    const llm = googleAI.model('gemini-1.5-flash', { apiKey: getApiKey(input.apiKey) });
     
     try {
       const { output } = await withAiRetry(() => prompt(enhancedInput, { model: llm }), { retries: 2, initialDelayMs: 1500 });

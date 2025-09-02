@@ -52,6 +52,16 @@ export function AtmosphericLights({
   const bubblesRef = useRef<Bubble[]>([]);
   const timeRef = useRef(0);
 
+  // Add this function to ensure bubbles stay within boundaries
+  const keepWithinBounds = (bubble: Bubble, rect: DOMRect) => {
+    // Ensure the bubble always stays within the container bounds
+    if (bubble.y < 0) bubble.y = 0;
+    if (bubble.y > rect.height) bubble.y = rect.height;
+    if (bubble.x < 0) bubble.x = 0;
+    if (bubble.x > rect.width) bubble.x = rect.width;
+    return bubble;
+  };
+
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -156,6 +166,9 @@ export function AtmosphericLights({
         bubble.x += bubble.vx + wobbleX * 0.1;
         bubble.y += bubble.vy + wobbleY * 0.1;
         
+        // Apply strict boundary enforcement to prevent leaking
+        keepWithinBounds(bubble, rect);
+        
         // Boundary wrapping for horizontal movement
         if (bubble.x < -bubble.size) {
           bubble.x = rect.width + bubble.size;
@@ -172,6 +185,9 @@ export function AtmosphericLights({
           bubble.vy = -speed * (0.8 + Math.random() * 0.4);
           bubble.phase = Math.random() * Math.PI * 2;
           bubble.opacity = 0.3 + Math.random() * 0.4;
+          
+          // Apply bounds check after reset
+          keepWithinBounds(bubble, rect);
         }
         
         // Calculate opacity based on position (fade near edges)
@@ -234,6 +250,16 @@ export function AtmosphericLights({
       )}
       style={{
         background: 'transparent',
+        contain: 'strict',
+        zIndex: 0,
+        clipPath: 'inset(0 0 0 0)', // Force clipping to boundaries
+        position: 'absolute', // Ensure absolute positioning
+        height: '100%', // Explicit height
+        width: '100%', // Explicit width
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0
       }}
     />
   );

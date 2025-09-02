@@ -36,11 +36,13 @@ import { cn } from '@/lib/utils';
 import type { BubbleCategory, BubbleColor } from '@/types';
 import { useEffect, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { CalendarIcon, Lock } from 'lucide-react';
-import { format, setHours, setMinutes, startOfDay, getHours, getMinutes, addHours } from 'date-fns';
+import { CalendarIcon, Lock, Repeat } from 'lucide-react';
+import { format, setHours, setMinutes, startOfDay, getHours, getMinutes, addHours, addDays, isSameDay } from 'date-fns';
 import { Calendar } from './ui/calendar';
 import { useAuth } from '@/context/auth-context';
 import { ProModal } from './pro-modal';
+import { Switch } from './ui/switch';
+import { Checkbox } from './ui/checkbox';
 
 interface BubbleCreateModalProps {
   isOpen: boolean;
@@ -58,6 +60,9 @@ const createSchema = z.object({
   endMinute: z.string(),
   category: z.enum(['work', 'study', 'break', 'personal', 'health']),
   color: z.string(),
+  isRecurring: z.boolean().default(false),
+  selectedDays: z.array(z.number()).default([]),
+  endDate: z.date().optional(),
 }).refine(data => {
     const startTime = new Date();
     startTime.setHours(parseInt(data.startHour), parseInt(data.startMinute));
@@ -67,6 +72,14 @@ const createSchema = z.object({
 }, {
     message: "End time must be after start time",
     path: ["endHour"],
+}).refine(data => {
+    if (data.isRecurring && data.selectedDays.length === 0) {
+        return false;
+    }
+    return true;
+}, {
+    message: "Please select at least one day for recurring bubbles",
+    path: ["selectedDays"],
 });
 
 
@@ -75,6 +88,8 @@ type CreateFormValues = z.infer<typeof createSchema>;
 const categories: BubbleCategory[] = ['work', 'study', 'break', 'personal', 'health'];
 const hourOptions = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
 const minuteOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const dayNamesLong = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime }: BubbleCreateModalProps) {
   const { addBlockOnDate, currentDate } = useTimeBubbles();
@@ -93,6 +108,9 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
       endMinute: '00',
       category: 'personal',
       color: DEFAULT_BUBBLE_COLOR,
+      isRecurring: false,
+      selectedDays: [],
+      endDate: undefined,
     },
   });
 
@@ -111,6 +129,9 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
         endMinute: getMinutes(endTime).toString().padStart(2, '0'),
         category: 'personal',
         color: 'lavender',
+        isRecurring: false,
+        selectedDays: [],
+        endDate: undefined,
       });
     }
   }, [isOpen, initialStartTime, currentDate, form]);
@@ -125,16 +146,52 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
     
     const newDuration = (newEndTime.getTime() - newStartTime.getTime()) / (1000 * 60);
 
-    const newBlock = {
+    const baseBlock = {
       title: data.title,
       description: data.description,
-      startTime: newStartTime,
       duration: newDuration,
       category: data.category,
       color: data.color as BubbleColor,
     };
 
-    addBlockOnDate(newBlock, data.date);
+    if (data.isRecurring && data.selectedDays.length > 0) {
+      // Create recurring bubbles
+      const startDate = data.date;
+      const endDate = data.endDate || addDays(startDate, 90); // Default to 90 days if no end date
+      
+      let currentDate = startDate;
+      let createdCount = 0;
+      
+      while (currentDate <= endDate && createdCount < 365) { // Safety limit
+        const dayOfWeek = currentDate.getDay();
+        
+        if (data.selectedDays.includes(dayOfWeek)) {
+          const blockStartTime = setMinutes(
+            setHours(startOfDay(currentDate), parseInt(data.startHour)), 
+            parseInt(data.startMinute)
+          );
+          
+          const blockToCreate = {
+            ...baseBlock,
+            startTime: blockStartTime,
+          };
+          
+          addBlockOnDate(blockToCreate, currentDate);
+          createdCount++;
+        }
+        
+        currentDate = addDays(currentDate, 1);
+      }
+    } else {
+      // Create single bubble
+      const blockToCreate = {
+        ...baseBlock,
+        startTime: newStartTime,
+      };
+      
+      addBlockOnDate(blockToCreate, data.date);
+    }
+    
     onClose();
   };
 
@@ -149,15 +206,17 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
   return (
     <>
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Create New Bubble</DialogTitle>
           <DialogDescription>
             Add a new time bubble to your schedule on any day.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <Form {...form}>
+            <form id="bubble-create-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-1">
             <FormField
               control={form.control}
               name="title"
@@ -357,12 +416,134 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
                 </FormItem>
               )}
             />
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-              <Button type="submit">Create Bubble</Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            
+            {/* Recurring Options */}
+            <FormField
+              control={form.control}
+              name="isRecurring"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="flex items-center gap-2">
+                      <Repeat className="h-4 w-4" />
+                      Make this a recurring bubble
+                    </FormLabel>
+                    <div className="text-sm text-muted-foreground">
+                      Repeat this bubble on selected days of the week
+                    </div>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            
+            {/* Day Selection - only show when recurring is enabled */}
+            {form.watch('isRecurring') && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="selectedDays"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Days</FormLabel>
+                      <FormControl>
+                        <div className="grid grid-cols-7 gap-2">
+                          {dayNames.map((day, index) => {
+                            const isSelected = field.value.includes(index);
+                            return (
+                              <div key={index} className="flex flex-col items-center space-y-1">
+                                <Checkbox
+                                  id={`day-${index}`}
+                                  checked={isSelected}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      field.onChange([...field.value, index]);
+                                    } else {
+                                      field.onChange(field.value.filter((d: number) => d !== index));
+                                    }
+                                  }}
+                                  className="sr-only"
+                                />
+                                <label
+                                  htmlFor={`day-${index}`}
+                                  className={cn(
+                                    "w-10 h-10 rounded-full flex items-center justify-center text-xs font-medium cursor-pointer transition-colors",
+                                    isSelected
+                                      ? "bg-primary text-primary-foreground"
+                                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                                  )}
+                                >
+                                  {day}
+                                </label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>End Date (Optional)</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Select end date (default: 90 days)</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                            disabled={(date) => date < form.getValues('date')}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <div className="text-xs text-muted-foreground">
+                        Leave empty to create bubbles for the next 90 days
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}    
+            </form>
+          </Form>
+        </div>
+        
+        <DialogFooter className="shrink-0 border-t pt-4">
+          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+          <Button type="submit" form="bubble-create-form">
+            {form.watch('isRecurring') ? 'Create Recurring Bubbles' : 'Create Bubble'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
     <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />

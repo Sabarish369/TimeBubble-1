@@ -63,23 +63,97 @@ export const DailyInsightsOutputSchema = z.object({
 });
 export type DailyInsights = z.infer<typeof DailyInsightsOutputSchema>;
 
-// Types for daily-tips.ts
+// Enhanced Types for daily-tips.ts
+
+// User preferences and personalization
+export const UserTipPreferencesSchema = z.object({
+  preferredCategories: z.array(z.string()).optional().describe("User's preferred tip categories"),
+  tipStyle: z.enum(["concise", "detailed", "motivational", "analytical"]).optional().describe("User's preferred tip style"),
+  focusAreas: z.array(z.string()).optional().describe("Areas user wants to focus on improving"),
+  avoidTopics: z.array(z.string()).optional().describe("Topics user wants to avoid"),
+  timePreference: z.enum(["morning", "evening", "both"]).optional().describe("When user prefers to receive tips"),
+});
+export type UserTipPreferences = z.infer<typeof UserTipPreferencesSchema>;
+
+// Enhanced input schema with user context
 export const DailyTipsInputSchema = z.object({
   schedule: z.string().describe("A JSON string of the user's schedule from the previous day, including completed and incomplete tasks."),
-  productivityPatterns: z.string().describe("A summary of the user's historical productivity and mood patterns from their reflections."),
+  historicalPatterns: z.string().describe("A comprehensive analysis of the user's historical productivity, mood, and behavioral patterns."),
+  userPreferences: z.string().optional().describe("JSON string of user's tip preferences and focus areas."),
+  contextualData: z.string().optional().describe("Additional contextual information like weather, calendar events, etc."),
+  previousTipsFeedback: z.string().optional().describe("JSON string of feedback on previously provided tips."),
+  userGoals: z.string().optional().describe("JSON string of user's current goals and objectives."),
   ...ApiKeySchema,
 });
 export type DailyTipsInput = z.infer<typeof DailyTipsInputSchema>;
 
-const TipSchema = z.object({
-  type: z.enum(["Productivity", "Health", "Mindfulness", "Efficiency", "Motivation"]).describe("The category of the tip."),
-  suggestion: z.string().describe("The concise, actionable suggestion."),
+// Extended tip categories and subcategories
+const TipCategoryEnum = z.enum([
+  "Productivity", "Health", "Mindfulness", "Efficiency", "Motivation",
+  "Time Management", "Focus", "Energy", "Habits", "Work-Life Balance",
+  "Learning", "Creativity", "Communication", "Planning", "Recovery"
+]);
+
+const TipPriorityEnum = z.enum(["low", "medium", "high", "critical"]);
+const TipDifficultyEnum = z.enum(["easy", "moderate", "challenging"]);
+const TipTimeInvestmentEnum = z.enum(["immediate", "short-term", "long-term"]);
+
+// Enhanced tip schema with metadata
+const EnhancedTipSchema = z.object({
+  id: z.string().describe("Unique identifier for the tip"),
+  type: TipCategoryEnum.describe("The category of the tip"),
+  subCategory: z.string().optional().describe("More specific subcategory of the tip"),
+  title: z.string().describe("Short, catchy title for the tip"),
+  suggestion: z.string().describe("The detailed, actionable suggestion"),
+  reasoning: z.string().describe("Why this tip is relevant based on user's data"),
+  expectedImpact: z.string().describe("What improvement the user can expect"),
+  actionSteps: z.array(z.string()).describe("Specific steps to implement the tip"),
+  priority: TipPriorityEnum.describe("Priority level of this tip"),
+  difficulty: TipDifficultyEnum.describe("How challenging this tip is to implement"),
+  timeInvestment: TipTimeInvestmentEnum.describe("Time horizon for this tip"),
+  estimatedDuration: z.string().optional().describe("Estimated time to complete if applicable"),
+  relatedGoals: z.array(z.string()).optional().describe("User goals this tip addresses"),
+  tags: z.array(z.string()).optional().describe("Searchable tags for the tip"),
+  personalizedScore: z.number().min(0).max(100).describe("How personalized this tip is to the user"),
 });
 
+// Tip feedback schema
+export const TipFeedbackSchema = z.object({
+  tipId: z.string().describe("ID of the tip being rated"),
+  rating: z.number().min(1).max(5).describe("User rating of the tip (1-5 stars)"),
+  helpfulness: z.number().min(1).max(5).describe("How helpful was this tip"),
+  implemented: z.boolean().describe("Whether the user implemented the tip"),
+  difficulty: z.number().min(1).max(5).describe("How difficult was it to implement"),
+  results: z.string().optional().describe("What results the user experienced"),
+  feedback: z.string().optional().describe("Additional user feedback"),
+  timestamp: z.date().describe("When the feedback was provided"),
+});
+export type TipFeedback = z.infer<typeof TipFeedbackSchema>;
+
+// Enhanced output schema
 export const DailyTipsOutputSchema = z.object({
-  tips: z.array(TipSchema).describe("An array of 5-7 actionable and motivational tips based on the previous day's performance."),
+  tips: z.array(EnhancedTipSchema).min(3).max(10).describe("An array of 3-10 personalized and actionable tips"),
+  summary: z.object({
+    overallTheme: z.string().describe("The main theme or focus of today's tips"),
+    keyInsights: z.array(z.string()).describe("Key insights derived from user's data"),
+    priorityFocus: z.string().describe("What the user should prioritize today"),
+    encouragement: z.string().describe("Motivational message based on recent performance"),
+  }).describe("Summary and context for the tips"),
+  analytics: z.object({
+    completionRateAnalysis: z.string().describe("Analysis of task completion patterns"),
+    productivityTrends: z.string().describe("Identified productivity trends"),
+    improvementAreas: z.array(z.string()).describe("Areas with potential for improvement"),
+    strengths: z.array(z.string()).describe("User's identified strengths"),
+  }).describe("Analytics and insights from user data"),
+  metadata: z.object({
+    generatedAt: z.string().describe("Timestamp when tips were generated"),
+    dataQuality: z.number().min(0).max(100).describe("Quality score of the input data"),
+    personalizationLevel: z.number().min(0).max(100).describe("How personalized these tips are"),
+    suggestedReviewTime: z.string().describe("When user should review these tips"),
+  }).describe("Metadata about the tip generation"),
 });
 export type DailyTips = z.infer<typeof DailyTipsOutputSchema>;
+export type EnhancedTip = z.infer<typeof EnhancedTipSchema>;
 
 // Types for daily-sidebar-tip.ts
 export const DailySidebarTipInputSchema = z.object({
@@ -133,7 +207,38 @@ export const EnergyOptimizationOutputSchema = z.object({
   }),
 });
 
-export type DailySidebarTip = z.infer<typeof DailySidebarTipOutputSchema>;
+// Tip analytics and tracking types
+export const TipAnalyticsSchema = z.object({
+  totalTipsGenerated: z.number().describe("Total number of tips generated for user"),
+  implementationRate: z.number().min(0).max(100).describe("Percentage of tips actually implemented"),
+  averageRating: z.number().min(0).max(5).describe("Average user rating of tips"),
+  categoryPerformance: z.record(z.number()).describe("Performance score by tip category"),
+  recentTrends: z.array(z.string()).describe("Recent trends in user's tip engagement"),
+  personalizedInsights: z.array(z.string()).describe("Insights about user's tip preferences"),
+});
+export type TipAnalytics = z.infer<typeof TipAnalyticsSchema>;
+
+// Tip generation context
+export const TipGenerationContextSchema = z.object({
+  userId: z.string().describe("User identifier"),
+  sessionId: z.string().describe("Session identifier for this tip generation"),
+  generationReason: z.enum(["scheduled", "manual", "triggered"]).describe("Why tips were generated"),
+  userTimezone: z.string().describe("User's timezone"),
+  deviceContext: z.string().optional().describe("Device/platform context"),
+  environmentalFactors: z.string().optional().describe("Environmental factors like weather, time of day"),
+});
+export type TipGenerationContext = z.infer<typeof TipGenerationContextSchema>;
+
+// Error tracking for tips
+export const TipErrorSchema = z.object({
+  errorType: z.enum(["generation", "api", "validation", "network", "unknown"]).describe("Type of error encountered"),
+  errorMessage: z.string().describe("Error message"),
+  errorContext: z.string().optional().describe("Additional context about the error"),
+  retryAttempts: z.number().describe("Number of retry attempts made"),
+  timestamp: z.date().describe("When the error occurred"),
+  resolved: z.boolean().describe("Whether the error was resolved"),
+});
+export type TipError = z.infer<typeof TipErrorSchema>;
 export type DailySidebarTipInput = z.infer<typeof DailySidebarTipInputSchema>;
 export type HabitStackingInput = z.infer<typeof HabitStackingInputSchema>;
 export type HabitStackingOutput = z.infer<typeof HabitStackingOutputSchema>;

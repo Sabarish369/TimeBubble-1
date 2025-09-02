@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { BUBBLE_COLORS, HOUR_HEIGHT, TOTAL_HOURS, FREE_COLOR_NAMES, PRO_COLOR_NAMES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon, History, Undo, Lock } from 'lucide-react';
+import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Edit, Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon, History, Undo, Lock } from 'lucide-react';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from './ui/dropdown-menu';
 import { format, isToday, startOfDay } from 'date-fns';
@@ -45,7 +45,7 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
 };
 
 function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBubbleProps) {
-  const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setSelectedBlock, setReschedulingBlock, zoomLevel, currentDate } = useTimeBubbles();
+  const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setEditingBlock, setSelectedBlock, setReschedulingBlock, zoomLevel, currentDate } = useTimeBubbles();
   const { isPro } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'top' | 'bottom' | null>(null);
@@ -357,6 +357,9 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
       )}
       
       <div className="absolute top-1 right-1 z-20 flex items-center" style={{ opacity: isOverdue ? 0 : 1}}>
+        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer" onClick={(e) => {e.stopPropagation(); setEditingBlock(block)}}>
+            <Edit className="w-4 h-4 text-slate-700 dark:text-white" />
+        </Button>
         <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer" onClick={(e) => {e.stopPropagation(); setReflectingBlock(block)}}>
             <MessageSquareText className="w-4 h-4 text-slate-700 dark:text-white" />
         </Button>

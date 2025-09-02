@@ -6,10 +6,11 @@
  * - getDailySidebarTip - A function that returns an insightful tip.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, getApiKey } from '@/ai/genkit';
 import { googleAI } from '@genkit-ai/googleai';
 import { withAiRetry, normalizeAiError } from './_utils';
-import { DailySidebarTipInputSchema, DailySidebarTipOutputSchema, type DailySidebarTip, type DailySidebarTipInput } from '@/types/ai-types';
+import { DailySidebarTipInputSchema, DailySidebarTipOutputSchema, type DailySidebarTipInput } from '@/types/ai-types';
+import type { DailySidebarTip } from '@/types';
 
 export async function getDailySidebarTip(input: DailySidebarTipInput): Promise<DailySidebarTip> {
   return dailySidebarTipFlow(input);
@@ -48,7 +49,9 @@ const dailySidebarTipFlow = ai.defineFlow(
       return { tip: "A fresh start. What's one small thing you can accomplish today to feel great?" };
     }
 
-    const llm = googleAI.model('gemini-1.5-flash', {apiKey: input.apiKey});
+    // Get the effective API key (user provided or environment variable)
+    const effectiveApiKey = getApiKey(input.apiKey);
+    const llm = googleAI.model('gemini-1.5-flash', { apiKey: effectiveApiKey });
     
     try {
       const { output } = await withAiRetry(() => prompt(input, { model: llm }), { retries: 2, initialDelayMs: 1500 });
