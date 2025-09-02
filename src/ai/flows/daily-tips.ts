@@ -716,10 +716,28 @@ const enhancedDailyTipsPrompt = ai.definePrompt({
     })
   },
   output: { schema: DailyTipsOutputSchema },
+<<<<<<< HEAD
+  prompt: `You are an elite AI productivity coach and behavioral scientist specializing in personalized performance optimization. Your expertise spans cognitive psychology, habit formation, time management, and behavioral economics.
+=======
+<<<<<<< HEAD
+  prompt: `You are an expert productivity coach and behavioral psychologist specializing in personalized time management strategies. Your role is to analyze a user's patterns from their completed tasks on the previous day and provide highly specific, actionable tips for today.
+>>>>>>> my-local-changes
+
+**MISSION:** Generate highly personalized, actionable daily tips that directly address the user's unique patterns, challenges, and opportunities based on comprehensive data analysis.
+
+<<<<<<< HEAD
+=======
+**ANALYSIS FRAMEWORK:**
+1. **Completion Pattern Analysis**: Identify which tasks were completed and look for patterns in the reflection data (mood, productivity scores).
+2. **Energy & Mood Correlation**: Find connections between task types, timing, and the user's reported energy/mood.
+3. **Productivity Peaks & Valleys**: Based on productivity scores, identify when the user performs best.
+4. **Task Category Performance**: Analyze which types of tasks lead to higher productivity or better moods.
+=======
   prompt: `You are an elite AI productivity coach and behavioral scientist specializing in personalized performance optimization. Your expertise spans cognitive psychology, habit formation, time management, and behavioral economics.
 
 **MISSION:** Generate highly personalized, actionable daily tips that directly address the user's unique patterns, challenges, and opportunities based on comprehensive data analysis.
 
+>>>>>>> my-local-changes
 **USER DATA ANALYSIS:**
 {{{processedData}}}
 
@@ -745,10 +763,26 @@ const enhancedDailyTipsPrompt = ai.definePrompt({
    - Align recommendations with identified user preferences
    - Consider user's current life context and constraints
    - Build upon existing successful habits and routines
+<<<<<<< HEAD
 
 **TIP GENERATION STRATEGY:**
 
 Generate 5-8 tips across these enhanced categories:
+=======
+>>>>>>> 9d6657356760c093d4b16148523154e45dae6d51
+
+**TIP GENERATION STRATEGY:**
+
+<<<<<<< HEAD
+**REQUIRED ELEMENTS:**
+- **Specific**: Reference their actual tasks, times, and reflection data.
+- **Actionable**: Provide concrete steps they can take immediately.
+- **Evidence-based**: Connect to their data (e.g., "Since your 'Deep Work' sessions scored 5/5 productivity...").
+- **Forward-looking**: The advice should be for the upcoming day.
+=======
+Generate 5-8 tips across these enhanced categories:
+>>>>>>> 9d6657356760c093d4b16148523154e45dae6d51
+>>>>>>> my-local-changes
 
 **PRODUCTIVITY ENHANCEMENT:**
 - Task sequencing and batching optimizations
@@ -768,11 +802,23 @@ Generate 5-8 tips across these enhanced categories:
 - Trigger optimization
 - Reward system enhancement
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+**Mindfulness & Focus Tips:**
+- "You felt most focused when working in 90-minute blocks with no interruptions. Try scheduling your phone on Do Not Disturb during your next work session."
+- "Creative tasks consistently boosted your mood. Start your day with a creative task to set a positive tone."
+=======
+>>>>>>> my-local-changes
 **ENERGY MANAGEMENT:**
 - Circadian rhythm alignment
 - Recovery and restoration
 - Stress management
 - Physical vitality optimization
+<<<<<<< HEAD
+=======
+>>>>>>> 9d6657356760c093d4b16148523154e45dae6d51
+>>>>>>> my-local-changes
 
 **GOAL ACCELERATION:**
 - Progress tracking optimization
@@ -782,6 +828,7 @@ Generate 5-8 tips across these enhanced categories:
 
 **TIP QUALITY STANDARDS:**
 
+<<<<<<< HEAD
 Each tip must include:
 - **Specific Evidence:** Reference actual user data points
 - **Clear Action Steps:** 3-5 concrete implementation steps
@@ -793,6 +840,34 @@ Each tip must include:
 
 **ADVANCED PERSONALIZATION FEATURES:**
 
+=======
+<<<<<<< HEAD
+**CONTEXTUAL ADAPTATION:**
+- If they had a low-completion day: Focus on recovery and setting achievable goals.
+- If they had a high-productivity day: Build on that momentum with similar strategies.
+- If they reported stress: Prioritize wellness and stress-management tips.
+- If they were unmotivated: Focus on small wins and habit-building.
+
+**TONE GUIDELINES:**
+- Be encouraging but honest about patterns.
+- Use specific numbers and percentages when possible.
+- Reference their actual task names and times.
+- Focus on solutions, not just problems.
+- Celebrate wins while identifying opportunities.
+=======
+Each tip must include:
+- **Specific Evidence:** Reference actual user data points
+- **Clear Action Steps:** 3-5 concrete implementation steps
+- **Expected Outcomes:** Specific, measurable improvements
+- **Scientific Rationale:** Why this works psychologically/neurologically
+- **Personal Relevance:** Direct connection to user's patterns
+- **Implementation Ease:** Realistic difficulty assessment
+- **Success Metrics:** How to measure effectiveness
+
+**ADVANCED PERSONALIZATION FEATURES:**
+>>>>>>> 9d6657356760c093d4b16148523154e45dae6d51
+
+>>>>>>> my-local-changes
 - **Pattern-Based Recommendations:** "Based on your 85% completion rate for morning tasks..."
 - **Correlation Insights:** "Your productivity scores are 40% higher when..."
 - **Trend Analysis:** "Over the past week, you've shown improvement in..."
@@ -840,6 +915,20 @@ const enhancedDailyTipsFlow = ai.defineFlow(
     outputSchema: DailyTipsOutputSchema,
   },
   async (input) => {
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+    // The input 'schedule' is already a JSON string of the relevant completed tasks.
+    // No further complex processing is needed here. The prompt is designed to handle this directly.
+    const llm = googleAI.model('gemini-1.5-flash', { apiKey: input.apiKey });
+    try {
+        const { output } = await prompt(input, { model: llm });
+        return output!;
+    } catch (error: any) {
+        if (error.status === 400 || error.message.includes('API key not valid')) {
+            throw new Error("Invalid API Key. Please check your key in the settings.");
+=======
+>>>>>>> my-local-changes
     // Parse the processed data
     const data = JSON.parse(input.processedData);
     
@@ -869,6 +958,10 @@ const enhancedDailyTipsFlow = ai.defineFlow(
           topP: 0.9,
           topK: 40,
           maxOutputTokens: 4096,
+<<<<<<< HEAD
+=======
+>>>>>>> 9d6657356760c093d4b16148523154e45dae6d51
+>>>>>>> my-local-changes
         }
       });
       
