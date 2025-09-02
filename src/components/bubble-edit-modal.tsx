@@ -32,17 +32,27 @@ import {
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { BUBBLE_COLORS, FREE_COLOR_NAMES, PRO_COLOR_NAMES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import type { BubbleCategory, BubbleColor } from '@/types';
+import type { BubbleCategory, BubbleColor, TimeBlock } from '@/types';
 import { useEffect, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { CalendarIcon, Lock, Repeat } from 'lucide-react';
+import { AlertTriangle, CalendarIcon, Copy, Lock, Palette, Repeat, Sparkles, Trash2, X } from 'lucide-react';
 import { format, setHours, setMinutes, startOfDay, getHours, getMinutes, addDays, isSameDay } from 'date-fns';
 import { Calendar } from './ui/calendar';
 import { useAuth } from '@/context/auth-context';
 import { ProModal } from './pro-modal';
 import { Switch } from './ui/switch';
 import { Checkbox } from './ui/checkbox';
+import { Label } from './ui/label';
 import { DeleteAllBubblesModal } from './delete-all-bubbles-modal';
+import { QuickDeleteConfirmModal } from './quick-delete-confirm-modal';
+import { RecurringSyncConfirmationModal } from './recurring-sync-confirmation-modal';
+import { ConflictNotificationModal } from './conflict-notification-modal';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const editSchema = z.object({
   title: z.string().min(2, { message: 'Title must be at least 2 characters.' }).max(50),
@@ -84,10 +94,18 @@ const minuteOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart
 const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export function BubbleEditModal() {
-  const { editingBlock, setEditingBlock, updateBlock, addBlockOnDate, deleteBlock } = useTimeBubbles();
+  const { editingBlock, setEditingBlock, updateBlock, addBlockOnDate, deleteBlock, clearAllBlocks, syncRecurringBubbles, getRecurringPattern } = useTimeBubbles();
   const { isPro } = useAuth();
   const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
+  const [isQuickDeleteModalOpen, setIsQuickDeleteModalOpen] = useState(false);
+  const [isSyncConfirmationOpen, setIsSyncConfirmationOpen] = useState(false);
+  const [isConflictNotificationOpen, setIsConflictNotificationOpen] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<any>(null);
+  const [syncConflicts, setSyncConflicts] = useState<TimeBlock[]>([]);
+  const [updatedCount, setUpdatedCount] = useState(0);
+  const [originalValues, setOriginalValues] = useState<any>(null);
+  const [isLoadingPattern, setIsLoadingPattern] = useState(false);
   
   const form = useForm<EditFormValues>({
     resolver: zodResolver(editSchema),
@@ -108,27 +126,72 @@ export function BubbleEditModal() {
   });
 
   useEffect(() => {
-    if (editingBlock) {
-      const endTime = new Date(editingBlock.startTime.getTime() + editingBlock.duration * 60000);
-      
-      form.reset({
-        title: editingBlock.title,
-        description: editingBlock.description || '',
-        date: editingBlock.startTime,
-        startHour: getHours(editingBlock.startTime).toString().padStart(2, '0'),
-        startMinute: getMinutes(editingBlock.startTime).toString().padStart(2, '0'),
-        endHour: getHours(endTime).toString().padStart(2, '0'),
-        endMinute: getMinutes(endTime).toString().padStart(2, '0'),
-        category: editingBlock.category,
-        color: editingBlock.color,
-        isRecurring: false, // Default to false for existing blocks
-        selectedDays: [],
-        endDate: undefined,
-      });
-    }
-  }, [editingBlock, form]);
+    const loadBubbleData = async () => {
+      if (editingBlock) {
+        const endTime = new Date(editingBlock.startTime.getTime() + editingBlock.duration * 60000);
+        
+        let selectedDays: number[] = [];
+        let endDate: Date | undefined;
+        
+        // If this is a recurring bubble, get the pattern
+        if (editingBlock.recurringId) {
+          setIsLoadingPattern(true);
+          try {
+            const pattern = await getRecurringPattern(editingBlock.recurringId);
+            selectedDays = pattern.selectedDays;
+            endDate = pattern.endDate;
+          } catch (error) {
+            console.error('Failed to load recurring pattern:', error);
+          } finally {
+            setIsLoadingPattern(false);
+          }
+        }
+        
+        const initialValues = {
+          title: editingBlock.title,
+          description: editingBlock.description || '',
+          date: editingBlock.startTime,
+          startHour: getHours(editingBlock.startTime).toString().padStart(2, '0'),
+          startMinute: getMinutes(editingBlock.startTime).toString().padStart(2, '0'),
+          endHour: getHours(endTime).toString().padStart(2, '0'),
+          endMinute: getMinutes(endTime).toString().padStart(2, '0'),
+          category: editingBlock.category,
+          color: editingBlock.color,
+          isRecurring: !!editingBlock.recurringId,
+          selectedDays,
+          endDate,
+        };
+        
+        form.reset(initialValues);
+        setOriginalValues(initialValues);
+      }
+    };
+    
+    loadBubbleData();
+  }, [editingBlock, form, getRecurringPattern]);
 
-  const onSubmit = (data: EditFormValues) => {
+  const hasChanges = (data: EditFormValues) => {
+    if (!originalValues) return false;
+    
+    const newStartTime = setMinutes(setHours(startOfDay(data.date), parseInt(data.startHour)), parseInt(data.startMinute));
+    const newEndTime = setMinutes(setHours(startOfDay(data.date), parseInt(data.endHour)), parseInt(data.endMinute));
+    const newDuration = (newEndTime.getTime() - newStartTime.getTime()) / (1000 * 60);
+    
+    const originalStartTime = setMinutes(setHours(startOfDay(originalValues.date), parseInt(originalValues.startHour)), parseInt(originalValues.startMinute));
+    const originalEndTime = setMinutes(setHours(startOfDay(originalValues.date), parseInt(originalValues.endHour)), parseInt(originalValues.endMinute));
+    const originalDuration = (originalEndTime.getTime() - originalStartTime.getTime()) / (1000 * 60);
+    
+    return (
+      data.title !== originalValues.title ||
+      data.description !== originalValues.description ||
+      data.category !== originalValues.category ||
+      data.color !== originalValues.color ||
+      newStartTime.getTime() !== originalStartTime.getTime() ||
+      newDuration !== originalDuration
+    );
+  };
+
+  const onSubmit = async (data: EditFormValues) => {
     if (!editingBlock) return;
 
     const newStartTime = setMinutes(setHours(startOfDay(data.date), parseInt(data.startHour)), parseInt(data.startMinute));
@@ -140,13 +203,17 @@ export function BubbleEditModal() {
     
     const newDuration = (newEndTime.getTime() - newStartTime.getTime()) / (1000 * 60);
 
-    if (data.isRecurring && data.selectedDays.length > 0) {
-      // Handle recurring bubbles
+    // Check if this is creating a NEW recurring bubble (not editing existing one)
+    if (data.isRecurring && data.selectedDays.length > 0 && !editingBlock.recurringId) {
+      // Handle NEW recurring bubbles creation
       const startDate = data.date;
       const endDate = data.endDate || addDays(startDate, 90); // Default to 90 days if no end date
       
       // First, delete the original block
       deleteBlock(editingBlock.id);
+      
+      // Generate a unique recurring ID for all related bubbles
+      const recurringId = `recurring_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       // Then create recurring bubbles
       let currentDate = startDate;
@@ -168,6 +235,7 @@ export function BubbleEditModal() {
             duration: newDuration,
             category: data.category,
             color: data.color as BubbleColor,
+            recurringId: recurringId,
           };
           
           addBlockOnDate(blockToCreate, currentDate);
@@ -176,21 +244,29 @@ export function BubbleEditModal() {
         
         currentDate = addDays(currentDate, 1);
       }
+      
+      setEditingBlock(null);
     } else {
-      // Update single bubble
-      const updatedData = {
-        title: data.title,
-        description: data.description,
-        startTime: newStartTime,
-        duration: newDuration,
-        category: data.category,
-        color: data.color as BubbleColor,
-      };
+      // Check if this is a recurring bubble with changes (existing recurring bubble)
+      if (editingBlock.recurringId && hasChanges(data)) {
+        // Store pending data and show sync confirmation
+        setPendingFormData(data);
+        setIsSyncConfirmationOpen(true);
+      } else {
+        // Update single bubble immediately
+        const updatedData = {
+          title: data.title,
+          description: data.description,
+          startTime: newStartTime,
+          duration: newDuration,
+          category: data.category,
+          color: data.color as BubbleColor,
+        };
 
-      updateBlock(editingBlock.id, updatedData);
+        updateBlock(editingBlock.id, updatedData);
+        setEditingBlock(null);
+      }
     }
-    
-    setEditingBlock(null);
   };
 
   const handleClose = () => {
@@ -203,6 +279,70 @@ export function BubbleEditModal() {
     } else {
       fieldOnChange(colorName);
     }
+  };
+
+  const handleSyncConfirm = async () => {
+    if (!pendingFormData || !editingBlock) return;
+    
+    const data = pendingFormData;
+    const newStartTime = setMinutes(setHours(startOfDay(data.date), parseInt(data.startHour)), parseInt(data.startMinute));
+    const newEndTime = setMinutes(setHours(startOfDay(data.date), parseInt(data.endHour)), parseInt(data.endMinute));
+    const newDuration = (newEndTime.getTime() - newStartTime.getTime()) / (1000 * 60);
+    
+    const updatedData = {
+      title: data.title,
+      description: data.description,
+      startTime: newStartTime,
+      duration: newDuration,
+      category: data.category,
+      color: data.color as BubbleColor,
+    };
+    
+    try {
+      // First update the current bubble
+      updateBlock(editingBlock.id, updatedData);
+      
+      // Then sync to other recurring bubbles
+      const result = await syncRecurringBubbles(editingBlock.id, updatedData);
+      
+      setSyncConflicts(result.conflicts);
+      setUpdatedCount(result.updated);
+      
+      if (result.conflicts.length > 0) {
+        setIsConflictNotificationOpen(true);
+      }
+    } catch (error) {
+      console.error('Sync failed:', error);
+    }
+    
+    setPendingFormData(null);
+    setIsSyncConfirmationOpen(false);
+    setEditingBlock(null);
+  };
+
+  const handleSyncCancel = () => {
+    if (!pendingFormData || !editingBlock) return;
+    
+    const data = pendingFormData;
+    const newStartTime = setMinutes(setHours(startOfDay(data.date), parseInt(data.startHour)), parseInt(data.startMinute));
+    const newEndTime = setMinutes(setHours(startOfDay(data.date), parseInt(data.endHour)), parseInt(data.endMinute));
+    const newDuration = (newEndTime.getTime() - newStartTime.getTime()) / (1000 * 60);
+    
+    const updatedData = {
+      title: data.title,
+      description: data.description,
+      startTime: newStartTime,
+      duration: newDuration,
+      category: data.category,
+      color: data.color as BubbleColor,
+    };
+    
+    // Just update the current bubble without syncing
+    updateBlock(editingBlock.id, updatedData);
+    
+    setPendingFormData(null);
+    setIsSyncConfirmationOpen(false);
+    setEditingBlock(null);
   };
 
   if (!editingBlock) return null;
@@ -435,23 +575,26 @@ export function BubbleEditModal() {
                       <div className="space-y-0.5">
                         <FormLabel className="flex items-center gap-2">
                           <Repeat className="h-4 w-4" />
-                          Make this a recurring bubble
+                          {editingBlock?.recurringId ? 'This is a recurring bubble' : 'Make this a recurring bubble'}
                         </FormLabel>
                         <div className="text-sm text-muted-foreground">
                           Repeat this bubble on selected days of the week
                         </div>
+                        {isLoadingPattern && (
+                          <div className="text-sm text-blue-500">Loading pattern...</div>
+                        )}
                       </div>
                       <FormControl>
                         <Switch
                           checked={field.value}
                           onCheckedChange={field.onChange}
+                          disabled={!!editingBlock?.recurringId}
                         />
                       </FormControl>
                     </FormItem>
                   )}
                 />
-                
-                {/* Day Selection - only show when recurring is enabled */}
+
                 {form.watch('isRecurring') && (
                   <>
                     <FormField
@@ -459,52 +602,41 @@ export function BubbleEditModal() {
                       name="selectedDays"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Select Days</FormLabel>
+                          <FormLabel>Repeat on</FormLabel>
                           <FormControl>
-                            <div className="grid grid-cols-7 gap-2">
-                              {dayNames.map((day, index) => {
-                                const isSelected = field.value.includes(index);
-                                return (
-                                  <div key={index} className="flex flex-col items-center space-y-1">
-                                    <Checkbox
-                                      id={`day-${index}`}
-                                      checked={isSelected}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          field.onChange([...field.value, index]);
-                                        } else {
-                                          field.onChange(field.value.filter((d: number) => d !== index));
-                                        }
-                                      }}
-                                      className="sr-only"
-                                    />
-                                    <label
-                                      htmlFor={`day-${index}`}
-                                      className={cn(
-                                        "w-10 h-10 rounded-full flex items-center justify-center text-xs font-medium cursor-pointer transition-colors",
-                                        isSelected
-                                          ? "bg-primary text-primary-foreground"
-                                          : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                                      )}
-                                    >
-                                      {day}
-                                    </label>
-                                  </div>
-                                );
-                              })}
+                            <div className="flex flex-wrap gap-2">
+                              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+                                <div key={day} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`day-${index}`}
+                                    checked={field.value.includes(index)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        field.onChange([...field.value, index]);
+                                      } else {
+                                        field.onChange(field.value.filter((d: number) => d !== index));
+                                      }
+                                    }}
+                                  />
+                                  <Label htmlFor={`day-${index}`} className="text-sm">{day}</Label>
+                                </div>
+                              ))}
                             </div>
                           </FormControl>
+                          {field.value.length === 0 && (
+                            <div className="text-sm text-red-500">Please select at least one day</div>
+                          )}
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="endDate"
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel>End Date (Optional)</FormLabel>
+                          <FormLabel>End date (optional)</FormLabel>
                           <Popover>
                             <PopoverTrigger asChild>
                               <FormControl>
@@ -537,10 +669,21 @@ export function BubbleEditModal() {
                           <div className="text-xs text-muted-foreground">
                             Leave empty to create bubbles for the next 90 days
                           </div>
+                          {field.value && (
+                            <div className="text-sm text-gray-600">
+                              Series will end on {format(field.value, 'MMM dd, yyyy')}
+                            </div>
+                          )}
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+
+                    {editingBlock?.recurringId && (
+                      <div className="text-sm text-blue-600 bg-blue-50 p-3 rounded-lg">
+                        💡 Changes to the recurring pattern will apply to all future bubbles in this series.
+                      </div>
+                    )}
                   </>
                 )}
               </form>
@@ -556,15 +699,33 @@ export function BubbleEditModal() {
                 </Button>
               </div>
               <div className="flex gap-2 sm:ml-auto">
-                <Button 
-                  type="button" 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => setIsDeleteAllModalOpen(true)}
-                  className="text-xs"
-                >
-                  Delete All Bubbles
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      type="button" 
+                      variant="destructive" 
+                      size="sm"
+                      className="text-xs"
+                    >
+                      Delete All Bubbles
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem 
+                      onClick={() => setIsQuickDeleteModalOpen(true)}
+                      className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                    >
+                      Delete Current Day
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => setIsDeleteAllModalOpen(true)}
+                      className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                    >
+                      <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
+                      Delete All Time
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </DialogFooter>
@@ -574,6 +735,24 @@ export function BubbleEditModal() {
       <DeleteAllBubblesModal 
         isOpen={isDeleteAllModalOpen} 
         onClose={() => setIsDeleteAllModalOpen(false)} 
+      />
+      <QuickDeleteConfirmModal 
+        isOpen={isQuickDeleteModalOpen} 
+        onClose={() => setIsQuickDeleteModalOpen(false)} 
+        onConfirm={clearAllBlocks}
+      />
+      <RecurringSyncConfirmationModal
+        isOpen={isSyncConfirmationOpen}
+        onClose={handleSyncCancel}
+        onConfirm={handleSyncConfirm}
+        bubbleTitle={editingBlock?.title || ''}
+        changeType="changed"
+      />
+      <ConflictNotificationModal
+        isOpen={isConflictNotificationOpen}
+        onClose={() => setIsConflictNotificationOpen(false)}
+        conflicts={syncConflicts}
+        updatedCount={updatedCount}
       />
     </>
   );

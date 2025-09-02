@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { BUBBLE_COLORS, HOUR_HEIGHT, TOTAL_HOURS, FREE_COLOR_NAMES, PRO_COLOR_NAMES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Edit, Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon, History, Undo, Lock } from 'lucide-react';
+import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Edit, Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon, History, Undo, Lock, Repeat } from 'lucide-react';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuGroup } from './ui/dropdown-menu';
 import { format, isToday, startOfDay } from 'date-fns';
@@ -29,6 +29,9 @@ import { TaskCompletionCelebration } from './task-completion-celebration';
 import { useAuth } from '@/context/auth-context';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { ProModal } from './pro-modal';
+import { RecurringSyncConfirmationModal } from './recurring-sync-confirmation-modal';
+import { ConflictNotificationModal } from './conflict-notification-modal';
+import { RecurringDeleteConfirmationModal } from './recurring-delete-confirmation-modal';
 
 interface TimeBubbleProps {
   block: TimeBlockType;
@@ -45,7 +48,7 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
 };
 
 function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBubbleProps) {
-  const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setEditingBlock, setSelectedBlock, setReschedulingBlock, zoomLevel, currentDate } = useTimeBubbles();
+  const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setEditingBlock, setSelectedBlock, setReschedulingBlock, zoomLevel, currentDate, syncRecurringBubbles, deleteAllFutureRecurringBubbles } = useTimeBubbles();
   const { isPro } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'top' | 'bottom' | null>(null);
@@ -53,6 +56,14 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
   const [isHovering, setIsHovering] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isProModalOpen, setIsProModalOpen] = useState(false);
+  const [isSyncConfirmationOpen, setIsSyncConfirmationOpen] = useState(false);
+  const [isConflictNotificationOpen, setIsConflictNotificationOpen] = useState(false);
+  const [pendingUpdate, setPendingUpdate] = useState<{ startTime: Date; duration: number } | null>(null);
+  const [syncConflicts, setSyncConflicts] = useState<any[]>([]);
+  const [updatedCount, setUpdatedCount] = useState(0);
+  const [changeType, setChangeType] = useState<'moved' | 'resized' | 'changed'>('changed');
+  const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   
   const [liveStartTime, setLiveStartTime] = useState(ensureDateObject(block.startTime));
   const [liveDuration, setLiveDuration] = useState(block.duration);
@@ -165,24 +176,36 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
 
   const handleMouseUp = useCallback(() => {
     if (isDragging || isResizing) {
-      updateBlock(block.id, { startTime: liveStartTime, duration: liveDuration }, true);
+      const hasChanged = 
+        liveStartTime.getTime() !== ensureDateObject(block.startTime).getTime() ||
+        liveDuration !== block.duration;
       
-      // Add a subtle "snap" animation
-      setTimeout(() => {
-        const element = document.querySelector(`[data-bubble-id="${block.id}"]`) as HTMLElement;
-        if (element) {
-          element.style.animation = 'snapInPlace 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
-          setTimeout(() => {
-            element.style.animation = '';
-          }, 300);
-        }
-      }, 50);
+      if (hasChanged && block.recurringId) {
+        // Store the pending update and show confirmation modal
+        setPendingUpdate({ startTime: liveStartTime, duration: liveDuration });
+        setChangeType(isDragging ? 'moved' : 'resized');
+        setIsSyncConfirmationOpen(true);
+      } else {
+        // Apply update immediately for non-recurring bubbles or no changes
+        updateBlock(block.id, { startTime: liveStartTime, duration: liveDuration }, true);
+        
+        // Add a subtle "snap" animation
+        setTimeout(() => {
+          const element = document.querySelector(`[data-bubble-id="${block.id}"]`) as HTMLElement;
+          if (element) {
+            element.style.animation = 'snapInPlace 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+            setTimeout(() => {
+              element.style.animation = '';
+            }, 300);
+          }
+        }, 50);
+      }
     }
     setIsDragging(false);
     setIsResizing(null);
     setDragOffset({ x: 0, y: 0 });
     stopAutoScroll();
-  }, [isResizing, isDragging, block.id, liveStartTime, liveDuration, updateBlock, stopAutoScroll]);
+  }, [isResizing, isDragging, block.id, block.recurringId, liveStartTime, liveDuration, updateBlock, stopAutoScroll, block.startTime, block.duration]);
 
 
   const handleMouseMove = useCallback((e: globalThis.MouseEvent) => {
@@ -318,6 +341,79 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
     }
   };
 
+  const handleSyncConfirm = async () => {
+    if (!pendingUpdate) return;
+    
+    try {
+      // First update the current bubble
+      updateBlock(block.id, { startTime: pendingUpdate.startTime, duration: pendingUpdate.duration }, true);
+      
+      // Then sync to other recurring bubbles
+      const result = await syncRecurringBubbles(block.id, {
+        startTime: pendingUpdate.startTime,
+        duration: pendingUpdate.duration
+      });
+      
+      setSyncConflicts(result.conflicts);
+      setUpdatedCount(result.updated);
+      
+      if (result.conflicts.length > 0) {
+        setIsConflictNotificationOpen(true);
+      }
+    } catch (error) {
+      console.error('Sync failed:', error);
+    }
+    
+    setPendingUpdate(null);
+    setIsSyncConfirmationOpen(false);
+  };
+
+  const handleSyncCancel = () => {
+    if (pendingUpdate) {
+      // Just update the current bubble without syncing
+      updateBlock(block.id, { startTime: pendingUpdate.startTime, duration: pendingUpdate.duration }, true);
+    }
+    setPendingUpdate(null);
+    setIsSyncConfirmationOpen(false);
+  };
+
+  const handleDelete = (bubbleId: string) => {
+    if (block.recurringId) {
+      // Show confirmation for recurring bubbles
+      setPendingDeleteId(bubbleId);
+      setIsDeleteConfirmationOpen(true);
+    } else {
+      // Delete immediately for non-recurring bubbles
+      deleteBlock(bubbleId);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!pendingDeleteId) return;
+    
+    try {
+      // Delete the current bubble first
+      deleteBlock(pendingDeleteId);
+      
+      // Then delete all future recurring bubbles
+      await deleteAllFutureRecurringBubbles(pendingDeleteId);
+    } catch (error) {
+      console.error('Delete failed:', error);
+    }
+    
+    setPendingDeleteId(null);
+    setIsDeleteConfirmationOpen(false);
+  };
+
+  const handleDeleteCancel = () => {
+    if (pendingDeleteId) {
+      // Just delete the current bubble without syncing
+      deleteBlock(pendingDeleteId);
+    }
+    setPendingDeleteId(null);
+    setIsDeleteConfirmationOpen(false);
+  };
+
   return (
     <>
     <div
@@ -356,6 +452,15 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
         />
       )}
       
+      {/* Recurring indicator */}
+      {block.recurringId && (
+        <div className="absolute top-1 left-1 z-20">
+          <div className="bg-blue-500 text-white rounded-full p-1 shadow-sm">
+            <Repeat className="w-3 h-3" />
+          </div>
+        </div>
+      )}
+      
       <div className="absolute top-1 right-1 z-20 flex items-center" style={{ opacity: isOverdue ? 0 : 1}}>
         <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer" onClick={(e) => {e.stopPropagation(); setEditingBlock(block)}}>
             <Edit className="w-4 h-4 text-slate-700 dark:text-white" />
@@ -378,7 +483,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deleteBlock(block.id)}>Delete</AlertDialogAction>
+              <AlertDialogAction onClick={() => handleDelete(block.id)}>Delete</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -500,7 +605,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteBlock(block.id)}>Delete</AlertDialogAction>
+                            <AlertDialogAction onClick={() => handleDelete(block.id)}>Delete</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
@@ -526,6 +631,25 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
       />
     </div>
     <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
+    <RecurringSyncConfirmationModal
+      isOpen={isSyncConfirmationOpen}
+      onClose={handleSyncCancel}
+      onConfirm={handleSyncConfirm}
+      bubbleTitle={block.title}
+      changeType={changeType}
+    />
+    <ConflictNotificationModal
+      isOpen={isConflictNotificationOpen}
+      onClose={() => setIsConflictNotificationOpen(false)}
+      conflicts={syncConflicts}
+      updatedCount={updatedCount}
+    />
+    <RecurringDeleteConfirmationModal
+      isOpen={isDeleteConfirmationOpen}
+      onClose={handleDeleteCancel}
+      onConfirm={handleDeleteConfirm}
+      bubbleTitle={block.title}
+    />
     </>
   );
 }

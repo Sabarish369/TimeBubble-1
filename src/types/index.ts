@@ -41,6 +41,7 @@ export interface TimeBlock {
   notificationScheduled?: boolean;
   habitSuggestions?: HabitSuggestion[];
   energyOptimal?: boolean; // true if scheduled at optimal energy time
+  recurringId?: string; // identifier for grouping recurring bubbles
 }
 
 export interface BubbleTemplate {

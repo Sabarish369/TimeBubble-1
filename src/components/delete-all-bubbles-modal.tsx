@@ -24,7 +24,7 @@ interface DeleteAllBubblesModalProps {
 export function DeleteAllBubblesModal({ isOpen, onClose }: DeleteAllBubblesModalProps) {
   const [confirmationText, setConfirmationText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const { clearAllBlocks, timeBlocks } = useTimeBubbles();
+  const { clearAllBlocksAcrossAllDates, timeBlocks } = useTimeBubbles();
   
   const requiredText = 'delete';
   const isConfirmationValid = confirmationText.toLowerCase().trim() === requiredText;
@@ -35,7 +35,7 @@ export function DeleteAllBubblesModal({ isOpen, onClose }: DeleteAllBubblesModal
     
     setIsDeleting(true);
     try {
-      clearAllBlocks();
+      await clearAllBlocksAcrossAllDates();
       onClose();
       setConfirmationText('');
     } finally {
@@ -56,10 +56,10 @@ export function DeleteAllBubblesModal({ isOpen, onClose }: DeleteAllBubblesModal
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
             <Trash2 className="h-5 w-5" />
-            Delete All Bubbles
+            Delete All Time
           </DialogTitle>
           <DialogDescription>
-            This action will permanently delete all {bubbleCount} time bubble{bubbleCount !== 1 ? 's' : ''} for the current day.
+            This action will permanently delete all time bubbles across all dates.
           </DialogDescription>
         </DialogHeader>
 
@@ -67,7 +67,7 @@ export function DeleteAllBubblesModal({ isOpen, onClose }: DeleteAllBubblesModal
           <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950">
             <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             <AlertDescription className="text-orange-800 dark:text-orange-200">
-              <strong>Warning:</strong> This action cannot be undone. All your scheduled time bubbles for today will be permanently removed.
+              <strong>Warning:</strong> This action cannot be undone. All your scheduled time bubbles across all dates will be permanently removed.
             </AlertDescription>
           </Alert>
 
@@ -105,7 +105,7 @@ export function DeleteAllBubblesModal({ isOpen, onClose }: DeleteAllBubblesModal
           <Button 
             variant="destructive" 
             onClick={handleDelete}
-            disabled={!isConfirmationValid || isDeleting || bubbleCount === 0}
+            disabled={!isConfirmationValid || isDeleting}
             className="min-w-[100px]"
           >
             {isDeleting ? 'Deleting...' : 'Delete All'}

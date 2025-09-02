@@ -92,7 +92,7 @@ const getEnergyOptimizationSuggestions = async (input: any) => {
 };
 import { useToast } from '@/hooks/use-toast';
 import { MAX_ZOOM, MIN_ZOOM } from '@/lib/constants';
-import { addDays, format, startOfDay, isToday, isPast, subDays } from 'date-fns';
+import { startOfDay, format, addDays, subDays, isToday, differenceInDays, isSameDay } from 'date-fns';
 import { useAuth } from './auth-context';
 import { db } from '@/lib/firebase';
 import { ErrorCategory, ErrorSeverity } from '@/lib/tips-error-handler';
@@ -157,6 +157,7 @@ interface TimeBubblesContextType {
   deleteBlockFromDate: (id: string, date: Date | string) => void;
   duplicateBlock: (id: string) => void;
   clearAllBlocks: () => void;
+  clearAllBlocksAcrossAllDates: () => Promise<void>;
   clearAllBlocksWithPassword: (password: string) => void;
   requestClearAllBlocks: () => void;
   addTemplate: (template: Omit<BubbleTemplate, 'id' | 'isDefault'>) => void;
@@ -198,6 +199,10 @@ interface TimeBubblesContextType {
   getDailyTips: () => Promise<void>;
   dailyTips: DailyTips | null;
   isLoadingTips: boolean;
+  syncRecurringBubbles: (bubbleId: string, updates: Partial<TimeBlock>) => Promise<{conflicts: TimeBlock[], updated: number}>;
+  deleteAllFutureRecurringBubbles: (bubbleId: string) => Promise<number>;
+  getRecurringPattern: (recurringId: string) => Promise<{selectedDays: number[], endDate?: Date}>;
+
 }
 
 const TimeBubblesContext = createContext<TimeBubblesContextType | undefined>(undefined);
@@ -248,6 +253,12 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
     const blocksToSave = blocks.map(b => ({ ...b, startTime: ensureDateObject(b.startTime).toISOString() }));
     await setDoc(dayDocRef, { blocks: blocksToSave }, { merge: true });
   }, [user]);
+
+  const saveTemplatesToFirestore = async (newTemplates: BubbleTemplate[]) => {
+      if (!user) return;
+      const templatesDocRef = doc(db, 'users', user.uid, 'settings', 'templates');
+      await setDoc(templatesDocRef, { templates: newTemplates });
+  };
 
   const updateHistory = useCallback((date: Date, newBlocks: TimeBlock[]) => {
     const dateKey = getDayKey(date);
@@ -841,25 +852,43 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     clearAllBlocks();
   }, [clearAllBlocks]);
 
-  const duplicateBlock = useCallback((id: string) => {
-    const blockToDuplicate = timeBlocks.find(b => b.id === id);
-    if (blockToDuplicate) {
-      const newBlockData = {
-        title: `${blockToDuplicate.title} (copy)`,
-        description: blockToDuplicate.description,
-        duration: blockToDuplicate.duration,
-        color: blockToDuplicate.color,
-        category: blockToDuplicate.category,
-        startTime: new Date(ensureDateObject(blockToDuplicate.startTime).getTime() + (blockToDuplicate.duration * 60000)),
-      };
-      addBlockOnDate(newBlockData, newBlockData.startTime);
+  // New function to delete all blocks across all dates
+  const clearAllBlocksAcrossAllDates = async () => {
+    if (!user) return;
+    
+    try {
+      // Get all documents in the daily_data collection
+      const userDaysCollectionRef = collection(db, 'users', user.uid, 'daily_data');
+      const querySnapshot = await getDocs(userDaysCollectionRef);
+      
+      // Create a batch write operation
+      const batch = writeBatch(db);
+      
+      // Delete all documents in the collection
+      querySnapshot.forEach((docSnap) => {
+        batch.delete(docSnap.ref);
+      });
+      
+      // Commit the batch operation
+      await batch.commit();
+      
+      // If we're currently viewing a date with blocks, clear the local state too
+      if (timeBlocks.length > 0) {
+        setTimeBlocksWithHistory([], currentDate, true);
+      }
+      
+      toast({
+        title: 'All bubbles deleted',
+        description: 'All time bubbles across all dates have been permanently removed.',
+      });
+    } catch (e) {
+      console.error("Failed to delete all blocks across all dates", e);
+      toast({ 
+        title: "Error deleting bubbles", 
+        description: "Could not delete all bubbles. Please try again.",
+        variant: "destructive" 
+      });
     }
-  }, [timeBlocks, addBlockOnDate]);
-
-  const saveTemplatesToFirestore = async (newTemplates: BubbleTemplate[]) => {
-      if (!user) return;
-      const templatesDocRef = doc(db, 'users', user.uid, 'settings', 'templates');
-      await setDoc(templatesDocRef, { templates: newTemplates });
   };
 
   const addTemplate = useCallback((template: Omit<BubbleTemplate, 'id' | 'isDefault'>) => {
@@ -871,6 +900,9 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         title: 'Template Created',
         description: `"${template.title}" has been added to your templates.`,
     });
+  }, [templates, toast]);
+
+  const duplicateBlock = useCallback((id: string) => {
   }, [templates, toast]);
 
   const updateTemplate = useCallback((id: string, updates: Partial<Omit<BubbleTemplate, 'id' | 'isDefault'>>) => {
@@ -956,9 +988,9 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
         const sourceBlocks = sourceDocSnap.exists() ? sourceDocSnap.data().blocks.filter((b: any) => b.id !== id) : [];
 
         const batch = writeBatch(db);
-        batch.set(targetDayDocRef, { blocks: [...blocksForNewDate.map(b => ({...b, startTime: ensureDateObject(b.startTime).toISOString()})), {...rescheduledBlockData, startTime: rescheduledBlockData.startTime.toISOString()}] }, { merge: true });
+        batch.set(targetDayDocRef, { blocks: [...blocksForNewDate.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime).toISOString()})), {...rescheduledBlockData, startTime: rescheduledBlockData.startTime.toISOString()}] }, { merge: true });
         if (sourceBlocks.length > 0) {
-            batch.set(sourceDayDocRef, { blocks: sourceBlocks.map(b => ({...b, startTime: ensureDateObject(b.startTime).toISOString()})) });
+            batch.set(sourceDayDocRef, { blocks: sourceBlocks.map((b: any) => ({...b, startTime: ensureDateObject(b.startTime).toISOString()})) });
         } else {
             batch.delete(sourceDayDocRef);
         }
@@ -1226,6 +1258,273 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     setDailyInsights(null);
   };
 
+  // Sync recurring bubbles function
+  // Delete all future recurring bubbles function
+  const deleteAllFutureRecurringBubbles = useCallback(async (bubbleId: string): Promise<number> => {
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Find the bubble being deleted
+    let targetBubble: TimeBlock | null = null;
+    let targetDate: Date | null = null;
+
+    // First check current date blocks
+    const currentBubble = timeBlocks.find(b => b.id === bubbleId);
+    if (currentBubble) {
+      targetBubble = currentBubble;
+      targetDate = currentDate;
+    } else {
+      // Search across all dates
+      const allDaysCollectionRef = collection(db, 'users', user.uid, 'daily_data');
+      const querySnapshot = await getDocs(allDaysCollectionRef);
+      
+      for (const docSnap of querySnapshot.docs) {
+        const data = docSnap.data();
+        const found = (data.blocks as any[])?.find((b: any) => b.id === bubbleId);
+        if (found) {
+          targetBubble = { ...found, startTime: ensureDateObject(found.startTime) };
+          targetDate = new Date(docSnap.id);
+          break;
+        }
+      }
+    }
+
+    if (!targetBubble || !targetDate || !targetBubble.recurringId) {
+      throw new Error('Bubble not found or not part of a recurring series');
+    }
+
+    const recurringId = targetBubble.recurringId;
+    let deletedCount = 0;
+
+    try {
+      // Get all dates and find bubbles with the same recurringId
+      const allDaysCollectionRef = collection(db, 'users', user.uid, 'daily_data');
+      const querySnapshot = await getDocs(allDaysCollectionRef);
+      
+      const batch = writeBatch(db);
+      const today = startOfDay(new Date());
+      
+      for (const docSnap of querySnapshot.docs) {
+        const docDate = new Date(docSnap.id);
+        
+        // Only delete future bubbles (including today)
+        if (docDate >= today) {
+          const data = docSnap.data();
+          const blocks = (data.blocks as any[]) || [];
+          
+          const updatedBlocks = blocks.filter((block: any) => {
+            const shouldDelete = block.recurringId === recurringId;
+            if (shouldDelete) {
+              deletedCount++;
+            }
+            return !shouldDelete;
+          });
+          
+          if (updatedBlocks.length !== blocks.length) {
+            const dayDocRef = doc(db, 'users', user.uid, 'daily_data', docSnap.id);
+            batch.update(dayDocRef, { blocks: updatedBlocks });
+          }
+        }
+      }
+      
+      await batch.commit();
+      
+      // Update local state for current date if needed
+      if (isSameDay(targetDate, currentDate)) {
+        setTimeBlocksWithHistory(prev => 
+          prev.filter(b => b.recurringId !== recurringId), 
+          currentDate, 
+          true
+        );
+      }
+      
+      toast({
+        title: 'Recurring Bubbles Deleted',
+        description: `Successfully deleted ${deletedCount} future recurring bubbles.`,
+      });
+      
+      return deletedCount;
+    } catch (error) {
+      console.error('Error deleting recurring bubbles:', error);
+      toast({
+        title: 'Delete Failed',
+        description: 'Could not delete all recurring bubbles. Please try again.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  }, [user, timeBlocks, currentDate, setTimeBlocksWithHistory, toast]);
+
+  // Get recurring pattern information
+  const getRecurringPattern = useCallback(async (recurringId: string): Promise<{selectedDays: number[], endDate?: Date}> => {
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    try {
+      // Get all dates and find bubbles with the same recurringId to determine pattern
+      const allDaysCollectionRef = collection(db, 'users', user.uid, 'daily_data');
+      const querySnapshot = await getDocs(allDaysCollectionRef);
+      
+      const foundDays = new Set<number>();
+      let latestDate: Date | undefined;
+      
+      for (const docSnap of querySnapshot.docs) {
+        const data = docSnap.data();
+        const blocks = (data.blocks as any[]) || [];
+        
+        const hasRecurringBubble = blocks.some((block: any) => block.recurringId === recurringId);
+        if (hasRecurringBubble) {
+          const docDate = new Date(docSnap.id);
+          foundDays.add(docDate.getDay());
+          
+          if (!latestDate || docDate > latestDate) {
+            latestDate = docDate;
+          }
+        }
+      }
+      
+      return {
+        selectedDays: Array.from(foundDays).sort(),
+        endDate: latestDate
+      };
+    } catch (error) {
+      console.error('Error getting recurring pattern:', error);
+      throw error;
+    }
+  }, [user]);
+
+  const syncRecurringBubbles = useCallback(async (bubbleId: string, updates: Partial<TimeBlock>): Promise<{conflicts: TimeBlock[], updated: number}> => {
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Find the bubble being edited
+    let targetBubble: TimeBlock | null = null;
+    let targetDate: Date | null = null;
+
+    // First check current date blocks
+    const currentBubble = timeBlocks.find(b => b.id === bubbleId);
+    if (currentBubble) {
+      targetBubble = currentBubble;
+      targetDate = currentDate;
+    } else {
+      // Search across all dates
+      const allDaysCollectionRef = collection(db, 'users', user.uid, 'daily_data');
+      const querySnapshot = await getDocs(allDaysCollectionRef);
+      
+      for (const docSnap of querySnapshot.docs) {
+        const data = docSnap.data();
+        const found = (data.blocks as any[])?.find((b: any) => b.id === bubbleId);
+        if (found) {
+          targetBubble = { ...found, startTime: ensureDateObject(found.startTime) };
+          targetDate = new Date(docSnap.id);
+          break;
+        }
+      }
+    }
+
+    if (!targetBubble || !targetDate || !targetBubble.recurringId) {
+      throw new Error('Bubble not found or not part of a recurring series');
+    }
+
+    const recurringId = targetBubble.recurringId;
+    const conflicts: TimeBlock[] = [];
+    let updatedCount = 0;
+
+    try {
+      // Get all dates and find bubbles with the same recurringId
+      const allDaysCollectionRef = collection(db, 'users', user.uid, 'daily_data');
+      const querySnapshot = await getDocs(allDaysCollectionRef);
+      
+      const batch = writeBatch(db);
+      
+      for (const docSnap of querySnapshot.docs) {
+        const docDate = new Date(docSnap.id);
+        const data = docSnap.data();
+        
+        // Only update bubbles that are in the future relative to the target bubble
+        if (docDate <= targetDate) continue;
+        
+        const blocks = (data.blocks as any[]) || [];
+        const relatedBubbles = blocks.filter((b: any) => b.recurringId === recurringId);
+        
+        if (relatedBubbles.length === 0) continue;
+        
+        // Update each related bubble
+        let dayUpdated = false;
+        const updatedBlocks = blocks.map((b: any) => {
+          if (b.recurringId === recurringId) {
+            const existingBlock = { ...b, startTime: ensureDateObject(b.startTime) };
+            
+            // Calculate new start time based on updates
+            let newStartTime = existingBlock.startTime;
+            if (updates.startTime) {
+              // Preserve the date but update the time
+              const targetTime = ensureDateObject(updates.startTime);
+              newStartTime = new Date(docDate);
+              newStartTime.setHours(targetTime.getHours(), targetTime.getMinutes(), 0, 0);
+            }
+            
+            const newDuration = updates.duration || existingBlock.duration;
+            
+            // Check for conflicts with other bubbles on this day
+            const otherBlocks = blocks.filter((ob: any) => ob.id !== b.id).map((ob: any) => ({
+              ...ob,
+              startTime: ensureDateObject(ob.startTime)
+            }));
+            
+            const resolvedStartTime = findAvailableSlot(newStartTime, newDuration, otherBlocks);
+            
+            // If the resolved time is different from requested time, it's a conflict
+            if (updates.startTime && resolvedStartTime.getTime() !== newStartTime.getTime()) {
+              conflicts.push({
+                ...existingBlock,
+                startTime: resolvedStartTime,
+                duration: newDuration
+              });
+            }
+            
+            dayUpdated = true;
+            updatedCount++;
+            
+            return {
+              ...existingBlock,
+              ...updates,
+              startTime: resolvedStartTime.toISOString(),
+              duration: newDuration
+            };
+          }
+          return { ...b, startTime: ensureDateObject(b.startTime).toISOString() };
+        });
+        
+        if (dayUpdated) {
+          const dayDocRef = doc(db, 'users', user.uid, 'daily_data', docSnap.id);
+          batch.set(dayDocRef, { blocks: updatedBlocks }, { merge: true });
+        }
+      }
+      
+      await batch.commit();
+      
+      toast({
+        title: 'Recurring Bubbles Updated',
+        description: `Updated ${updatedCount} future recurring bubbles.${conflicts.length > 0 ? ` ${conflicts.length} bubbles were moved due to conflicts.` : ''}`,
+      });
+      
+      return { conflicts, updated: updatedCount };
+      
+    } catch (error) {
+      console.error('Error syncing recurring bubbles:', error);
+      toast({
+        title: 'Sync Failed',
+        description: 'Could not sync all recurring bubbles. Please try again.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  }, [user, timeBlocks, currentDate, findAvailableSlot, toast]);
+
   const setZoomLevel = (level: number) => {
     const newLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, level));
     if(zoomLevel !== newLevel) {
@@ -1356,6 +1655,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     deleteBlockFromDate,
     duplicateBlock,
     clearAllBlocks,
+    clearAllBlocksAcrossAllDates,
     clearAllBlocksWithPassword,
     requestClearAllBlocks,
     addTemplate,
@@ -1397,9 +1697,9 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     getDailyTips,
     dailyTips,
     isLoadingTips,
-
-    // New function for password-protected clear all
-    requestClearAllBlocks,
+    syncRecurringBubbles,
+    deleteAllFutureRecurringBubbles,
+    getRecurringPattern,
   };
 
   return (

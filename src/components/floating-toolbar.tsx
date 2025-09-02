@@ -1,7 +1,6 @@
-
 'use client';
 
-import { Undo2, Redo2, Trash2 } from 'lucide-react';
+import { Undo2, Redo2, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { ZoomControls } from './zoom-controls';
@@ -9,7 +8,14 @@ import { SIDEBAR_WIDTH } from '@/lib/constants';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { DeleteAllBubblesModal } from './delete-all-bubbles-modal';
+import { QuickDeleteConfirmModal } from './quick-delete-confirm-modal';
 import { useState } from 'react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export function FloatingToolbar() {
   const {
@@ -17,9 +23,11 @@ export function FloatingToolbar() {
     redo,
     canUndo,
     canRedo,
+    clearAllBlocks,
   } = useTimeBubbles();
   const isMobile = useIsMobile();
   const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
+  const [isQuickDeleteModalOpen, setIsQuickDeleteModalOpen] = useState(false);
 
   return (
     <div 
@@ -44,18 +52,41 @@ export function FloatingToolbar() {
         <div className='w-px h-6 bg-border mx-1'></div>
         <ZoomControls />
         <div className='w-px h-6 bg-border mx-1'></div>
-        <Button 
-          variant="ghost-destructive" 
-          size="icon"
-          onClick={() => setIsDeleteAllModalOpen(true)}
-        >
-          <Trash2 className="h-5 w-5" />
-          <span className="sr-only">Clear all bubbles</span>
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost-destructive" 
+              size="icon"
+            >
+              <Trash2 className="h-5 w-5" />
+              <span className="sr-only">Clear all bubbles</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem 
+              onClick={() => setIsQuickDeleteModalOpen(true)}
+              className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+            >
+              Delete Current Day
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => setIsDeleteAllModalOpen(true)}
+              className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+            >
+              <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
+              Delete All Time
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <DeleteAllBubblesModal 
         isOpen={isDeleteAllModalOpen} 
         onClose={() => setIsDeleteAllModalOpen(false)} 
+      />
+      <QuickDeleteConfirmModal 
+        isOpen={isQuickDeleteModalOpen} 
+        onClose={() => setIsQuickDeleteModalOpen(false)} 
+        onConfirm={clearAllBlocks}
       />
     </div>
   );

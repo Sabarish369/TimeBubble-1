@@ -159,6 +159,9 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
       const startDate = data.date;
       const endDate = data.endDate || addDays(startDate, 90); // Default to 90 days if no end date
       
+      // Generate a unique recurring ID for all related bubbles
+      const recurringId = `recurring_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
       let currentDate = startDate;
       let createdCount = 0;
       
@@ -174,6 +177,7 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
           const blockToCreate = {
             ...baseBlock,
             startTime: blockStartTime,
+            recurringId: recurringId,
           };
           
           addBlockOnDate(blockToCreate, currentDate);
