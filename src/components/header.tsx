@@ -22,6 +22,7 @@ import { ProBadge } from './pro-badge';
 import { useAuth } from '@/context/auth-context';
 import { AtmosphericLights } from './atmospheric-lights';
 import { BarChart3 } from 'lucide-react';
+import { FeedbackModal } from './feedback-modal';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -42,7 +43,7 @@ export function Header({ onToggleSidebar, onOpenWeeklyAnalysis }: HeaderProps) {
   return (
     <header className={cn(
       "relative flex items-center justify-between p-3 md:p-6 border-b border-border/40 shrink-0 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 touch-friendly overflow-hidden isolation",
-      isPro && "pro-gradient-background"
+      isPro && "pro-header-gradient"
     )}>
       {/* Atmospheric floating bubbles behind header content */}
       <AtmosphericLights className="z-0 absolute inset-0" count={8} speed={0.5} size={14} />
@@ -126,7 +127,8 @@ export function Header({ onToggleSidebar, onOpenWeeklyAnalysis }: HeaderProps) {
             <span className="absolute -top-0.5 -right-0.5 text-[8px] px-1 py-0.5 rounded-full bg-primary/20 text-primary font-medium border border-primary/30 shadow-sm">Beta</span>
           </div>
         )}
-          <UpgradeBadge />
+        <FeedbackModal />
+        <UpgradeBadge />
         <ThemeToggle />
         <UserProfile />
 

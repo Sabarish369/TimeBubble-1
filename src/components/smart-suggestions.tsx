@@ -10,7 +10,7 @@ import { Skeleton } from './ui/skeleton';
 import { DailyInsights } from '@/types/ai-types';
 import { useAuth } from '@/context/auth-context';
 import { ProModal } from './pro-modal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ApiKeyModal } from './api-key-modal';
 
 export function SmartSuggestions() {
@@ -18,6 +18,16 @@ export function SmartSuggestions() {
   const { isPro, geminiApiKey } = useAuth();
   const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+
+  // Listen for API key modal events
+  useEffect(() => {
+    const handleOpenApiKeyModal = () => {
+      setIsApiKeyModalOpen(true);
+    };
+    
+    window.addEventListener('openApiKeyModal', handleOpenApiKeyModal);
+    return () => window.removeEventListener('openApiKeyModal', handleOpenApiKeyModal);
+  }, []);
 
   const handleOpen = () => {
     if (!isPro) {
@@ -90,6 +100,9 @@ export function SmartSuggestions() {
             <Button className="w-full" size="lg" onClick={getDailyInsights} disabled={isLoadingInsights}>
               {isLoadingInsights ? 'Analyzing...' : 'Analyze My Day'}
             </Button>
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              💡 If you encounter API errors, update your Gemini API key in the modal that opens
+            </p>
           </div>
         </SheetContent>
       </Sheet>

@@ -26,8 +26,6 @@ import { ApiKeyModal } from './api-key-modal';
 import { SmartSuggestions } from './smart-suggestions';
 import { HabitStackingModal } from './habit-stacking-modal';
 import { EnergyTrackingPanel } from './energy-tracking-panel';
-import { TipFeedbackModal } from './tip-feedback-modal';
-import { tipTrackingSystem, trackTipView } from '@/lib/tip-tracking-system';
 
 const tipIcons: Record<string, LucideIcon> = {
   Productivity: Zap,
@@ -43,8 +41,6 @@ export function AIOptimizerDrawer() {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<View>('main');
   const [isClient, setIsClient] = useState(false);
-  const [selectedTipForFeedback, setSelectedTipForFeedback] = useState<EnhancedTip | null>(null);
-  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   
   const { 
     getDailyTips, 
@@ -64,6 +60,16 @@ export function AIOptimizerDrawer() {
 
   useEffect(() => {
     setIsClient(true);
+  }, []);
+
+  // Listen for API key modal events
+  useEffect(() => {
+    const handleOpenApiKeyModal = () => {
+      setIsApiKeyModalOpen(true);
+    };
+    
+    window.addEventListener('openApiKeyModal', handleOpenApiKeyModal);
+    return () => window.removeEventListener('openApiKeyModal', handleOpenApiKeyModal);
   }, []);
 
   const handleOpen = (e: React.MouseEvent) => {
@@ -87,13 +93,7 @@ export function AIOptimizerDrawer() {
 
   // Track tip views when tips are loaded and displayed
   useEffect(() => {
-    if (dailyTips && dailyTips.tips && view === 'tips') {
-      dailyTips.tips.forEach(tip => {
-        if (tip.id) {
-          trackTipView(tip.id);
-        }
-      });
-    }
+    // Tip tracking removed with feedback system cleanup
   }, [dailyTips, view]);
 
   const handleFetchTips = useCallback(() => {
@@ -274,6 +274,9 @@ export function AIOptimizerDrawer() {
         >
             {isLoadingInsights ? "Analyzing..." : "Analyze My Day"}
         </Button>
+        <p className="text-xs text-slate-400 text-center mt-2">
+          💡 If you encounter API errors, update your Gemini API key in the modal that opens
+        </p>
       </div>
     </div>
   );
@@ -394,24 +397,6 @@ export function AIOptimizerDrawer() {
                                 )}
                               </div>
                               
-                              {/* Feedback Button */}
-                              <div className="mt-3 flex justify-center px-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setSelectedTipForFeedback(tip);
-                                    setIsFeedbackModalOpen(true);
-                                    if (tip.id) {
-                                      tipTrackingSystem.trackTipInteraction(tip.id, 'expanded');
-                                    }
-                                  }}
-                                  className="bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-600/50 text-sm px-3 py-2 w-full max-w-[140px] h-8"
-                                >
-                                  <MessageCircle className="h-4 w-4 mr-1" />
-                                  Rate Tip
-                                </Button>
-                              </div>
                             </div>
                           </div>
                         </div>
@@ -506,6 +491,9 @@ export function AIOptimizerDrawer() {
             "Generate Tips"
           )}
         </Button>
+        <p className="text-xs text-slate-400 text-center mt-2">
+          💡 If you encounter API errors, update your Gemini API key in the modal that opens
+        </p>
       </div>
     </div>
   );
@@ -583,20 +571,6 @@ export function AIOptimizerDrawer() {
           isOpen={isHabitStackingOpen} 
           onClose={() => setIsHabitStackingOpen(false)}
           routineBubbles={timeBlocks.filter(b => b.category === 'personal' || b.title.toLowerCase().includes('routine'))}
-        />
-      )}
-      {selectedTipForFeedback && (
-        <TipFeedbackModal
-          isOpen={isFeedbackModalOpen}
-          onClose={() => {
-            setIsFeedbackModalOpen(false);
-            setSelectedTipForFeedback(null);
-          }}
-          tip={selectedTipForFeedback}
-          onFeedbackSubmitted={() => {
-            // Optionally refresh tips or show success message
-            console.log('Feedback submitted for tip:', selectedTipForFeedback.id);
-          }}
         />
       )}
     </>

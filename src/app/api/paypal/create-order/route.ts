@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const userId = decoded.uid;
 
     // Create order for $29 USD Lifetime Pro
-    const { id } = await createPayPalOrder({
+    const { id, approvalUrl } = await createPayPalOrder({
       amount: '29',
       currency: 'USD',
       description: 'TimeBubble Lifetime Pro',
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       });
     } catch {}
 
-    return NextResponse.json({ orderId: id });
+    return NextResponse.json({ orderId: id, approvalUrl });
   } catch (error: any) {
     console.error('PayPal create-order error:', error);
     return NextResponse.json({ error: error.message || 'Failed to create order' }, { status: 500 });

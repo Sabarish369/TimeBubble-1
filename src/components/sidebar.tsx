@@ -1,7 +1,7 @@
 'use client';
 
 import type { DragEvent } from 'react';
-import { Briefcase, BookOpen, Coffee, User, Heart, Plus, Trash2, Pencil, type LucideIcon, CalendarPlus, History } from 'lucide-react';
+import { Briefcase, BookOpen, Coffee, User, Heart, Plus, Trash2, Pencil, MessageSquare, type LucideIcon, CalendarPlus, History } from 'lucide-react';
 import { BUBBLE_COLORS, SIDEBAR_WIDTH } from '@/lib/constants';
 import type { BubbleCategory, BubbleTemplate } from '@/types';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { MissedTasksDrawer } from './missed-tasks-drawer';
 import { DailySidebarTip } from './daily-sidebar-tip';
-import { FeedbackSection } from './feedback-section';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -52,7 +52,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { templates, updateTemplate, deleteTemplate, setIsBubbleCreateModalOpen, timeBlocks } = useTimeBubbles();
-  const { user, isPro } = useAuth();
+  const { user, isPro, isAdmin } = useAuth();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isMissedTasksDrawerOpen, setIsMissedTasksDrawerOpen] = useState(false);
   const [isProModalOpen, setIsProModalOpen] = useState(false);
@@ -306,7 +306,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         })}
       </div>
 
-      <FeedbackSection />
+
     </aside>
     {isMobile && isOpen && (
       <div 

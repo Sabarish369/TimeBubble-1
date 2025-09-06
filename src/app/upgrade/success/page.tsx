@@ -19,15 +19,33 @@ function UpgradeSuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const sessionId = searchParams.get('session_id');
+  const paypalToken = searchParams.get('token'); // PayPal order ID
+  const payerId = searchParams.get('PayerID');
   const [isUpdating, setIsUpdating] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUpgradeAnimation, setShowUpgradeAnimation] = useState(false);
   const [showSuccessContent, setShowSuccessContent] = useState(false);
 
   useEffect(() => {
-    if (user && sessionId) {
+    if (user && (sessionId || (paypalToken && payerId))) {
       const updateUserToPro = async () => {
         try {
+          // Handle PayPal payment completion
+          if (paypalToken && payerId) {
+            const idToken = await user.getIdToken();
+            const captureRes = await fetch('/api/paypal/capture-order', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderId: paypalToken, idToken }),
+            });
+            
+            if (!captureRes.ok) {
+              const err = await captureRes.json().catch(() => ({}));
+              console.error('PayPal capture failed:', err);
+              throw new Error(err.error || 'Failed to capture PayPal payment');
+            }
+          }
+
           const userDocRef = doc(db, 'users', user.uid);
           await setDoc(userDocRef, { isPro: true }, { merge: true });
           // Manually trigger a refresh of user status
@@ -44,7 +62,7 @@ function UpgradeSuccessContent() {
       };
       updateUserToPro();
     }
-  }, [user, sessionId, router, refreshUserStatus]);
+  }, [user, sessionId, paypalToken, payerId, router, refreshUserStatus]);
 
   const handleAnimationComplete = () => {
     setShowUpgradeAnimation(false);
@@ -56,11 +74,11 @@ function UpgradeSuccessContent() {
     }, 3000);
   };
 
-  if (!sessionId) {
+  if (!sessionId && !paypalToken) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center p-4">
             <h1 className="text-2xl font-bold text-destructive mb-4">Invalid Session</h1>
-            <p className="text-muted-foreground mb-8">No session ID was found. Please return to the app.</p>
+            <p className="text-muted-foreground mb-8">No payment session was found. Please return to the app.</p>
             <Button asChild>
                 <Link href="/app">Go to My Timeline</Link>
             </Button>

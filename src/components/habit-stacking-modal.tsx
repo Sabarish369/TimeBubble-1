@@ -24,7 +24,7 @@ export function HabitStackingModal({ isOpen, onClose, routineBubbles }: HabitSta
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
   const hasFetchedRef = useRef(false); // Track if we've already fetched for this session
-  const { addBlockOnDate, currentDate } = useTimeBubbles();
+  const { addMultipleBlocksOnDate } = useTimeBubbles();
   const { geminiApiKey } = useAuth();
 
   useEffect(() => {
@@ -77,7 +77,8 @@ export function HabitStackingModal({ isOpen, onClose, routineBubbles }: HabitSta
         description: s.description,
         estimatedDuration: s.estimatedDuration,
         category: s.category,
-        stackBefore: s.stackBefore
+        stackBefore: s.stackBefore,
+        targetBubbleId: s.targetBubbleId
       })));
     } catch (error) {
       console.error('Failed to fetch habit suggestions:', error);
@@ -106,28 +107,45 @@ export function HabitStackingModal({ isOpen, onClose, routineBubbles }: HabitSta
   };
 
   const handleApplySelected = async () => {
-    for (const suggestionId of selectedSuggestions) {
-      const suggestion = suggestions.find(s => s.id === suggestionId);
-      if (!suggestion) continue;
+    try {
+      // Prepare all blocks to be added
+      const blocksToAdd = [];
+      
+      for (const suggestionId of selectedSuggestions) {
+        const suggestion = suggestions.find(s => s.id === suggestionId);
+        if (!suggestion) continue;
 
-      const targetBubble = routineBubbles[0]; // For demo, use first routine bubble
-      const stackTime = suggestion.stackBefore 
-        ? new Date(targetBubble.startTime.getTime() - suggestion.estimatedDuration * 60000)
-        : new Date(targetBubble.startTime.getTime() + targetBubble.duration * 60000);
+        // Find the target bubble for this suggestion
+        const targetBubble = routineBubbles.find(b => b.id === suggestion.targetBubbleId) || routineBubbles[0];
+        const stackTime = suggestion.stackBefore 
+          ? new Date(targetBubble.startTime.getTime() - suggestion.estimatedDuration * 60000)
+          : new Date(targetBubble.startTime.getTime() + targetBubble.duration * 60000);
 
-      await addBlockOnDate({
-        title: suggestion.habitTitle,
-        startTime: stackTime,
-        duration: suggestion.estimatedDuration,
-        category: suggestion.category,
-        color: 'canary',
-        description: suggestion.description,
-        actionable: true
-      }, stackTime);
+        blocksToAdd.push({
+          title: suggestion.habitTitle,
+          startTime: stackTime,
+          duration: suggestion.estimatedDuration,
+          category: suggestion.category,
+          color: 'canary' as const,
+          description: suggestion.description,
+          actionable: true,
+          isHabitStacking: true,
+          habitStackingTarget: targetBubble.id,
+          stackBefore: suggestion.stackBefore
+        });
+      }
+
+      console.log(`Adding ${blocksToAdd.length} habit stacking bubbles`);
+
+      // Add all blocks at once using the batch function
+      await addMultipleBlocksOnDate(blocksToAdd, new Date());
+
+      console.log(`Successfully added ${selectedSuggestions.size} habit stacking bubbles`);
+      setSelectedSuggestions(new Set());
+      onClose();
+    } catch (error) {
+      console.error('Error adding habit stacking bubbles:', error);
     }
-
-    setSelectedSuggestions(new Set());
-    onClose();
   };
 
   return (

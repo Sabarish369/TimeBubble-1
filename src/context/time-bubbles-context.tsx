@@ -152,6 +152,7 @@ interface TimeBubblesContextType {
   goToPreviousDay: () => void;
   addBlock: (block: Omit<TimeBlock, 'id' | 'completed'>) => void;
   addBlockOnDate: (block: Omit<TimeBlock, 'id' | 'completed'>, date: Date) => void;
+  addMultipleBlocksOnDate: (blocks: Omit<TimeBlock, 'id' | 'completed'>[], date: Date) => Promise<TimeBlock[] | undefined>;
   updateBlock: (id: string, updates: Partial<TimeBlock>, saveToDb?: boolean) => void;
   deleteBlock: (id: string) => void;
   deleteBlockFromDate: (id: string, date: Date | string) => void;
@@ -438,12 +439,20 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
           description: 'Your API key is invalid. Please update it in settings.',
           variant: 'destructive',
         });
+        // Open API key modal for invalid API key
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('openApiKeyModal'));
+        }
       } else {
         toast({
           title: 'Tips Generation Failed',
           description: error.message || 'Unable to generate tips. Please try again.',
           variant: 'destructive',
         });
+        // Open API key modal for other API errors
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('openApiKeyModal'));
+        }
       }
       
       handleGenericTipsError(error);
@@ -475,15 +484,24 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     requestedStartTime: Date,
     duration: number,
     allBlocks: TimeBlock[],
-    excludeId?: string
+    excludeId?: string,
+    isHabitStacking?: boolean
   ): Date => {
     const movingBlockEndTime = new Date(requestedStartTime.getTime() + duration * 60000);
     const otherBlocks = allBlocks.filter(b => b.id !== excludeId);
 
+    // Allow habit stacking bubbles to overlap with their target bubbles
     const collidingBlocks = otherBlocks.filter(b => {
         const blockStartTime = ensureDateObject(b.startTime);
         const blockEndTime = new Date(blockStartTime.getTime() + b.duration * 60000);
-        return requestedStartTime < blockEndTime && movingBlockEndTime > blockStartTime;
+        const hasOverlap = requestedStartTime < blockEndTime && movingBlockEndTime > blockStartTime;
+        
+        // If this is a habit stacking bubble, only consider non-habit-stacking bubbles as collisions
+        if (isHabitStacking) {
+            return hasOverlap && !b.isHabitStacking;
+        }
+        
+        return hasOverlap;
     });
 
     if (collidingBlocks.length === 0) {
@@ -553,7 +571,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
         // If a drag/resize happened, resolve collisions
         if (saveToDb && (updates.startTime || updates.duration)) {
-            const newStartTime = findAvailableSlot(updatedBlock.startTime, updatedBlock.duration, newBlocks, id);
+            const newStartTime = findAvailableSlot(updatedBlock.startTime, updatedBlock.duration, newBlocks, id, updatedBlock.isHabitStacking);
             updatedBlock.startTime = newStartTime;
         }
 
@@ -755,7 +773,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     const isCurrentOpenDate = getDayKey(date) === getDayKey(currentDate);
     const blocksForDate = isCurrentOpenDate ? timeBlocks : await getBlocksForDate(date);
 
-    const newStartTime = findAvailableSlot(block.startTime, block.duration, blocksForDate);
+    const newStartTime = findAvailableSlot(block.startTime, block.duration, blocksForDate, undefined, block.isHabitStacking);
     const newBlock: TimeBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false };
 
     const newBlocks = [...blocksForDate, newBlock];
@@ -775,6 +793,42 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
   const addBlock = useCallback((block: Omit<TimeBlock, 'id' | 'completed'>) => {
     addBlockOnDate(block, block.startTime);
   }, [addBlockOnDate]);
+
+  const addMultipleBlocksOnDate = useCallback(async (blocks: Omit<TimeBlock, 'id' | 'completed'>[], date: Date) => {
+    if (!user) {
+        toast({ title: 'Not signed in', description: 'You must be signed in to add bubbles.', variant: 'destructive'});
+        return;
+    }
+
+    const isCurrentOpenDate = getDayKey(date) === getDayKey(currentDate);
+    let blocksForDate = isCurrentOpenDate ? timeBlocks : await getBlocksForDate(date);
+
+    const newBlocks: TimeBlock[] = [];
+
+    // Process each block sequentially, updating the blocks array as we go
+    for (const block of blocks) {
+      const newStartTime = findAvailableSlot(block.startTime, block.duration, blocksForDate, undefined, block.isHabitStacking);
+      const newBlock: TimeBlock = { ...block, startTime: newStartTime, id: crypto.randomUUID(), completed: false };
+      
+      // Add to both our working array and the new blocks array
+      blocksForDate = [...blocksForDate, newBlock];
+      newBlocks.push(newBlock);
+    }
+
+    // Save all blocks at once
+    if (isCurrentOpenDate) {
+        setTimeBlocksWithHistory(blocksForDate, date, true);
+    } else {
+        await saveTimeBlocksToFirestore(blocksForDate, date);
+    }
+
+    toast({
+      title: 'Bubbles Added',
+      description: `${newBlocks.length} habit stacking bubbles added to ${format(date, 'MMMM do')}.`
+    });
+
+    return newBlocks;
+  }, [user, findAvailableSlot, setTimeBlocksWithHistory, toast, currentDate, timeBlocks, getBlocksForDate, saveTimeBlocksToFirestore]);
 
 
   const deleteBlock = useCallback(async (id: string): Promise<void> => {
@@ -980,7 +1034,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
             ? targetDocSnap.data().blocks.map((b: any) => ({ ...b, startTime: ensureDateObject(b.startTime) }))
             : [];
 
-        const resolvedStartTime = findAvailableSlot(newStartTime, rescheduledBlockData.duration, blocksForNewDate);
+        const resolvedStartTime = findAvailableSlot(newStartTime, rescheduledBlockData.duration, blocksForNewDate, undefined, rescheduledBlockData.isHabitStacking);
         rescheduledBlockData.startTime = resolvedStartTime;
 
         const sourceDayDocRef = doc(db, 'users', user.uid, 'daily_data', sourceDayKey);
@@ -1064,6 +1118,10 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
           description: error.message || 'Failed to generate insights',
           variant: 'destructive',
         });
+        // Open API key modal for API errors
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('openApiKeyModal'));
+        }
       }
     } finally {
       setIsLoadingInsights(false);
@@ -1475,10 +1533,11 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
               startTime: ensureDateObject(ob.startTime)
             }));
             
-            const resolvedStartTime = findAvailableSlot(newStartTime, newDuration, otherBlocks);
+            const resolvedStartTime = findAvailableSlot(newStartTime, newDuration, otherBlocks, undefined, existingBlock.isHabitStacking);
             
             // If the resolved time is different from requested time, it's a conflict
-            if (updates.startTime && resolvedStartTime.getTime() !== newStartTime.getTime()) {
+            // But allow habit stacking bubbles to overlap
+            if (updates.startTime && resolvedStartTime.getTime() !== newStartTime.getTime() && !existingBlock.isHabitStacking) {
               conflicts.push({
                 ...existingBlock,
                 startTime: resolvedStartTime,
@@ -1650,6 +1709,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     goToPreviousDay,
     addBlock,
     addBlockOnDate,
+    addMultipleBlocksOnDate,
     updateBlock,
     deleteBlock,
     deleteBlockFromDate,

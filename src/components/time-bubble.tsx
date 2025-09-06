@@ -321,11 +321,13 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
   const bubbleStyle: React.CSSProperties = {
     top: `${top}px`,
     height: `${height}px`,
-    transform: isDragging ? `scale(1.02) rotate(${Math.sin(Date.now() * 0.001) * 0.5}deg)` : isHovering ? 'scale(1.01)' : 'scale(1)',
+    transform: isDragging ? `rotate(${Math.sin(Date.now() * 0.002) * 0.2}deg)` : isHovering ? 'scale(1.005)' : 'none',
     transition: isDragging || isResizing ? 'none' : 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
     zIndex: isDragging ? 40 : isHovering ? 20 : 'auto',
     filter: isDragging ? 'drop-shadow(0 10px 25px rgba(0, 0, 0, 0.3))' : 'none',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    // Set the CSS variable for the glow color to match the bubble's color
+    '--bubble-glow-color': `var(--bubble-${block.color})`
   } as React.CSSProperties;
   
   const handleUndoComplete = () => {
@@ -419,7 +421,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
     <div
       data-bubble-id={block.id}
       className={cn(
-        'absolute left-[50px] md:left-[80px] right-2 md:right-4 rounded-lg p-2 md:p-3 flex flex-col items-start shadow-md time-bubble',
+        'absolute left-[50px] md:left-[80px] w-[calc(100%-70px)] md:w-[calc(100%-100px)] rounded-lg p-2 md:p-3 flex flex-col items-start shadow-md time-bubble',
         'select-none', 
         'outline outline-1 outline-slate-300/50 dark:outline-slate-700/50',
         isDragging && 'shadow-2xl cursor-grabbing drag-active time-bubble-dragging',

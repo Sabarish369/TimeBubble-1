@@ -112,38 +112,33 @@ export default function UpgradePage() {
         if (!user) return;
         setIsLoading(true);
         try {
-            // If you already have a PayPal payment link, open it directly.
-            // After user pays, they click OK, and we confirm manually.
-            const link = process.env.NEXT_PUBLIC_PAYPAL_LINK || 'https://www.paypal.com/ncp/payment/EK7YRQ3G4XYQY';
-            if (!link) throw new Error('PayPal link not configured');
-            window.open(link, '_blank');
-
-            const confirmed = await new Promise<boolean>((resolve) => {
-              const ok = window.confirm('After completing the PayPal payment, click OK to activate Pro.');
-              resolve(ok);
-            });
-            if (!confirmed) throw new Error('Payment not confirmed');
-
             const idToken = await auth.currentUser?.getIdToken();
             if (!idToken) throw new Error('Not authenticated');
 
-            // Ask for transaction ID to store for verification/audit
-            const txn = window.prompt('Enter your PayPal transaction ID (optional for faster verification):') || '';
-            const res = await fetch('/api/paypal/manual-confirm', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ idToken, transactionId: txn, amount: '29' }),
+            // Create PayPal order
+            const createRes = await fetch('/api/paypal/create-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idToken }),
             });
-            if (!res.ok) {
-              const err = await res.json().catch(() => ({}));
-              throw new Error(err.error || 'Failed to confirm payment');
+            
+            if (!createRes.ok) {
+                const err = await createRes.json().catch(() => ({}));
+                throw new Error(err.error || 'Failed to create PayPal order');
+            }
+            
+            const { orderId, approvalUrl } = await createRes.json();
+            if (!orderId || !approvalUrl) {
+                throw new Error('PayPal approval URL not received');
             }
 
-            router.push('/upgrade/success');
+            // Redirect to PayPal for approval
+            window.location.href = approvalUrl;
+
         } catch (error: any) {
-            console.error(error);
+            console.error('PayPal upgrade error:', error);
             setIsLoading(false);
-            // You might want to show an error toast here
+            alert(`Payment failed: ${error.message}`);
         }
     };
 

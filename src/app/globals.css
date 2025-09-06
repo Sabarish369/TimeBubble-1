@@ -294,17 +294,80 @@ body {
     }
   }
 
-  /* Glow animation for active bubble */
+  /* Enhanced glow animation for active bubble */
   .is-glowing {
-    animation: glow 2.5s infinite alternate;
+    animation: activeBubbleGlow 3s infinite ease-in-out;
+    position: relative;
+    /* Allow hover transform but prevent glow scaling */
+    box-sizing: border-box;
+  }
+  
+  /* Override transform only for the glow animation, not hover */
+  .is-glowing:not(:hover) {
+    transform: none !important;
   }
 
-  @keyframes glow {
-    from {
-      box-shadow: 0 0 5px -2px hsl(var(--glow-color)), 0 0 10px -2px hsl(var(--glow-color)), 0 0 15px -2px hsl(var(--glow-color));
+  @keyframes activeBubbleGlow {
+    0% {
+      box-shadow: 
+        0 0 8px 1px hsl(var(--bubble-glow-color) / 0.6),
+        0 0 16px 2px hsl(var(--bubble-glow-color) / 0.4),
+        0 0 24px 3px hsl(var(--bubble-glow-color) / 0.2),
+        0 0 32px 4px hsl(var(--bubble-glow-color) / 0.1);
     }
-    to {
-      box-shadow: 0 0 5px 2px hsl(var(--glow-color)), 0 0 10px 2px hsl(var(--glow-color)), 0 0 15px 2px hsl(var(--glow-color));
+    50% {
+      box-shadow: 
+        0 0 12px 2px hsl(var(--bubble-glow-color) / 0.8),
+        0 0 24px 4px hsl(var(--bubble-glow-color) / 0.6),
+        0 0 36px 6px hsl(var(--bubble-glow-color) / 0.4),
+        0 0 48px 8px hsl(var(--bubble-glow-color) / 0.2);
+    }
+    100% {
+      box-shadow: 
+        0 0 8px 1px hsl(var(--bubble-glow-color) / 0.6),
+        0 0 16px 2px hsl(var(--bubble-glow-color) / 0.4),
+        0 0 24px 3px hsl(var(--bubble-glow-color) / 0.2),
+        0 0 32px 4px hsl(var(--bubble-glow-color) / 0.1);
+    }
+  }
+
+
+  /* Pro header subtle gradient background */
+  .pro-header-gradient {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .pro-header-gradient::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(168, 85, 247, 0.06) 0%,
+      rgba(59, 130, 246, 0.05) 20%,
+      rgba(16, 185, 129, 0.04) 40%,
+      transparent 50%,
+      rgba(251, 146, 60, 0.04) 60%,
+      rgba(245, 101, 101, 0.05) 80%,
+      rgba(168, 85, 247, 0.06) 100%
+    );
+    pointer-events: none;
+    z-index: 0;
+    animation: instagramGradientShift 8s ease-in-out infinite;
+  }
+
+  @keyframes instagramGradientShift {
+    0%, 100% {
+      opacity: 0.8;
+      transform: translateX(0);
+    }
+    50% {
+      opacity: 1;
+      transform: translateX(5px);
     }
   }
 

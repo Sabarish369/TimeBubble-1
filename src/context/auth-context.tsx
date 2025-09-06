@@ -12,7 +12,7 @@ import {
   signOut as firebaseSignOut,
   updateProfile,
   sendPasswordResetEmail,
-  sendEmailVerification,
+  sendEmailVerification as firebaseSendEmailVerification,
   type User,
 } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
@@ -26,6 +26,7 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   isPro: boolean;
+  isAdmin: boolean;
   isNewUser: boolean;
   geminiApiKey: string | null;
   setGeminiApiKey: (key: string) => Promise<void>;
@@ -45,6 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPro, setIsPro] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
   const [geminiApiKey, setGeminiApiKeyState] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
@@ -91,12 +93,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setIsPro(!!data.isPro);
+          setIsAdmin(!!data.isAdmin);
           // Check if geminiApiKey is null or undefined before setting state
           setGeminiApiKeyState(data.geminiApiKey || null);
         } else {
           // New user, create their doc
-          setDoc(userDocRef, { email: user.email, displayName: user.displayName, isPro: false }, { merge: true });
+          setDoc(userDocRef, { email: user.email, displayName: user.displayName, isPro: false, isAdmin: false }, { merge: true });
           setIsPro(false);
+          setIsAdmin(false);
           setGeminiApiKeyState(null);
         }
         setLoading(false);
@@ -117,6 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       // User logged out, clear state
       setIsPro(false);
+      setIsAdmin(false);
       setIsNewUser(false);
       setGeminiApiKeyState(null);
       setLoading(false);
@@ -264,7 +269,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const sendEmailVerification = async () => {
     if (!user) return;
     await performAuthAction(async () => {
-      await sendEmailVerification(user);
+      await firebaseSendEmailVerification(user);
       toast({
         title: 'Verification Email Sent',
         description: 'Please check your inbox for the verification email.',
@@ -288,6 +293,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loading: loading || isAuthLoading,
     error,
     isPro,
+    isAdmin,
     isNewUser,
     geminiApiKey,
     setGeminiApiKey,

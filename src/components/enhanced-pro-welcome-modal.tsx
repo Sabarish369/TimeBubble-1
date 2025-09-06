@@ -6,7 +6,7 @@ import {
   DialogContent,
 } from '@/components/ui/dialog';
 import { Button } from './ui/button';
-import { Sparkles, Crown, Zap, BrainCircuit, BarChart, Star, CheckCircle, X, ArrowRight, ArrowLeft, Play, Trophy, Gift } from 'lucide-react';
+import { Sparkles, Crown, BrainCircuit, BarChart, CheckCircle, X, ArrowRight, ArrowLeft, Play, Trophy, Gift } from 'lucide-react';
 import { LockBreakingBubble } from './lock-breaking-bubble';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -169,11 +169,11 @@ const welcomeSteps = [
     id: 'api-setup',
     title: 'API Key Setup',
     subtitle: 'Bring your own Gemini API key for unlimited AI usage',
-    icon: Star,
+    icon: Sparkles,
     content: (
       <div className="space-y-6">
         <div className="flex items-center justify-center gap-4 p-4 rounded-2xl bg-gradient-to-br from-emerald-400/20 to-teal-500/20 border border-emerald-400/30">
-          <Star className="h-8 w-8 text-emerald-500" />
+          <Sparkles className="h-8 w-8 text-emerald-500" />
           <div className="text-left">
             <h4 className="font-semibold text-foreground">Set up your API key</h4>
             <p className="text-sm text-muted-foreground">Get complete control over your AI usage</p>
@@ -281,7 +281,6 @@ export function EnhancedProWelcomeModal({ isOpen, onClose }: EnhancedProWelcomeM
       <DialogContent className="max-w-4xl border-0 bg-gradient-to-br from-background via-background/95 to-primary/10 backdrop-blur-xl shadow-2xl overflow-hidden">
         {/* Animated background */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-8 -right-8 w-32 h-32 bg-gradient-to-br from-primary/30 to-accent/30 rounded-full blur-2xl animate-pulse" />
           <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-gradient-to-tr from-accent/30 to-primary/30 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }} />
         </div>
 
@@ -309,18 +308,23 @@ export function EnhancedProWelcomeModal({ isOpen, onClose }: EnhancedProWelcomeM
         <div className="relative z-10 p-8">
           {/* Header */}
           <div className="text-center mb-8">
+            <div className="flex items-center justify-center mb-4">
+              <currentStepData.icon className="h-12 w-12 text-primary" />
+            </div>
             <h2 className={`text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
               {currentStepData.title}
             </h2>
-            <p className={`text-lg text-muted-foreground mt-2 transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionDelay: '200ms' }}>
+            <p className={`text-lg text-muted-foreground mt-3 transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionDelay: '200ms' }}>
               {currentStepData.subtitle}
             </p>
           </div>
 
           {/* Content */}
-          <div className={`min-h-[400px] transform transition-all duration-500 ${isAnimating ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
-            {currentStepData.content}
+          <div className={`min-h-[350px] flex items-center justify-center transform transition-all duration-500 ${isAnimating ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+            <div className="w-full max-w-3xl">
+              {currentStepData.content}
             </div>
+          </div>
 
           {/* Navigation */}
           <div className="flex items-center justify-between mt-8">
@@ -330,7 +334,7 @@ export function EnhancedProWelcomeModal({ isOpen, onClose }: EnhancedProWelcomeM
               disabled={isFirstStep}
               className={cn(
                 "flex items-center gap-2 transition-all duration-200",
-                isFirstStep ? "opacity-50 cursor-not-allowed" : "hover:scale-105"
+                isFirstStep ? "opacity-0 pointer-events-none" : "hover:scale-105"
               )}
             >
               <ArrowLeft className="h-4 w-4" />
@@ -343,7 +347,6 @@ export function EnhancedProWelcomeModal({ isOpen, onClose }: EnhancedProWelcomeM
                   onClick={handleNext}
                   className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
                 >
-                  {currentStep}
                   {currentStepData.continueText}
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
@@ -356,8 +359,8 @@ export function EnhancedProWelcomeModal({ isOpen, onClose }: EnhancedProWelcomeM
                   Start Exploring
                 </Button>
               )}
-                  </div>
             </div>
+          </div>
 
           {/* Step indicators */}
             <div className="flex justify-center gap-2 mt-6">

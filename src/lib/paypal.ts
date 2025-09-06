@@ -25,7 +25,7 @@ async function getAccessToken(): Promise<string> {
   return data.access_token as string;
 }
 
-export async function createPayPalOrder(params: { amount: string; currency?: string; description?: string; referenceId: string; }): Promise<{ id: string }> {
+export async function createPayPalOrder(params: { amount: string; currency?: string; description?: string; referenceId: string; }): Promise<{ id: string; approvalUrl: string }> {
   const accessToken = await getAccessToken();
   const res = await fetch(`${baseUrl}/v2/checkout/orders`, {
     method: 'POST',
@@ -48,6 +48,8 @@ export async function createPayPalOrder(params: { amount: string; currency?: str
       application_context: {
         brand_name: 'TimeBubble',
         user_action: 'PAY_NOW',
+        return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/upgrade/success`,
+        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/upgrade`,
       },
     }),
     // @ts-ignore
@@ -58,7 +60,14 @@ export async function createPayPalOrder(params: { amount: string; currency?: str
     throw new Error(`Failed to create PayPal order: ${text}`);
   }
   const data = await res.json();
-  return { id: data.id };
+  
+  // Extract approval URL from links
+  const approvalLink = data.links?.find((link: any) => link.rel === 'approve');
+  if (!approvalLink) {
+    throw new Error('PayPal approval URL not found in response');
+  }
+  
+  return { id: data.id, approvalUrl: approvalLink.href };
 }
 
 export async function capturePayPalOrder(orderId: string): Promise<any> {

@@ -58,15 +58,25 @@ interface TipEffectiveness {
  * Main personalization engine class
  */
 export class TipPersonalizationEngine {
-  private static instance: TipPersonalizationEngine;
+  private static instance: TipPersonalizationEngine | null = null;
   private behaviorPatterns: Map<string, UserBehaviorPattern> = new Map();
   private personalizationWeights: PersonalizationWeights;
   private tipEffectiveness: TipEffectiveness[] = [];
   private userPreferences: UserTipPreferences;
   
   private constructor() {
-    this.personalizationWeights = this.initializeWeights();
-    this.userPreferences = this.loadUserPreferences();
+    if (typeof window !== 'undefined' && localStorage.getItem('personalizationWeights')) {
+      this.personalizationWeights = JSON.parse(localStorage.getItem('personalizationWeights')!);
+    } else {
+      this.personalizationWeights = this.initializeWeights();
+    }
+    
+    if (typeof window !== 'undefined' && localStorage.getItem('userPreferences')) {
+      this.userPreferences = JSON.parse(localStorage.getItem('userPreferences')!);
+    } else {
+      this.userPreferences = this.loadUserPreferences();
+    }
+    
     this.loadPersonalizationData();
   }
 
@@ -292,7 +302,16 @@ export class TipPersonalizationEngine {
     
     if (moodProductivityPairs.length >= 5) {
       const correlation = this.calculateCorrelation(
-        moodProductivityPairs.map(p => p.mood),
+        moodProductivityPairs.map(p => {
+          switch (p.mood) {
+            case 'happy': return 5;
+            case 'focused': return 4;
+            case 'neutral': return 3;
+            case 'tired': return 2;
+            case 'stressed': return 1;
+            default: return 3;
+          }
+        }),
         moodProductivityPairs.map(p => p.productivity)
       );
       
@@ -409,27 +428,30 @@ export class TipPersonalizationEngine {
   }
 
   private loadUserPreferences(): UserTipPreferences {
+    const defaultPrefs = {
+      preferredCategories: [],
+      tipStyle: 'balanced' as any,
+      focusAreas: [],
+      avoidTopics: [],
+      timePreference: 'morning' as 'morning' | 'evening' | 'both' | undefined
+    };
+
+    if (typeof window === 'undefined') {
+      return defaultPrefs;
+    }
+
     try {
       const stored = localStorage.getItem('user_tip_preferences');
-      return stored ? JSON.parse(stored) : {
-        preferredCategories: [],
-        tipStyle: 'balanced' as any,
-        focusAreas: [],
-        avoidTopics: [],
-        timePreference: 'morning'
-      };
+      return stored ? JSON.parse(stored) : defaultPrefs;
     } catch {
-      return {
-        preferredCategories: [],
-        tipStyle: 'balanced' as any,
-        focusAreas: [],
-        avoidTopics: [],
-        timePreference: 'morning'
-      };
+      return defaultPrefs;
     }
   }
 
   private loadPersonalizationData(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
     try {
       const stored = localStorage.getItem('tip_personalization_weights');
       if (stored) {
@@ -441,6 +463,9 @@ export class TipPersonalizationEngine {
   }
 
   private savePersonalizationData(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
     try {
       localStorage.setItem('tip_personalization_weights', JSON.stringify(this.personalizationWeights));
     } catch (error) {

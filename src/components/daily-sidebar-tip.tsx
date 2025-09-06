@@ -34,7 +34,36 @@ export function DailySidebarTip() {
   const getStorageKey = useCallback(() => {
     if (!user || !isClient) return null;
     return `daily_tip_${user.uid}_${format(currentDate, 'yyyy-MM-dd')}`;
-  }, [user?.uid, currentDate, isClient]); // Use user.uid instead of user object
+  }, [user?.uid, currentDate, isClient]);
+
+  const getScheduleHash = useCallback(() => {
+    // Create a hash of the current schedule to detect changes
+    const scheduleString = JSON.stringify(timeBlocks.map(b => ({ 
+      title: b.title, 
+      category: b.category, 
+      duration: b.duration,
+      startTime: format(new Date(b.startTime), 'HH:mm')
+    })));
+    return btoa(scheduleString).slice(0, 16); // Short hash
+  }, [timeBlocks]);
+
+  const shouldRegenerateTip = useCallback(() => {
+    const storageKey = getStorageKey();
+    if (!storageKey) return true;
+    
+    try {
+      const cached = localStorage.getItem(storageKey);
+      if (!cached) return true;
+      
+      const { scheduleHash } = JSON.parse(cached);
+      const currentHash = getScheduleHash();
+      
+      // Only regenerate if schedule changed significantly
+      return scheduleHash !== currentHash;
+    } catch {
+      return true;
+    }
+  }, [getStorageKey, getScheduleHash]);
 
   const fetchTip = useCallback(async (forceRefresh = false) => {
     console.log('fetchTip called:', { isPro, geminiApiKey: !!geminiApiKey, forceRefresh, isLoading });
@@ -69,10 +98,20 @@ export function DailySidebarTip() {
         if (cachedTip) {
           try {
             const parsedTip = JSON.parse(cachedTip);
-            console.log('Using cached tip:', parsedTip);
-            setTip(parsedTip);
-            setIsLoading(false);
-            return;
+            
+            // Check if schedule changed or cache is too old (24 hours)
+            const isExpired = Date.now() - (parsedTip.timestamp || 0) > 24 * 60 * 60 * 1000;
+            const scheduleChanged = parsedTip.scheduleHash !== getScheduleHash();
+            
+            if (!isExpired && !scheduleChanged) {
+              console.log('Using cached tip - schedule unchanged:', parsedTip);
+              setTip({ tip: parsedTip.tip });
+              setIsLoading(false);
+              return;
+            } else {
+              console.log('Cache invalid:', { isExpired, scheduleChanged });
+              localStorage.removeItem(storageKey);
+            }
           } catch(e) {
             console.warn("Could not parse cached tip, fetching new one.");
             localStorage.removeItem(storageKey);
@@ -87,8 +126,13 @@ export function DailySidebarTip() {
       setTip(result);
 
       if (storageKey && result) {
-        localStorage.setItem(storageKey, JSON.stringify(result));
-        console.log('Cached tip for future use');
+        const cacheData = {
+          ...result,
+          scheduleHash: getScheduleHash(),
+          timestamp: Date.now()
+        };
+        localStorage.setItem(storageKey, JSON.stringify(cacheData));
+        console.log('Cached tip with schedule hash for smart reuse');
       }
     } catch (err: any) {
       console.error('Failed to fetch daily tip:', err);
@@ -105,7 +149,7 @@ export function DailySidebarTip() {
       isLoadingRef.current = false;
       setIsLoading(false);
     }
-  }, [getStorageKey, timeBlocks, getNewDailySidebarTip, isPro, geminiApiKey]); // Removed isLoading to prevent circular dependency
+  }, [getStorageKey, timeBlocks, getNewDailySidebarTip, isPro, geminiApiKey, getScheduleHash]);
 
   // Fetch tip on initial load and when date changes, but only on the client
   useEffect(() => {
@@ -116,7 +160,17 @@ export function DailySidebarTip() {
       hasFetchedRef.current = true;
       fetchTip();
     }
-  }, [currentDate, isClient, isPro, geminiApiKey]); // Remove fetchTip from dependencies to prevent infinite loop
+  }, [currentDate, isClient, isPro, geminiApiKey]);
+
+  // Smart schedule change detection - only refetch if schedule actually changed
+  useEffect(() => {
+    if (isClient && isPro && geminiApiKey && hasFetchedRef.current && tip) {
+      if (shouldRegenerateTip()) {
+        console.log('Schedule changed significantly, regenerating tip');
+        fetchTip(true);
+      }
+    }
+  }, [timeBlocks, isClient, isPro, geminiApiKey, tip, shouldRegenerateTip, fetchTip]);
 
   // Reset fetch flag when date changes
   useEffect(() => {
@@ -167,19 +221,23 @@ export function DailySidebarTip() {
         onClick={handleCardClick}
       >
         <Card 
-            className="relative overflow-hidden border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background shadow-sm"
+            className="relative overflow-hidden border border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background shadow-sm hover:shadow-md transition-all duration-200 hover:border-primary/30"
         >
           <CardContent className="p-4">
-            {/* Accent glow */}
-            <div className="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-amber-400/10 blur-2xl" />
+            {/* Enhanced accent glow */}
+            <div className="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-amber-400/15 blur-2xl" />
+            <div className="pointer-events-none absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-primary/10 blur-xl" />
             <div className="flex items-start gap-3">
-              <div className="h-8 w-8 rounded-full bg-amber-500/15 flex items-center justify-center ring-1 ring-amber-400/30">
-                { isPro ? <Lightbulb className="h-4 w-4 text-amber-500" /> : <Star className="h-4 w-4 text-amber-500" /> }
+              <div className="h-9 w-9 rounded-full bg-amber-500/20 flex items-center justify-center ring-1 ring-amber-400/40 shadow-sm">
+                { isPro ? <Lightbulb className="h-4 w-4 text-amber-600 drop-shadow-sm" /> : <Star className="h-4 w-4 text-amber-600 drop-shadow-sm" /> }
               </div>
               <div className="flex-1">
                 <div className="flex justify-between items-center">
                      <div className="flex items-center gap-2">
-                       <p className="font-semibold text-sm text-primary/90">{isPro ? "Tip of the Day" : "Pro Tip"}</p>
+                       <p className="font-bold text-sm text-primary">{isPro ? "Today's Focus" : "Pro Tip"}</p>
+                       {isPro && tip?.tip && (
+                         <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" title="Fresh tip loaded" />
+                       )}
                      </div>
                 </div>
                 {isLoading ? (
@@ -191,13 +249,20 @@ export function DailySidebarTip() {
                   <p className="text-xs text-destructive">{error}</p>
                 ) : isPro ? (
                     tip?.tip ? (
-                      <p className="text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move">
-                        {tip.tip}
-                      </p>
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent bg-[size:200%_auto] animate-gradient-move leading-relaxed">
+                          {tip.tip}
+                        </p>
+                      </div>
                     ) : (
-                      <p className="text-xs text-muted-foreground">
-                        Click to load daily tips for {format(currentDate, 'MMM d')}
-                      </p>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-primary/80">
+                          Get your personalized tip for {format(currentDate, 'MMM d')}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Click to generate actionable insights from your schedule
+                        </p>
+                      </div>
                     )
                 ) : (
                     <p className='text-sm font-semibold'>Upgrade to Pro to unlock daily personalized tips.</p>

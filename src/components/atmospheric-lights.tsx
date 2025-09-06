@@ -166,29 +166,27 @@ export function AtmosphericLights({
         bubble.x += bubble.vx + wobbleX * 0.1;
         bubble.y += bubble.vy + wobbleY * 0.1;
         
-        // Apply strict boundary enforcement to prevent leaking
-        keepWithinBounds(bubble, rect);
-        
-        // Boundary wrapping for horizontal movement
+        // Continuous horizontal wrapping for seamless flow
         if (bubble.x < -bubble.size) {
           bubble.x = rect.width + bubble.size;
         } else if (bubble.x > rect.width + bubble.size) {
           bubble.x = -bubble.size;
         }
         
-        // Reset bubble when it goes off screen (top)
+        // Continuous vertical cycling - bubbles always flow
         if (bubble.y < -bubble.size * 2) {
-          // Reset to bottom with new properties
-          bubble.y = rect.height + bubble.size + Math.random() * 100;
+          // Reset to bottom with new properties for continuous flow
+          bubble.y = rect.height + bubble.size + Math.random() * 50;
           bubble.x = Math.random() * rect.width;
           bubble.vx = (Math.random() - 0.5) * speed * 0.5;
           bubble.vy = -speed * (0.8 + Math.random() * 0.4);
           bubble.phase = Math.random() * Math.PI * 2;
           bubble.opacity = 0.3 + Math.random() * 0.4;
-          
-          // Apply bounds check after reset
-          keepWithinBounds(bubble, rect);
         }
+        
+        // Keep bubbles strictly within container bounds
+        bubble.x = Math.max(-bubble.size, Math.min(rect.width + bubble.size, bubble.x));
+        bubble.y = Math.max(-bubble.size * 2, Math.min(rect.height + bubble.size + 50, bubble.y));
         
         // Calculate opacity based on position (fade near edges)
         const edgeFadeZone = 50;

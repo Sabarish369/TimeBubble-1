@@ -16,6 +16,7 @@ export interface HabitSuggestion {
   estimatedDuration: number; // in minutes
   category: BubbleCategory;
   stackBefore?: boolean; // true = before the bubble, false = after
+  targetBubbleId?: string; // ID of the target bubble to stack with
 }
 
 export interface ReflectionData {
@@ -31,17 +32,28 @@ export interface TimeBlock {
   title: string;
   startTime: Date;
   duration: number; // in minutes
+  category: 'work' | 'study' | 'break' | 'personal' | 'health';
   color: BubbleColor;
-  category: BubbleCategory;
   completed: boolean;
   description?: string;
-  reflection?: ReflectionData;
-  notified?: boolean;
   actionable?: boolean;
-  notificationScheduled?: boolean;
-  habitSuggestions?: HabitSuggestion[];
-  energyOptimal?: boolean; // true if scheduled at optimal energy time
-  recurringId?: string; // identifier for grouping recurring bubbles
+  reflection?: {
+    productivity?: number; // 1-5 scale
+    energy?: number; // 1-5 scale
+    focus?: number; // 1-5 scale
+    notes?: string;
+  };
+  recurringId?: string;
+  isRecurring?: boolean;
+  recurringPattern?: {
+    frequency: 'daily' | 'weekly' | 'monthly';
+    selectedDays?: number[]; // 0-6 for Sunday-Saturday
+    endDate?: Date;
+  };
+  // Habit stacking properties
+  isHabitStacking?: boolean;
+  habitStackingTarget?: string; // ID of the target bubble to stack with
+  stackBefore?: boolean; // true = before target, false = after target
 }
 
 export interface BubbleTemplate {
