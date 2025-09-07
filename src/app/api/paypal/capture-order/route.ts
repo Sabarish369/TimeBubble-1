@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
 import { capturePayPalOrder, isPayPalConfigured } from '@/lib/paypal';
+import { safeVerifyIdToken, safeUpgradeUserToPro, safeLogPaymentEvent, isFirebaseAdminConfigured } from '@/lib/firebase-utils';
 
 // Import getAccessToken function
 async function getAccessToken(): Promise<string> {
@@ -24,32 +22,6 @@ async function getAccessToken(): Promise<string> {
   return data.access_token as string;
 }
 
-// Initialize Firebase Admin
-if (!getApps().length) {
-  try {
-    const serviceAccount = {
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    };
-    
-    if (serviceAccount.projectId && serviceAccount.privateKey && serviceAccount.clientEmail) {
-      initializeApp({ 
-        credential: cert(serviceAccount),
-        projectId: serviceAccount.projectId
-      });
-      console.log('Firebase Admin initialized successfully');
-    } else {
-      console.error('Firebase Admin configuration is incomplete:', {
-        hasProjectId: !!serviceAccount.projectId,
-        hasPrivateKey: !!serviceAccount.privateKey,
-        hasClientEmail: !!serviceAccount.clientEmail
-      });
-    }
-  } catch (e) {
-    console.error('Firebase Admin initialization error:', e);
-  }
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -60,10 +32,20 @@ export async function POST(req: NextRequest) {
     const { idToken, orderId } = await req.json();
     if (!idToken || !orderId) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
 
+    // Check Firebase Admin configuration
+    if (!isFirebaseAdminConfigured()) {
+      console.error('Firebase Admin not properly configured');
+      return NextResponse.json({ error: 'Service temporarily unavailable' }, { status: 503 });
+    }
+
     // Verify Firebase ID token
-    const auth = getAuth();
-    const decoded = await auth.verifyIdToken(idToken);
-    const userId = decoded.uid;
+    const userAuth = await safeVerifyIdToken(idToken);
+    if (!userAuth) {
+      console.error('Firebase Auth verification failed');
+      return NextResponse.json({ error: 'Invalid authentication token' }, { status: 401 });
+    }
+    
+    const userId = userAuth.uid;
 
     // Capture order (handle already captured orders)
     let capture;
@@ -137,21 +119,26 @@ export async function POST(req: NextRequest) {
     
     console.log(`Payment validation passed - Successful: ${successful}, Sandbox bypass: ${sandboxBypass}`);
 
+    // Log payment event
+    await safeLogPaymentEvent('paypal_capture_success', {
+      orderId,
+      userId,
+      amount: captures[0]?.amount || 'unknown',
+      captureId: captures[0]?.id || 'unknown'
+    });
+
     // Mark user as Pro
-    try {
-      const db = getFirestore();
-      await db.collection('users').doc(userId).set({ isPro: true }, { merge: true });
-      await db.collection('paypal_orders').doc(orderId).set({
-        userId,
-        status: 'COMPLETED',
-        completedAt: new Date().toISOString(),
-        raw: capture,
-      }, { merge: true });
-    } catch (firebaseError: any) {
-      console.error('Firebase error:', firebaseError);
-      // If Firebase fails, still return success since PayPal payment was successful
-      // The frontend will handle user upgrade through client-side Firebase
-      console.log('PayPal payment successful, but Firebase admin failed. Client will handle user upgrade.');
+    const upgradeSuccess = await safeUpgradeUserToPro(userId, {
+      orderId,
+      provider: 'paypal',
+      status: 'COMPLETED',
+      raw: capture,
+    });
+    
+    if (upgradeSuccess) {
+      console.log('User successfully upgraded to Pro via PayPal');
+    } else {
+      console.warn('PayPal payment successful, but user upgrade failed. Client will handle upgrade.');
     }
 
     return NextResponse.json({ success: true });

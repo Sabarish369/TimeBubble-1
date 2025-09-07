@@ -109,12 +109,28 @@ export default function UpgradePage() {
     }, [deadline]);
 
     const handleUpgrade = async () => {
-        if (!user) return;
+        console.log('Upgrade button clicked');
+        console.log('User:', user);
+        
+        if (!user) {
+            console.error('No user found');
+            alert('Please log in to upgrade');
+            return;
+        }
+        
         setIsLoading(true);
+        console.log('Starting upgrade process...');
+        
         try {
+            console.log('Getting ID token...');
             const idToken = await auth.currentUser?.getIdToken();
-            if (!idToken) throw new Error('Not authenticated');
+            console.log('ID token obtained:', !!idToken);
+            
+            if (!idToken) {
+                throw new Error('Not authenticated - please log in again');
+            }
 
+            console.log('Creating PayPal order...');
             // Create PayPal order
             const createRes = await fetch('/api/paypal/create-order', {
                 method: 'POST',
@@ -122,16 +138,22 @@ export default function UpgradePage() {
                 body: JSON.stringify({ idToken }),
             });
             
+            console.log('PayPal create response status:', createRes.status);
+            
             if (!createRes.ok) {
                 const err = await createRes.json().catch(() => ({}));
+                console.error('PayPal create error:', err);
                 throw new Error(err.error || 'Failed to create PayPal order');
             }
             
             const { orderId, approvalUrl } = await createRes.json();
+            console.log('PayPal order created:', { orderId, approvalUrl: !!approvalUrl });
+            
             if (!orderId || !approvalUrl) {
                 throw new Error('PayPal approval URL not received');
             }
 
+            console.log('Redirecting to PayPal...');
             // Redirect to PayPal for approval
             window.location.href = approvalUrl;
 

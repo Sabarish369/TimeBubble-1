@@ -18,15 +18,44 @@ let auth: Auth;
 let db: Firestore;
 let messaging: Messaging | null = null;
 
-if (!firebaseConfig.apiKey) {
-    console.error("Firebase config is missing or invalid. Please ensure your NEXT_PUBLIC_FIREBASE environment variables are set correctly in your .env file.");
+// Validate Firebase configuration
+const isConfigValid = firebaseConfig.apiKey && 
+                     firebaseConfig.authDomain && 
+                     firebaseConfig.projectId && 
+                     firebaseConfig.storageBucket && 
+                     firebaseConfig.messagingSenderId && 
+                     firebaseConfig.appId;
+
+if (!isConfigValid) {
+    console.error("Firebase config is missing or invalid:", {
+        hasApiKey: !!firebaseConfig.apiKey,
+        hasAuthDomain: !!firebaseConfig.authDomain,
+        hasProjectId: !!firebaseConfig.projectId,
+        hasStorageBucket: !!firebaseConfig.storageBucket,
+        hasMessagingSenderId: !!firebaseConfig.messagingSenderId,
+        hasAppId: !!firebaseConfig.appId
+    });
+    console.error("Please ensure your NEXT_PUBLIC_FIREBASE environment variables are set correctly.");
+    
+    // Create mock objects to prevent runtime errors
     app = {} as FirebaseApp;
     auth = {} as Auth;
     db = {} as Firestore;
 } else {
-    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
+    try {
+        // Initialize Firebase app safely
+        app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+        
+        console.log('Firebase client initialized successfully for project:', firebaseConfig.projectId);
+    } catch (error: any) {
+        console.error('Firebase client initialization error:', error);
+        // Create mock objects to prevent runtime errors
+        app = {} as FirebaseApp;
+        auth = {} as Auth;
+        db = {} as Firestore;
+    }
 
     if (typeof window !== 'undefined') {
         // Set persistence for Auth

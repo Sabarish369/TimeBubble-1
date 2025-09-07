@@ -1,30 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-
-// Initialize Firebase Admin
-if (!getApps().length) {
-  try {
-    const serviceAccount = {
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    } as any;
-    
-    if (serviceAccount.projectId && serviceAccount.privateKey && serviceAccount.clientEmail) {
-      initializeApp({ credential: cert(serviceAccount) });
-      console.log('Firebase Admin SDK initialized successfully for feedback.');
-    } else {
-      console.error('Firebase Admin credentials missing:', {
-        hasProjectId: !!serviceAccount.projectId,
-        hasPrivateKey: !!serviceAccount.privateKey,
-        hasClientEmail: !!serviceAccount.clientEmail
-      });
-    }
-  } catch (e) {
-    console.error('Firebase Admin init error (feedback):', e);
-  }
-}
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,6 +7,14 @@ export async function POST(req: NextRequest) {
     
     if (!message || message.trim().length === 0) {
       return NextResponse.json({ error: 'Feedback message is required' }, { status: 400 });
+    }
+
+    // Initialize Firebase Admin
+    const { db } = getFirebaseAdmin();
+    
+    if (!db) {
+      console.error('Firebase Admin not available, cannot save feedback');
+      return NextResponse.json({ error: 'Service temporarily unavailable' }, { status: 503 });
     }
 
     const feedbackData = {
@@ -42,7 +25,6 @@ export async function POST(req: NextRequest) {
       status: 'new'
     };
 
-    const db = getFirestore();
     await db.collection('feedback').add(feedbackData);
 
     return NextResponse.json({ 

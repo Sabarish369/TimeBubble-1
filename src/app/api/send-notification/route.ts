@@ -1,41 +1,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { getMessaging } from 'firebase-admin/messaging';
-import { getFirestore } from 'firebase-admin/firestore';
-
-// Standardized Firebase Admin SDK initialization
-if (!getApps().length) {
-  try {
-    const serviceAccount = {
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    };
-    
-    if (!serviceAccount.projectId || !serviceAccount.privateKey || !serviceAccount.clientEmail) {
-      throw new Error('Firebase Admin SDK credentials are not fully configured in environment variables.');
-    }
-
-    initializeApp({
-      credential: cert(serviceAccount),
-    });
-    console.log('Firebase Admin SDK initialized successfully for notifications.');
-  } catch (error: any) {
-    console.error('Firebase Admin initialization error:', error.message);
-  }
-}
 
 export async function POST(req: NextRequest) {
-  if (!getApps().length) {
-    console.error('Notification failed because Firebase Admin SDK is not initialized.');
-    // Simulate success for development if keys are missing, to not block frontend.
-    const { title, body } = await req.json();
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Notification would be sent (Admin SDK not configured)',
-      simulatedPayload: { notification: { title, body } }
-    });
+  // Initialize Firebase Admin
+  const { auth, db, messaging } = initializeFirebaseAdmin();
+  
+  if (!auth || !db || !messaging) {
+    console.error('Firebase Admin not available, cannot send notifications');
+    return NextResponse.json({ error: 'Service temporarily unavailable' }, { status: 503 });
   }
 
   try {
@@ -46,8 +20,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get user's FCM token from Firestore
-    const adminDb = getFirestore();
-    const userDoc = await adminDb.collection('users').doc(userId).get();
+    const userDoc = await db.collection('users').doc(userId).get();
     
     if (!userDoc.exists) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -83,7 +56,6 @@ export async function POST(req: NextRequest) {
     };
 
     // Send the notification
-    const messaging = getMessaging();
     const response = await messaging.send(message);
       
     console.log('Successfully sent notification:', response);
