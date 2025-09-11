@@ -44,7 +44,29 @@ export function DailySidebarTip() {
       duration: b.duration,
       startTime: format(new Date(b.startTime), 'HH:mm')
     })));
-    return btoa(scheduleString).slice(0, 16); // Short hash
+    
+    // Use TextEncoder to handle Unicode characters properly
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(scheduleString);
+      
+      // Create a simple hash from the byte array
+      let hash = 0;
+      for (let i = 0; i < data.length; i++) {
+        hash = ((hash << 5) - hash + data[i]) & 0xffffffff;
+      }
+      
+      // Convert to base36 for a shorter string
+      return Math.abs(hash).toString(36).slice(0, 16);
+    } catch (error) {
+      // Fallback to a simple string hash if TextEncoder fails
+      let hash = 0;
+      for (let i = 0; i < scheduleString.length; i++) {
+        const char = scheduleString.charCodeAt(i);
+        hash = ((hash << 5) - hash + char) & 0xffffffff;
+      }
+      return Math.abs(hash).toString(36).slice(0, 16);
+    }
   }, [timeBlocks]);
 
   const shouldRegenerateTip = useCallback(() => {
@@ -162,12 +184,22 @@ export function DailySidebarTip() {
     }
   }, [currentDate, isClient, isPro, geminiApiKey]);
 
-  // Smart schedule change detection - only refetch if schedule actually changed
+  // Debounced schedule change detection - only refetch after inactivity period
   useEffect(() => {
     if (isClient && isPro && geminiApiKey && hasFetchedRef.current && tip) {
       if (shouldRegenerateTip()) {
-        console.log('Schedule changed significantly, regenerating tip');
-        fetchTip(true);
+        console.log('Schedule changed significantly, will regenerate tip after inactivity period');
+        
+        // Clear any existing timeout
+        const timeoutId = setTimeout(() => {
+          console.log('Inactivity period reached, regenerating tip');
+          fetchTip(true);
+        }, 3000); // Wait 3 seconds of inactivity before regenerating
+        
+        // Store timeout ID for cleanup
+        return () => {
+          clearTimeout(timeoutId);
+        };
       }
     }
   }, [timeBlocks, isClient, isPro, geminiApiKey, tip, shouldRegenerateTip, fetchTip]);

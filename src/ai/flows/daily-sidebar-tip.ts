@@ -37,6 +37,11 @@ function getTimeOfDay(startTime: string): string {
 
 function getCachedTipBySignature(signature: string): string | null {
   try {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return null;
+    }
+    
     const cached = localStorage.getItem(CACHE_KEY_PREFIX + signature);
     if (cached) {
       const { tip, timestamp } = JSON.parse(cached);
@@ -53,6 +58,11 @@ function getCachedTipBySignature(signature: string): string | null {
 
 function cacheScheduleTip(signature: string, tip: string): void {
   try {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return;
+    }
+    
     localStorage.setItem(CACHE_KEY_PREFIX + signature, JSON.stringify({
       tip,
       timestamp: Date.now()

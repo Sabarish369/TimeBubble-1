@@ -7,7 +7,7 @@ import type { BubbleCategory, BubbleTemplate } from '@/types';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { Button } from './ui/button';
 import { TemplateModal } from './template-modal';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +28,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 import { ProModal } from './pro-modal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
+import { GhostBubble } from './ghost-bubble';
 
 const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   work: Briefcase,
@@ -60,6 +61,18 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isMobile = useIsMobile();
   const { toast } = useToast();
 
+  // Ghost bubble state for drag preview
+  const [ghostBubble, setGhostBubble] = useState<{
+    template: BubbleTemplate;
+    position: { x: number; y: number };
+    isVisible: boolean;
+  } | null>(null);
+  
+  // Store current drag template and position refs for performance
+  const currentDragTemplate = useRef<BubbleTemplate | null>(null);
+  const ghostPosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const animationFrameId = useRef<number | null>(null);
+
   const allTemplates = [...defaultTemplates.map(t => {
     const userOverride = templates.find(ut => ut.id === t.id);
     return userOverride ? { ...t, ...userOverride, isDefault: true } : t;
@@ -88,6 +101,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     };
     e.dataTransfer.setData('application/json', JSON.stringify(templateData));
 
+    // Store the template for ghost bubble
+    currentDragTemplate.current = template;
+
     // Close sidebar on mobile when drag starts
     if (isMobile) {
       onClose();
@@ -101,58 +117,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     target.style.transition = 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
     target.classList.add('dragging-source');
 
-    // Create a simpler, more compatible drag image
-    const dragImage = document.createElement('div');
-    dragImage.style.cssText = `
-      position: absolute;
-      top: -1000px;
-      left: -1000px;
-      width: 280px;
-      height: ${Math.max(60, template.duration)}px;
-      background: linear-gradient(135deg, 
-        hsl(var(--bubble-${template.color}) / 0.3) 0%, 
-        hsl(var(--bubble-${template.color}) / 0.2) 50%, 
-        hsl(var(--bubble-${template.color}) / 0.25) 100%);
-      border: 2px dashed hsl(var(--bubble-${template.color}) / 0.6);
-      border-radius: 12px;
-      box-shadow: 0 0 20px hsl(var(--bubble-${template.color}) / 0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: 500;
-      font-size: 14px;
-      text-align: center;
-      padding: 10px;
-      z-index: 10000;
-      pointer-events: none;
-    `;
-    
-    dragImage.innerHTML = `
-      <div style="display: flex; flex-direction: column; align-items: center;">
-        <div>${template.title}</div>
-        <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">${template.duration} min</div>
-      </div>
-    `;
-    
-    document.body.appendChild(dragImage);
-    
-    // For better cross-browser compatibility, we'll use the element itself as the drag image
-    // but with a fallback for browsers that don't support custom drag images properly
-    try {
-      e.dataTransfer.setDragImage(dragImage, dragImage.offsetWidth / 2, dragImage.offsetHeight / 2);
-    } catch (error) {
-      // Fallback: Some browsers (like Brave) might not support custom drag images properly
-      // In this case, we'll rely on the browser's default ghost image
-      console.warn('Custom drag image not supported, using browser default');
-    }
+    // Hide the default drag image by creating a transparent 1x1 pixel image
+    const emptyImg = new Image();
+    emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
+    e.dataTransfer.setDragImage(emptyImg, 0, 0);
 
-    // Clean up the drag image after a short delay
-    setTimeout(() => {
-      if (document.body.contains(dragImage)) {
-        document.body.removeChild(dragImage);
-      }
-    }, 100);
+    // Initialize ghost bubble
+    const scrollX = window.scrollX || window.pageXOffset;
+    const scrollY = window.scrollY || window.pageYOffset;
+    const x = e.clientX + scrollX;
+    const y = e.clientY + scrollY;
+    
+    setGhostBubble({
+      template,
+      position: { x, y },
+      isVisible: true
+    });
   };
 
   const handleDragEnd = (e: DragEvent<HTMLDivElement>) => {
@@ -173,6 +153,91 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       target.style.opacity = '';
       target.style.transition = '';
     }, 400);
+
+    // Clean up ghost bubble
+    setGhostBubble(null);
+    currentDragTemplate.current = null;
+  };
+
+  // Optimized position update function
+  const updateGhostPosition = useRef((x: number, y: number) => {
+    ghostPosition.current = { x, y };
+    
+    if (animationFrameId.current) {
+      cancelAnimationFrame(animationFrameId.current);
+    }
+    
+    animationFrameId.current = requestAnimationFrame(() => {
+      setGhostBubble(prev => {
+        if (!prev) return null;
+        return { ...prev, position: ghostPosition.current };
+      });
+    });
+  });
+
+  // Global drag tracking for drag operations
+  useEffect(() => {
+    const handleGlobalDrag = (e: Event) => {
+      const dragEvent = e as globalThis.DragEvent;
+      if (currentDragTemplate.current && dragEvent.clientX !== 0 && dragEvent.clientY !== 0) {
+        dragEvent.preventDefault();
+        const scrollX = window.scrollX || window.pageXOffset;
+        const scrollY = window.scrollY || window.pageYOffset;
+        
+        const x = dragEvent.clientX + scrollX;
+        const y = dragEvent.clientY + scrollY;
+        
+        updateGhostPosition.current(x, y);
+      }
+    };
+
+    const handleGlobalDragOver = (e: Event) => {
+      const dragEvent = e as globalThis.DragEvent;
+      if (currentDragTemplate.current) {
+        dragEvent.preventDefault();
+        const scrollX = window.scrollX || window.pageXOffset;
+        const scrollY = window.scrollY || window.pageYOffset;
+        
+        const x = dragEvent.clientX + scrollX;
+        const y = dragEvent.clientY + scrollY;
+        
+        updateGhostPosition.current(x, y);
+      }
+    };
+
+    if (currentDragTemplate.current) {
+      document.addEventListener('drag', handleGlobalDrag, { passive: false });
+      document.addEventListener('dragover', handleGlobalDragOver, { passive: false });
+    }
+
+    return () => {
+      document.removeEventListener('drag', handleGlobalDrag);
+      document.removeEventListener('dragover', handleGlobalDragOver);
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+    };
+  }, [ghostBubble]);
+
+  // Track mouse movement for ghost bubble
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (ghostBubble && currentDragTemplate.current) {
+      const scrollX = window.scrollX || window.pageXOffset;
+      const scrollY = window.scrollY || window.pageYOffset;
+      
+      const x = e.clientX + scrollX;
+      const y = e.clientY + scrollY;
+      
+      setGhostBubble(prev => prev ? { ...prev, position: { x, y } } : null);
+    }
+  };
+
+  // Handle mouse leave to hide ghost bubble when leaving sidebar
+  const handleMouseLeave = () => {
+    if (ghostBubble && currentDragTemplate.current) {
+      // Don't hide immediately, let the timeline handle it
+      // setGhostBubble(null);
+    }
   };
 
   const handleOpenCreateTemplateModal = () => {
@@ -210,6 +275,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         !isMobile && "translate-x-0" // Always show on desktop
       )}
       style={{ width: `${SIDEBAR_WIDTH}px` }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
     >
       <DailySidebarTip />
 
@@ -324,6 +391,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       onClose={() => setIsMissedTasksDrawerOpen(false)}
     />
     <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
+    
+    {/* Ghost Bubble for drag preview */}
+    {ghostBubble && (
+      <GhostBubble
+        template={ghostBubble.template}
+        position={ghostBubble.position}
+        isVisible={ghostBubble.isVisible}
+      />
+    )}
     </>
   );
 }

@@ -25,8 +25,12 @@ async function getAccessToken(): Promise<string> {
   return data.access_token as string;
 }
 
-export async function createPayPalOrder(params: { amount: string; currency?: string; description?: string; referenceId: string; }): Promise<{ id: string; approvalUrl: string }> {
+export async function createPayPalOrder(params: { amount: string; currency?: string; description?: string; referenceId: string; origin?: string; }): Promise<{ id: string; approvalUrl: string }> {
   const accessToken = await getAccessToken();
+  
+  // Use provided origin, environment variable, or detect from headers
+  const siteUrl = params.origin || process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+  
   const res = await fetch(`${baseUrl}/v2/checkout/orders`, {
     method: 'POST',
     headers: {
@@ -48,8 +52,8 @@ export async function createPayPalOrder(params: { amount: string; currency?: str
       application_context: {
         brand_name: 'TimeBubble',
         user_action: 'PAY_NOW',
-        return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/upgrade/success`,
-        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/upgrade`,
+        return_url: `${siteUrl}/upgrade/success`,
+        cancel_url: `${siteUrl}/upgrade`,
       },
     }),
     // @ts-ignore

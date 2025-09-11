@@ -49,6 +49,11 @@ body {
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 
+    /* Enhanced bubble animations and effects */
+    --bubble-glow-intensity: 0.3;
+    --bubble-hover-scale: 1.02;
+    --bubble-drag-scale: 1.03;
+
     --bubble-mint: 166 57% 77%;
     --bubble-lavender: 255 47% 84%;
     --bubble-peach: 28 100% 86%;
@@ -64,6 +69,28 @@ body {
     --bubble-teal: 175 60% 80%;
     --bubble-crimson: 350 80% 85%;
     --bubble-amber: 40 90% 80%;
+    
+    /* Additional Pro Colors */
+    --bubble-emerald: 140 70% 75%;
+    --bubble-sapphire: 220 85% 80%;
+    --bubble-ruby: 0 85% 75%;
+    --bubble-topaz: 35 95% 75%;
+    --bubble-amethyst: 270 75% 80%;
+    --bubble-turquoise: 185 65% 75%;
+    --bubble-magenta: 320 80% 80%;
+    --bubble-chartreuse: 75 85% 75%;
+    --bubble-bronze: 25 65% 70%;
+    --bubble-platinum: 210 15% 85%;
+    --bubble-rose: 340 75% 80%;
+    --bubble-violet: 260 70% 80%;
+    --bubble-gold: 45 100% 75%;
+    --bubble-silver: 210 20% 80%;
+    --bubble-copper: 15 75% 70%;
+    --bubble-jade: 160 70% 70%;
+    --bubble-onyx: 220 25% 25%;
+    --bubble-pearl: 30 20% 90%;
+    --bubble-opal: 200 60% 85%;
+    --bubble-diamond: 210 30% 95%;
   }
   .dark {
     --background: 222 84% 4.9%; /* Rich dark background */
@@ -111,6 +138,28 @@ body {
     --bubble-teal: 175 60% 35%;
     --bubble-crimson: 350 70% 40%;
     --bubble-amber: 40 80% 35%;
+    
+    /* Additional Pro Colors - Dark Mode */
+    --bubble-emerald: 140 70% 35%;
+    --bubble-sapphire: 220 85% 40%;
+    --bubble-ruby: 0 85% 35%;
+    --bubble-topaz: 35 95% 35%;
+    --bubble-amethyst: 270 75% 40%;
+    --bubble-turquoise: 185 65% 35%;
+    --bubble-magenta: 320 80% 40%;
+    --bubble-chartreuse: 75 85% 35%;
+    --bubble-bronze: 25 65% 30%;
+    --bubble-platinum: 210 15% 45%;
+    --bubble-rose: 340 75% 40%;
+    --bubble-violet: 260 70% 40%;
+    --bubble-gold: 45 100% 35%;
+    --bubble-silver: 210 20% 40%;
+    --bubble-copper: 15 75% 30%;
+    --bubble-jade: 160 70% 30%;
+    --bubble-onyx: 220 25% 15%;
+    --bubble-pearl: 30 20% 50%;
+    --bubble-opal: 200 60% 45%;
+    --bubble-diamond: 210 30% 55%;
   }
 }
 
@@ -294,43 +343,172 @@ body {
     }
   }
 
-  /* Enhanced glow animation for active bubble */
+  /* Enhanced magical glow animation for active bubble */
   .is-glowing {
-    animation: activeBubbleGlow 3s infinite ease-in-out;
     position: relative;
-    /* Allow hover transform but prevent glow scaling */
     box-sizing: border-box;
+    transition: all 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    animation: magicalBubbleGlow 6s infinite cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
   
-  /* Override transform only for the glow animation, not hover */
-  .is-glowing:not(:hover) {
-    transform: none !important;
+  /* Magical gradient glow overlay */
+  .is-glowing::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+    background: linear-gradient(45deg, 
+      hsl(var(--bubble-glow-color) / 0.3),
+      hsl(var(--primary) / 0.2),
+      hsl(var(--accent) / 0.25),
+      hsl(var(--bubble-glow-color) / 0.3)
+    );
+    background-size: 300% 300%;
+    animation: gradientShimmer 5s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  
+  .is-glowing::before {
+    opacity: 1;
+  }
+  
+  /* Sparkle effect overlay */
+  .is-glowing::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 60%),
+                radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.25) 0%, transparent 60%),
+                radial-gradient(circle at 40% 80%, rgba(255, 255, 255, 0.2) 0%, transparent 60%);
+    animation: sparkleShift 4s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  
+  .is-glowing::after {
+    opacity: 1;
   }
 
-  @keyframes activeBubbleGlow {
+  @keyframes magicalBubbleGlow {
     0% {
       box-shadow: 
-        0 0 8px 1px hsl(var(--bubble-glow-color) / 0.6),
-        0 0 16px 2px hsl(var(--bubble-glow-color) / 0.4),
-        0 0 24px 3px hsl(var(--bubble-glow-color) / 0.2),
-        0 0 32px 4px hsl(var(--bubble-glow-color) / 0.1);
+        0 0 12px 2px hsl(var(--bubble-glow-color) / 0.45),
+        0 0 22px 4px hsl(var(--bubble-glow-color) / 0.35),
+        0 0 32px 6px hsl(var(--primary) / 0.25),
+        0 0 42px 8px hsl(var(--accent) / 0.2),
+        0 0 62px 12px hsl(var(--bubble-glow-color) / 0.15);
+      filter: brightness(1.05);
+    }
+    16.67% {
+      box-shadow: 
+        0 0 14px 2.5px hsl(var(--primary) / 0.5),
+        0 0 24px 4.5px hsl(var(--bubble-glow-color) / 0.4),
+        0 0 34px 6.5px hsl(var(--accent) / 0.3),
+        0 0 46px 9px hsl(var(--primary) / 0.22),
+        0 0 66px 13px hsl(var(--bubble-glow-color) / 0.18);
+      filter: brightness(1.08);
+    }
+    33.33% {
+      box-shadow: 
+        0 0 16px 3px hsl(var(--accent) / 0.55),
+        0 0 26px 5px hsl(var(--primary) / 0.45),
+        0 0 36px 7px hsl(var(--bubble-glow-color) / 0.35),
+        0 0 50px 10px hsl(var(--accent) / 0.25),
+        0 0 70px 14px hsl(var(--primary) / 0.2);
+      filter: brightness(1.11);
     }
     50% {
       box-shadow: 
-        0 0 12px 2px hsl(var(--bubble-glow-color) / 0.8),
-        0 0 24px 4px hsl(var(--bubble-glow-color) / 0.6),
-        0 0 36px 6px hsl(var(--bubble-glow-color) / 0.4),
-        0 0 48px 8px hsl(var(--bubble-glow-color) / 0.2);
+        0 0 18px 3.5px hsl(var(--bubble-glow-color) / 0.6),
+        0 0 28px 5.5px hsl(var(--accent) / 0.5),
+        0 0 38px 7.5px hsl(var(--primary) / 0.4),
+        0 0 54px 11px hsl(var(--bubble-glow-color) / 0.28),
+        0 0 74px 15px hsl(var(--accent) / 0.22);
+      filter: brightness(1.14);
+    }
+    66.67% {
+      box-shadow: 
+        0 0 17px 3.2px hsl(var(--primary) / 0.58),
+        0 0 27px 5.2px hsl(var(--bubble-glow-color) / 0.48),
+        0 0 37px 7.2px hsl(var(--accent) / 0.38),
+        0 0 52px 10.5px hsl(var(--primary) / 0.26),
+        0 0 72px 14.5px hsl(var(--bubble-glow-color) / 0.21);
+      filter: brightness(1.1);
+    }
+    83.33% {
+      box-shadow: 
+        0 0 15px 2.8px hsl(var(--accent) / 0.52),
+        0 0 25px 4.8px hsl(var(--primary) / 0.42),
+        0 0 35px 6.8px hsl(var(--bubble-glow-color) / 0.32),
+        0 0 48px 9.5px hsl(var(--accent) / 0.24),
+        0 0 68px 13.5px hsl(var(--primary) / 0.19);
+      filter: brightness(1.07);
     }
     100% {
       box-shadow: 
-        0 0 8px 1px hsl(var(--bubble-glow-color) / 0.6),
-        0 0 16px 2px hsl(var(--bubble-glow-color) / 0.4),
-        0 0 24px 3px hsl(var(--bubble-glow-color) / 0.2),
-        0 0 32px 4px hsl(var(--bubble-glow-color) / 0.1);
+        0 0 12px 2px hsl(var(--bubble-glow-color) / 0.45),
+        0 0 22px 4px hsl(var(--bubble-glow-color) / 0.35),
+        0 0 32px 6px hsl(var(--primary) / 0.25),
+        0 0 42px 8px hsl(var(--accent) / 0.2),
+        0 0 62px 12px hsl(var(--bubble-glow-color) / 0.15);
+      filter: brightness(1.05);
     }
   }
-
+  
+  @keyframes gradientShimmer {
+    0% {
+      background-position: 0% 50%;
+      opacity: 0.6;
+    }
+    25% {
+      background-position: 25% 50%;
+      opacity: 0.75;
+    }
+    50% {
+      background-position: 100% 50%;
+      opacity: 0.85;
+    }
+    75% {
+      background-position: 75% 50%;
+      opacity: 0.75;
+    }
+    100% {
+      background-position: 0% 50%;
+      opacity: 0.6;
+    }
+  }
+  
+  @keyframes sparkleShift {
+    0% {
+      opacity: 0.3;
+      transform: scale(1);
+    }
+    20% {
+      opacity: 0.45;
+      transform: scale(1.01);
+    }
+    40% {
+      opacity: 0.6;
+      transform: scale(1.02);
+    }
+    60% {
+      opacity: 0.55;
+      transform: scale(1.015);
+    }
+    80% {
+      opacity: 0.4;
+      transform: scale(0.99);
+    }
+    100% {
+      opacity: 0.3;
+      transform: scale(1);
+    }
+  }
 
   /* Pro header subtle gradient background */
   .pro-header-gradient {
@@ -3091,5 +3269,43 @@ body {
 
   .celebration-aurora {
     animation: celebrationAurora 2s ease-out forwards;
+  }
+
+  /* Enhanced bubble animations */
+  @keyframes bubbleFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-2px) scale(1.01); }
+  }
+
+  @keyframes bubbleGlow {
+    0%, 100% { 
+      filter: drop-shadow(0 4px 15px rgba(0, 0, 0, 0.1));
+    }
+    50% { 
+      box-shadow: 0 0 0 2px var(--bubble-glow-color, rgba(59, 130, 246, 0.3));
+    }
+  }
+
+  .time-bubble {
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .time-bubble.is-glowing {
+    animation: float 8s ease-in-out infinite, magicalBubbleGlow 4s infinite ease-in-out;
+  }
+
+  .time-bubble.hover-active {
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .time-bubble.drag-active {
+    animation: none;
+  }
+
+  /* Snap animation for bubble placement */
+  @keyframes snapInPlace {
+    0% { transform: scale(1.05); }
+    50% { transform: scale(0.98); }
+    100% { transform: scale(1); }
   }
 }

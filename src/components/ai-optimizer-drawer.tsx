@@ -570,7 +570,29 @@ export function AIOptimizerDrawer() {
         <HabitStackingModal 
           isOpen={isHabitStackingOpen} 
           onClose={() => setIsHabitStackingOpen(false)}
-          routineBubbles={timeBlocks.filter(b => b.category === 'personal' || b.title.toLowerCase().includes('routine'))}
+          routineBubbles={timeBlocks.filter(b => {
+            const title = b.title.toLowerCase();
+            const category = b.category.toLowerCase();
+            
+            // Filter for routine-like activities
+            return (
+              category === 'personal' ||
+              category === 'health' ||
+              category === 'work' ||
+              title.includes('routine') ||
+              title.includes('workout') ||
+              title.includes('exercise') ||
+              title.includes('meeting') ||
+              title.includes('breakfast') ||
+              title.includes('lunch') ||
+              title.includes('dinner') ||
+              title.includes('commute') ||
+              title.includes('shower') ||
+              title.includes('meditation') ||
+              title.includes('reading') ||
+              b.duration >= 15 // Activities longer than 15 minutes are good anchors
+            );
+          })}
         />
       )}
     </>

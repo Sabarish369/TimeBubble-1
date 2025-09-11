@@ -57,23 +57,6 @@ const getDailySidebarTip = async (input: any) => {
   return await response.json();
 };
 
-const getHabitStackingSuggestions = async (input: any) => {
-  const response = await fetch('/api/habit-stacking', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(input),
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Failed to fetch habit stacking suggestions');
-  }
-  
-  return await response.json();
-};
-
 const getEnergyOptimizationSuggestions = async (input: any) => {
   const response = await fetch('/api/energy-optimization', {
     method: 'POST',

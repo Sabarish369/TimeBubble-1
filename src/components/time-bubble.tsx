@@ -321,10 +321,18 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
   const bubbleStyle: React.CSSProperties = {
     top: `${top}px`,
     height: `${height}px`,
-    transform: isDragging ? `rotate(${Math.sin(Date.now() * 0.002) * 0.2}deg)` : isHovering ? 'scale(1.005)' : 'none',
-    transition: isDragging || isResizing ? 'none' : 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+    transform: isDragging 
+      ? `rotate(${Math.sin(Date.now() * 0.002) * 0.2}deg) scale(1.01)` 
+      : isHovering 
+        ? 'scale(1.005) translateY(-0.5px)' 
+        : 'scale(1)',
+    transition: isDragging || isResizing ? 'none' : 'all 0.2s ease-out',
     zIndex: isDragging ? 40 : isHovering ? 20 : 'auto',
-    filter: isDragging ? 'drop-shadow(0 10px 25px rgba(0, 0, 0, 0.3))' : 'none',
+    filter: isDragging 
+      ? `drop-shadow(0 8px 20px rgba(0, 0, 0, 0.15))` 
+      : isHovering 
+        ? `drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1))`
+        : `drop-shadow(0 2px 8px rgba(0, 0, 0, 0.08))`,
     overflow: 'hidden',
     // Set the CSS variable for the glow color to match the bubble's color
     '--bubble-glow-color': `var(--bubble-${block.color})`
@@ -421,14 +429,13 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
     <div
       data-bubble-id={block.id}
       className={cn(
-        'absolute left-[50px] md:left-[80px] w-[calc(100%-70px)] md:w-[calc(100%-100px)] rounded-lg p-2 md:p-3 flex flex-col items-start shadow-md time-bubble',
-        'select-none', 
-        'outline outline-1 outline-slate-300/50 dark:outline-slate-700/50',
-        isDragging && 'shadow-2xl cursor-grabbing drag-active time-bubble-dragging',
-        isResizing && 'shadow-xl resize-active',
-        isHovering && !isDragging && !isResizing && 'shadow-lg hover-active',
+        'absolute left-[50px] md:left-[80px] w-[calc(100%-70px)] md:w-[calc(100%-100px)] rounded-xl p-2 md:p-3 flex flex-col items-start time-bubble',
+        'select-none border border-white/10',
+        isDragging && 'cursor-grabbing drag-active time-bubble-dragging',
+        isResizing && 'resize-active',
+        isHovering && !isDragging && !isResizing && 'hover-active',
         showAsCurrent && 'is-glowing',
-        isInteractive && !isDragging && 'cursor-pointer hover:shadow-lg'
+        isInteractive && !isDragging && 'cursor-pointer transition-all duration-200 ease-out'
       )}
       style={bubbleStyle}
       onMouseDown={isInteractive ? handleMouseDown : undefined}
@@ -437,11 +444,12 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
       onClick={isInteractive ? handleClick : undefined}
     >
        <div 
-        className={cn("absolute inset-0 rounded-lg")}
+        className={cn("absolute inset-0 rounded-xl")}
         style={{
           background: block.completed 
-            ? 'linear-gradient(to bottom, hsl(140, 60%, 65%), hsl(140, 60%, 45%))' 
-            : `linear-gradient(to bottom, hsl(var(--bubble-${block.color})), hsl(var(--bubble-${block.color}) / 0.8))`
+            ? 'linear-gradient(135deg, hsl(140, 50%, 65%) 0%, hsl(140, 45%, 55%) 100%)' 
+            : `linear-gradient(135deg, hsl(var(--bubble-${block.color}) / 0.9) 0%, hsl(var(--bubble-${block.color}) / 0.7) 100%)`,
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
         }}
       />
       
@@ -556,22 +564,22 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
       <div className={cn("w-full h-full pointer-events-none relative z-10 flex-1")}>
         {showFullContent ? (
           <div className={cn("flex-grow overflow-hidden flex items-center gap-2 md:gap-3 h-full")}>
-            <Icon className="h-5 w-5 md:h-6 md:w-6 text-slate-700 dark:text-white shrink-0" />
+            <Icon className="h-5 w-5 md:h-6 md:w-6 text-white drop-shadow-sm shrink-0" />
             <div className="flex-1 overflow-hidden">
-              <p className="text-sm md:text-base font-semibold text-slate-800 dark:text-white pointer-events-none truncate">{block.title}</p>
-              <p className="text-xs md:text-sm text-slate-700 dark:text-white/80 pointer-events-none">
+              <p className="text-sm md:text-base font-semibold text-white drop-shadow-sm pointer-events-none truncate">{block.title}</p>
+              <p className="text-xs md:text-sm text-white/90 drop-shadow-sm pointer-events-none">
                 {format(startTimeToDisplay, 'p')} - {format(endTimeToDisplay, 'p')}
               </p>
             </div>
           </div>
         ) : showCompactContent ? (
            <div className={cn("flex-grow overflow-hidden flex items-center gap-2 md:gap-3 h-full")}>
-            <Icon className="h-5 w-5 text-slate-700 dark:text-white shrink-0" />
-            <p className="text-sm font-semibold text-slate-800 dark:text-white pointer-events-none truncate">{block.title}</p>
+            <Icon className="h-5 w-5 text-white drop-shadow-sm shrink-0" />
+            <p className="text-sm font-semibold text-white drop-shadow-sm pointer-events-none truncate">{block.title}</p>
           </div>
         ) : (
           <div className='w-full h-full flex items-center justify-center pointer-events-none'>
-            <p className="text-xs font-semibold text-slate-800 dark:text-white truncate px-2">{block.title}</p>
+            <p className="text-xs font-semibold text-white drop-shadow-sm truncate px-2">{block.title}</p>
           </div>
         )}
       </div>

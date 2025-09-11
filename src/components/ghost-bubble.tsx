@@ -46,18 +46,17 @@ export function GhostBubble({ template, position, isVisible, onDrop }: GhostBubb
   return (
     <div
       className={cn(
-        "fixed pointer-events-none z-[100] transition-all duration-300 ease-out",
+        "fixed pointer-events-none z-[100]",
         isAnimating && "ghost-bubble-visible",
         !isVisible && "opacity-0 scale-95"
       )}
       style={{
         left: position.x,
         top: position.y,
-        width: '280px', // Fixed width for consistency
+        width: '280px',
         height: `${height}px`,
         transform: 'translate(-50%, -50%)',
-        marginLeft: '0', // Reset any inherited margin
-        marginTop: '0', // Reset any inherited margin
+        willChange: 'transform',
       }}
     >
       {/* Ghost bubble background with glow effect */}

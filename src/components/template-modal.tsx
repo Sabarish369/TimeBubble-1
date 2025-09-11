@@ -121,15 +121,17 @@ export function TemplateModal({ isOpen, onClose, template }: TemplateModalProps)
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle>{isEditMode ? 'Edit Template' : 'Create New Template'}</DialogTitle>
             <DialogDescription>
               {isEditMode ? 'Modify your existing time bubble template.' : 'Design a new time bubble template for quick access.'}
             </DialogDescription>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <Form {...form}>
+              <form id="template-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-1">
               <FormField
                 control={form.control}
                 name="title"
@@ -235,12 +237,14 @@ export function TemplateModal({ isOpen, onClose, template }: TemplateModalProps)
                   </FormItem>
                 )}
               />
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
-                <Button type="submit">{isEditMode ? 'Save Changes' : 'Create Template'}</Button>
-              </DialogFooter>
-            </form>
-          </Form>
+              </form>
+            </Form>
+          </div>
+          
+          <DialogFooter className="shrink-0 border-t pt-4">
+            <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
+            <Button type="submit" form="template-form">{isEditMode ? 'Save Changes' : 'Create Template'}</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />

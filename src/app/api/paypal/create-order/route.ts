@@ -27,12 +27,16 @@ export async function POST(req: NextRequest) {
     
     const userId = userAuth.uid;
 
+    // Get the origin from request headers
+    const origin = req.headers.get('origin') || req.headers.get('host') ? `https://${req.headers.get('host')}` : undefined;
+
     // Create order for $29 USD Lifetime Pro
     const { id, approvalUrl } = await createPayPalOrder({
       amount: '29',
       currency: 'USD',
       description: 'TimeBubble Lifetime Pro',
       referenceId: userId,
+      origin,
     });
 
     // Log payment event
