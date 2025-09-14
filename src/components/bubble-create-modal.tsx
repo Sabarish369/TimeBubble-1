@@ -5,14 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
+// Removed Dialog imports - using custom modal implementation
 import {
   Form,
   FormControl,
@@ -34,9 +27,11 @@ import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { BUBBLE_COLORS, DEFAULT_BUBBLE_COLOR, FREE_COLOR_NAMES, PRO_COLOR_NAMES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type { BubbleCategory, BubbleColor } from '@/types';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { CalendarIcon, Lock, Repeat } from 'lucide-react';
+import { useSmartSuggestions } from '@/hooks/use-smart-suggestions';
+import { SmartSuggestionOverlay } from './smart-suggestion-overlay';
 import { format, setHours, setMinutes, startOfDay, getHours, getMinutes, addHours, addDays, isSameDay } from 'date-fns';
 import { Calendar } from './ui/calendar';
 import { useAuth } from '@/context/auth-context';
@@ -95,6 +90,9 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
   const { addBlockOnDate, currentDate } = useTimeBubbles();
   const { isPro } = useAuth();
   const [isProModalOpen, setIsProModalOpen] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+  
+  // Smart suggestions deactivated - using auto-schedule on timeline instead
   
   const form = useForm<CreateFormValues>({
     resolver: zodResolver(createSchema),
@@ -133,6 +131,8 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
         selectedDays: [],
         endDate: undefined,
       });
+      
+      // Auto-schedule suggestions now appear on timeline
     }
   }, [isOpen, initialStartTime, currentDate, form]);
 
@@ -207,20 +207,38 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
     }
   };
 
+  // Suggestion handling moved to timeline auto-schedule feature
+
+  if (!isOpen) return null;
+
   return (
     <>
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
-        <DialogHeader className="shrink-0">
-          <DialogTitle>Create New Bubble</DialogTitle>
-          <DialogDescription>
-            Add a new time bubble to your schedule on any day.
-          </DialogDescription>
-        </DialogHeader>
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto" onClick={onClose}>
+      <div 
+        ref={modalRef} 
+        className="bg-background border rounded-lg shadow-lg w-full max-w-lg my-8 flex flex-col max-h-[calc(100vh-4rem)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-6 border-b shrink-0">
+          <div>
+            <h2 className="text-lg font-semibold">Create New Bubble</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Add a new time bubble to your schedule on any day.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 p-1"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
         
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto p-6">
           <Form {...form}>
-            <form id="bubble-create-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-1">
+            <form id="bubble-create-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="title"
@@ -542,14 +560,14 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
           </Form>
         </div>
         
-        <DialogFooter className="shrink-0 border-t pt-4">
+        <div className="flex justify-end gap-3 p-6 border-t shrink-0">
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
           <Button type="submit" form="bubble-create-form">
             {form.watch('isRecurring') ? 'Create Recurring Bubbles' : 'Create Bubble'}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </div>
     <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
     </>
   );

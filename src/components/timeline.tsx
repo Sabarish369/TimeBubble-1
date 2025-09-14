@@ -12,7 +12,9 @@ import { BubbleDetailsModal } from './bubble-details-modal';
 import { RescheduleModal } from './reschedule-modal';
 import { useToast } from '@/hooks/use-toast';
 import { GhostBubble } from './ghost-bubble';
-import { isToday, isPast } from 'date-fns';
+import { SuggestedBubble } from './suggested-bubble';
+import { useAutoSchedule } from '@/hooks/use-auto-schedule';
+import { isToday, isPast, getHours, getMinutes } from 'date-fns';
 
 interface TimelineProps {
   scrollContainerRef: RefObject<HTMLElement>;
@@ -34,6 +36,21 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
   const timelineRef = React.useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
+  // Auto-schedule suggestions
+  const {
+    suggestedBubbles,
+    isAnalyzing,
+    activeSuggestionIndex,
+    showSuggestions,
+    ignoredSuggestions,
+    acceptSuggestion,
+    navigateSuggestions,
+    dismissSuggestion,
+    showSuggestionsOnHover,
+    hideSuggestionsWithDelay,
+    keepSuggestionsVisible
+  } = useAutoSchedule();
+  
   // Ghost bubble state
   const [ghostBubble, setGhostBubble] = React.useState<{
     template: any;
@@ -46,6 +63,50 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
 
   const hourHeight = HOUR_HEIGHT * zoomLevel;
   const pixelsPerMinute = hourHeight / 60;
+  
+  // Handle keyboard navigation for suggestions
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (suggestedBubbles.length === 0 || !showSuggestions) return;
+      
+      switch (e.key) {
+        case 'Tab':
+          e.preventDefault();
+          acceptSuggestion(activeSuggestionIndex);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          navigateSuggestions('up');
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          navigateSuggestions('down');
+          break;
+        case 'Escape':
+          dismissSuggestion(activeSuggestionIndex);
+          break;
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [suggestedBubbles, activeSuggestionIndex, showSuggestions, acceptSuggestion, navigateSuggestions, dismissSuggestion]);
+  
+  // Calculate position and size for suggested bubbles
+  const getSuggestedBubbleStyle = (suggestion: any) => {
+    const startHour = getHours(suggestion.startTime);
+    const startMinute = getMinutes(suggestion.startTime);
+    const top = (startHour * hourHeight) + (startMinute * pixelsPerMinute);
+    const height = suggestion.duration * pixelsPerMinute;
+    
+    return {
+      top: `${top}px`,
+      left: '8px',
+      right: '8px',
+      height: `${Math.max(height, 40)}px`,
+      zIndex: 5
+    };
+  };
 
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -189,6 +250,8 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
       onDoubleClick={handleDoubleClick}
       onDragLeave={handleDragLeave}
       onMouseMove={handleMouseMove}
+      onMouseEnter={showSuggestionsOnHover}
+      onMouseLeave={hideSuggestionsWithDelay}
     >
       <TimelineGrid />
       <CurrentTimeIndicator />
@@ -204,6 +267,51 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
           isVisible={ghostBubble.isVisible}
         />
       )}
+      
+      {/* Suggested Bubbles - only show when hovering or interacting */}
+      {showSuggestions && suggestedBubbles.map((suggestion, index) => {
+        const isIgnored = ignoredSuggestions.has(suggestion.id);
+        return (
+          <div
+            key={suggestion.id}
+            onMouseEnter={keepSuggestionsVisible}
+            onMouseLeave={hideSuggestionsWithDelay}
+          >
+            <SuggestedBubble
+              suggestion={suggestion}
+              isActive={index === activeSuggestionIndex}
+              isIgnored={isIgnored}
+              style={getSuggestedBubbleStyle(suggestion)}
+              onAccept={() => acceptSuggestion(index)}
+              onDismiss={() => dismissSuggestion(index)}
+            />
+          </div>
+        );
+      })}
+      
+      {/* Show ignored suggestions as faded when hovering */}
+      {showSuggestions && Array.from(ignoredSuggestions).map(ignoredId => {
+        // Find if we have the ignored suggestion data (for display purposes)
+        const ignoredSuggestion = suggestedBubbles.find(s => s.id === ignoredId);
+        if (!ignoredSuggestion) return null;
+        
+        return (
+          <div
+            key={`ignored-${ignoredId}`}
+            onMouseEnter={keepSuggestionsVisible}
+            onMouseLeave={hideSuggestionsWithDelay}
+          >
+            <SuggestedBubble
+              suggestion={ignoredSuggestion}
+              isActive={false}
+              isIgnored={true}
+              style={getSuggestedBubbleStyle(ignoredSuggestion)}
+              onAccept={() => {}}
+              onDismiss={() => {}}
+            />
+          </div>
+        );
+      })}
       
       {reflectingBlock && <ReflectionModal />}
       {selectedBlock && <BubbleDetailsModal />}

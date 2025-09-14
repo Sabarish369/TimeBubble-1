@@ -194,7 +194,7 @@ export function DailySidebarTip() {
         const timeoutId = setTimeout(() => {
           console.log('Inactivity period reached, regenerating tip');
           fetchTip(true);
-        }, 3000); // Wait 3 seconds of inactivity before regenerating
+        }, 300000); // Wait 5 minutes of inactivity before regenerating
         
         // Store timeout ID for cleanup
         return () => {

@@ -20,7 +20,10 @@ async function getAccessToken(): Promise<string> {
     // @ts-ignore
     cache: 'no-store',
   });
-  if (!res.ok) throw new Error('Failed to obtain PayPal access token');
+  if (!res.ok) {
+    const errorMessage = 'Failed to obtain PayPal access token\n\nIf you continue to experience payment issues, please contact our support team at timebubblehelp@gmail.com';
+    throw new Error(errorMessage);
+  }
   const data = await res.json();
   return data.access_token as string;
 }
@@ -61,7 +64,8 @@ export async function createPayPalOrder(params: { amount: string; currency?: str
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(`Failed to create PayPal order: ${text}`);
+    const errorMessage = `Failed to create PayPal order: ${text}\n\nIf you continue to experience payment issues, please contact our support team at timebubblehelp@gmail.com`;
+    throw new Error(errorMessage);
   }
   const data = await res.json();
   
@@ -87,7 +91,8 @@ export async function capturePayPalOrder(orderId: string): Promise<any> {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(`Failed to capture PayPal order: ${text}`);
+    const errorMessage = `Failed to capture PayPal order: ${text}\n\nIf you continue to experience payment issues, please contact our support team at timebubblehelp@gmail.com`;
+    throw new Error(errorMessage);
   }
   return await res.json();
 }

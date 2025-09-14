@@ -217,150 +217,35 @@ export function HabitStackingModal({ isOpen, onClose, routineBubbles }: HabitSta
             Smart Habit Stacking
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Build powerful habits by linking them to your existing routines
+            This feature will be available very soon! We're working hard to bring you powerful habit stacking capabilities.
           </p>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Existing Habits Summary */}
-          {existingHabits.length > 0 && (
-            <div className="bg-muted/30 p-4 rounded-lg">
-              <h3 className="font-medium mb-2">Your Active Habit Stacks</h3>
-              <div className="flex flex-wrap gap-2">
-                {existingHabits.map(habit => (
-                  <Badge key={habit.id} variant="secondary" className="text-xs">
-                    {habit.name} • {habit.completionStreak} day streak
-                  </Badge>
-                ))}
+          {/* Coming Soon Message */}
+          <div className="text-center py-16">
+            <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-8 mb-6">
+              <Target className="h-16 w-16 mx-auto mb-4 text-primary" />
+              <h3 className="text-xl font-semibold mb-3 text-primary">Coming Very Soon!</h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                We're putting the finishing touches on our Smart Habit Stacking feature. 
+                It will help you build powerful habits by linking them to your existing routines.
+              </p>
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Need help or have questions?
+                </p>
+                <p className="text-sm font-medium">
+                  Contact us: <a href="mailto:timebubblehelp@gmail.com" className="text-primary hover:underline">timebubblehelp@gmail.com</a>
+                </p>
               </div>
             </div>
-          )}
-
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <span className="ml-3">Analyzing your routines...</span>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {suggestions.map((suggestion) => (
-                <Card 
-                  key={suggestion.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedSuggestions.has(suggestion.id) 
-                      ? 'ring-2 ring-primary bg-primary/5' 
-                      : 'hover:bg-muted/30'
-                  }`}
-                  onClick={() => toggleSuggestion(suggestion.id)}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <span className="text-2xl">{suggestion.template.icon}</span>
-                          {suggestion.template.title}
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs ${getConfidenceColor(suggestion.confidence)}`}
-                          >
-                            {getConfidenceIcon(suggestion.confidence)}
-                            {suggestion.confidence}% match
-                          </Badge>
-                        </CardTitle>
-                        <CardDescription className="mt-1 text-sm">
-                          {suggestion.template.description}
-                        </CardDescription>
-                      </div>
-                      {selectedSuggestions.has(suggestion.id) ? (
-                        <CheckCircle className="h-6 w-6 text-primary flex-shrink-0" />
-                      ) : (
-                        <Plus className="h-6 w-6 text-muted-foreground flex-shrink-0" />
-                      )}
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent className="pt-0">
-                    <div className="space-y-3">
-                      {/* Timing Info */}
-                      <div className="flex items-center gap-4 text-sm">
-                        <Badge variant="secondary" className="text-xs">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {suggestion.template.estimatedDuration} min
-                        </Badge>
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {suggestion.template.category}
-                        </Badge>
-                        <Badge 
-                          variant={suggestion.position === 'before' ? 'default' : 'secondary'} 
-                          className="text-xs"
-                        >
-                          {suggestion.position === 'before' ? '⬅️ Before' : '➡️ After'} routine
-                        </Badge>
-                      </div>
-
-                      {/* Reasoning */}
-                      <div className="bg-muted/50 p-3 rounded text-sm">
-                        <div className="flex items-start gap-2">
-                          <Lightbulb className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                          <p className="text-muted-foreground">{suggestion.reasoning}</p>
-                        </div>
-                      </div>
-
-                      {/* Tags */}
-                      <div className="flex flex-wrap gap-1">
-                        {suggestion.template.tags.map(tag => (
-                          <Badge key={tag} variant="outline" className="text-xs opacity-70">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {!isLoading && suggestions.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              <Target className="h-16 w-16 mx-auto mb-4 opacity-30" />
-              <h3 className="text-lg font-medium mb-2">No Suitable Routines Found</h3>
-              <p className="text-sm mb-4">
-                Add some regular routines (like morning routine, workout, or work blocks) to get personalized habit stacking suggestions.
-              </p>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={generateSuggestions}
-              >
-                Refresh Suggestions
-              </Button>
-            </div>
-          )}
+          </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-between pt-4 border-t">
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              {suggestions.length > 0 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={generateSuggestions}
-                  disabled={isLoading}
-                >
-                  🔄 Refresh
-                </Button>
-              )}
-            </div>
-            <Button 
-              onClick={handleApplySelected}
-              disabled={selectedSuggestions.size === 0 || isLoading}
-              className="bg-primary hover:bg-primary/90"
-            >
-              Create {selectedSuggestions.size} Habit Stack{selectedSuggestions.size !== 1 ? 's' : ''}
+          <div className="flex justify-center pt-4 border-t">
+            <Button variant="outline" onClick={onClose}>
+              Close
             </Button>
           </div>
         </div>

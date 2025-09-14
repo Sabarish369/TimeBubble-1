@@ -29,7 +29,7 @@ const callDailyTipsAPI = async (input: any) => {
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(input),
+    body: JSON.stringify({ ...input, userId: input.userId || 'anonymous' }),
   });
   
   if (!response.ok) {

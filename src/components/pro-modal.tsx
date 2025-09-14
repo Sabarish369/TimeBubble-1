@@ -76,6 +76,11 @@ export function ProModal({ isOpen, onClose }: ProModalProps) {
           <DialogDescription className={`text-lg text-muted-foreground max-w-sm mx-auto transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`} style={{ transitionDelay: '200ms' }}>
             Unlock powerful AI features to supercharge your productivity and gain deeper insights.
           </DialogDescription>
+          <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              Need help? Contact us: <a href="mailto:timebubblehelp@gmail.com" className="text-primary hover:underline font-medium">timebubblehelp@gmail.com</a>
+            </p>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6 py-6 relative z-10">

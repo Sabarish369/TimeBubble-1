@@ -2,6 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDailyTips } from '@/ai/flows/daily-tips';
 import type { DailyTipsInput } from '@/types/ai-types';
 
+// Daily refresh limit (not exposed to frontend)
+const DAILY_REFRESH_LIMIT = 20;
+const refreshCounts = new Map<string, { count: number; date: string }>();
+
+function checkDailyLimit(userId: string): boolean {
+  const today = new Date().toISOString().split('T')[0];
+  const userRefresh = refreshCounts.get(userId);
+  
+  if (!userRefresh || userRefresh.date !== today) {
+    refreshCounts.set(userId, { count: 1, date: today });
+    return true;
+  }
+  
+  if (userRefresh.count >= DAILY_REFRESH_LIMIT) {
+    return false;
+  }
+  
+  userRefresh.count++;
+  return true;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -12,8 +33,17 @@ export async function POST(request: NextRequest) {
       contextualData, 
       previousTipsFeedback, 
       userGoals, 
-      apiKey 
-    }: DailyTipsInput = body;
+      apiKey,
+      userId 
+    }: DailyTipsInput & { userId?: string } = body;
+
+    // Check daily refresh limit (silent limit, not shown to user)
+    if (userId && !checkDailyLimit(userId)) {
+      return NextResponse.json(
+        { error: 'Service temporarily unavailable. Please try again later.' },
+        { status: 429 }
+      );
+    }
 
     // Require user to provide their own API key
     if (!apiKey) {

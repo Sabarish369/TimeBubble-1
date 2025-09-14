@@ -165,8 +165,11 @@ export function AIOptimizerDrawer() {
             <div className="flex-1 min-w-0">
               <h3 className="text-xl font-semibold text-white mb-2">Habit Stacking</h3>
               <p className="text-slate-300 text-lg leading-relaxed">
-                Build better habits by stacking them with your existing routines.
+                Coming Very Soon! Build better habits by stacking them with your existing routines.
               </p>
+              <div className="mt-2 text-xs text-amber-400 font-medium">
+                Feature in development - Contact timebubblehelp@gmail.com for updates
+              </div>
             </div>
           </div>
         </div>

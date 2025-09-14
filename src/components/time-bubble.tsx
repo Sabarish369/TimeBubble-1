@@ -32,6 +32,8 @@ import { ProModal } from './pro-modal';
 import { RecurringSyncConfirmationModal } from './recurring-sync-confirmation-modal';
 import { ConflictNotificationModal } from './conflict-notification-modal';
 import { RecurringDeleteConfirmationModal } from './recurring-delete-confirmation-modal';
+import { useSmartSuggestions } from '@/hooks/use-smart-suggestions';
+import { SmartSuggestionOverlay } from './smart-suggestion-overlay';
 
 interface TimeBubbleProps {
   block: TimeBlockType;
@@ -50,6 +52,18 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
 function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBubbleProps) {
   const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setEditingBlock, setSelectedBlock, setReschedulingBlock, zoomLevel, currentDate, syncRecurringBubbles, deleteAllFutureRecurringBubbles } = useTimeBubbles();
   const { isPro } = useAuth();
+  
+  // Smart suggestions integration
+  const {
+    suggestions,
+    activeSuggestion,
+    showTooltip,
+    generateSuggestions,
+    acceptSuggestion,
+    dismissSuggestion,
+    dismissAllSuggestions,
+    hideTooltip
+  } = useSmartSuggestions();
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<'top' | 'bottom' | null>(null);
   const [didMove, setDidMove] = useState(false);
@@ -64,6 +78,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
   const [changeType, setChangeType] = useState<'moved' | 'resized' | 'changed'>('changed');
   const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   
   const [liveStartTime, setLiveStartTime] = useState(ensureDateObject(block.startTime));
   const [liveDuration, setLiveDuration] = useState(block.duration);
@@ -141,6 +156,10 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
     setDidMove(false);
     const top = (ensureDateObject(block.startTime).getHours() * 60 + ensureDateObject(block.startTime).getMinutes()) * pixelsPerMinute;
     dragStartRef.current = { y: e.clientY, initialTop: top, initialHeight: 0 };
+    
+    // Generate suggestions when starting to move a bubble
+    generateSuggestions('moving', block);
+    setShowSuggestions(true);
   };
 
   const handleResizeMouseDown = (e: MouseEvent<HTMLDivElement>, direction: 'top' | 'bottom') => {
@@ -204,6 +223,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
     setIsDragging(false);
     setIsResizing(null);
     setDragOffset({ x: 0, y: 0 });
+    setShowSuggestions(false);
     stopAutoScroll();
   }, [isResizing, isDragging, block.id, block.recurringId, liveStartTime, liveDuration, updateBlock, stopAutoScroll, block.startTime, block.duration]);
 
@@ -459,6 +479,21 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
           isVisible={showCelebration}
           position={celebrationPosition}
           onComplete={() => setShowCelebration(false)}
+        />
+      )}
+      
+      {/* Smart Suggestions Overlay - only show during drag */}
+      {showSuggestions && suggestions.length > 0 && isDragging && (
+        <SmartSuggestionOverlay
+          suggestions={suggestions}
+          activeSuggestion={activeSuggestion}
+          isVisible={showSuggestions && isDragging}
+          showTooltip={showTooltip}
+          onAccept={acceptSuggestion}
+          onDismiss={dismissSuggestion}
+          onDismissAll={dismissAllSuggestions}
+          onHideTooltip={hideTooltip}
+          className="absolute -top-20 -right-4 z-50"
         />
       )}
       
