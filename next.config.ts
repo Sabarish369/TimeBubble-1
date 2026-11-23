@@ -18,6 +18,30 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  serverExternalPackages: [
+    'genkit',
+    '@genkit-ai/googleai',
+    '@genkit-ai/next',
+    '@opentelemetry/sdk-node',
+  ],
+  webpack: (config: any, { isServer }) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@opentelemetry/exporter-jaeger': false,
+    };
+
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        dns: false,
+        net: false,
+        tls: false,
+        fs: false,
+      };
+    }
+
+    return config;
+  },
 };
 
 export default withSentryConfig(nextConfig, {
