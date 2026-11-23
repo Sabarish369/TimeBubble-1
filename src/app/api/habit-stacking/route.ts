@@ -1,0 +1,1 @@
+// This API route is no longer needed - habit stacking now works locally without AI calls

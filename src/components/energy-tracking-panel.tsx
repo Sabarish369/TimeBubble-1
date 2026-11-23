@@ -1,0 +1,193 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Brain, TrendingUp, Clock, Zap, Info } from 'lucide-react';
+import { format, isToday, subDays } from 'date-fns';
+import { useAuth } from '@/context/auth-context';
+import { useTimeBubbles } from '@/context/time-bubbles-context';
+import { getEnergyOptimizationSuggestions } from '@/ai/flows/energy-optimization';
+import type { EnergyOptimizationOutput } from '@/types/ai-types';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+
+export function EnergyTrackingPanel() {
+  const [analysis, setAnalysis] = useState<EnergyOptimizationOutput | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { user, geminiApiKey } = useAuth();
+  const { timeBlocks, currentDate, getBlocksForDate } = useTimeBubbles();
+
+  const handleAnalyzeEnergy = async () => {
+    if (!geminiApiKey) return;
+
+    setIsLoading(true);
+    setAnalysis(null);
+    setError(null);
+
+    try {
+      const yesterday = subDays(currentDate, 1);
+      const previousDayBlocks = await getBlocksForDate(yesterday);
+      
+      const completedTasks = previousDayBlocks.filter(b => b.completed && b.reflection);
+      const upcomingTasks = timeBlocks.filter(b => !b.completed);
+
+      if (completedTasks.length < 2) {
+        setError("Please complete and reflect on at least two bubbles from the previous day to analyze your energy patterns.");
+        setIsLoading(false);
+        return;
+      }
+
+      const result = await getEnergyOptimizationSuggestions({
+        apiKey: geminiApiKey,
+        dailyData: JSON.stringify(completedTasks.map(t => ({
+          title: t.title,
+          category: t.category,
+          startTime: format(t.startTime, 'HH:mm'),
+          reflection: {
+            mood: t.reflection?.mood,
+            productivity: t.reflection?.productivity,
+            notes: t.reflection?.notes,
+          },
+        }))),
+        upcomingTasks: JSON.stringify(upcomingTasks.map(t => ({
+          id: t.id,
+          title: t.title,
+          category: t.category,
+          duration: t.duration,
+        }))),
+        currentTime: format(new Date(), 'HH:mm')
+      });
+
+      setAnalysis(result);
+    } catch (error) {
+      console.error('Failed to get energy recommendations:', error);
+      setError("There was an error analyzing your energy. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const getEnergyIcon = (level: number) => {
+    if (level <= 2) return <Zap className="h-4 w-4 text-red-500" />;
+    if (level <= 3) return <Zap className="h-4 w-4 text-yellow-500" />;
+    return <Zap className="h-4 w-4 text-green-500" />;
+  };
+
+  const getEnergyLabel = (level: number) => {
+    const labels = ['Very Low', 'Low', 'Moderate', 'High', 'Very High'];
+    return labels[Math.round(level) - 1] || 'N/A';
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="h-5 w-5" />
+            Energy Optimizer
+          </CardTitle>
+          <CardDescription>
+            Analyze yesterday's reflections to find your peak energy times and optimize today's schedule.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={handleAnalyzeEnergy} disabled={isLoading || !geminiApiKey} className="w-full">
+            {isLoading ? 'Analyzing...' : 'Analyze & Optimize Schedule'}
+          </Button>
+           {!geminiApiKey && (
+             <p className="text-xs text-muted-foreground text-center mt-2">Please set your Gemini API key to use this feature.</p>
+           )}
+        </CardContent>
+      </Card>
+      
+      {error && (
+        <Alert variant="default" className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800">
+          <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+          <AlertTitle className="text-yellow-800 dark:text-yellow-200">Prerequisite not met</AlertTitle>
+          <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isLoading && (
+         <Card>
+          <CardContent className="py-8">
+            <div className="flex items-center justify-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              <span className="text-sm">Analyzing reflections...</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {analysis && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <TrendingUp className="h-5 w-5" />
+                Energy Forecast for Today
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                    <p className="text-sm text-muted-foreground">Next Hour</p>
+                    <div className="flex items-center justify-center gap-1 font-semibold">
+                        {getEnergyIcon(analysis.energyForecast.nextHour)}
+                        <span>{getEnergyLabel(analysis.energyForecast.nextHour)}</span>
+                    </div>
+                </div>
+                <div>
+                    <p className="text-sm text-muted-foreground">Next 3 Hrs</p>
+                    <div className="flex items-center justify-center gap-1 font-semibold">
+                        {getEnergyIcon(analysis.energyForecast.nextThreeHours)}
+                        <span>{getEnergyLabel(analysis.energyForecast.nextThreeHours)}</span>
+                    </div>
+                </div>
+                <div>
+                    <p className="text-sm text-muted-foreground">Evening</p>
+                    <div className="flex items-center justify-center gap-1 font-semibold">
+                        {getEnergyIcon(analysis.energyForecast.evening)}
+                        <span>{getEnergyLabel(analysis.energyForecast.evening)}</span>
+                    </div>
+                </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Clock className="h-5 w-5" />
+                Scheduling Recommendations
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {analysis.recommendations.length > 0 ? analysis.recommendations.map((rec, index) => {
+                const bubble = timeBlocks.find(b => b.id === rec.taskId);
+                return bubble && (
+                   <div key={index} className="p-3 bg-muted/50 rounded-lg border">
+                    <div className="font-medium text-sm">{bubble.title}</div>
+                    <div className="flex items-center gap-2 text-sm text-primary font-semibold my-1">
+                      <Clock className="h-3 w-3" />
+                      <span>Suggested Time: {rec.suggestedTime}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{rec.reasoning}</p>
+                  </div>
+                )
+              }) : (
+                <Alert>
+                  <AlertTitle>No recommendations right now.</AlertTitle>
+                  <AlertDescription>
+                    All your upcoming tasks seem well-placed, or there isn't enough data to suggest a change.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </div>
+  );
+}
