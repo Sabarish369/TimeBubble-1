@@ -117,22 +117,14 @@ export function Header({ onOpenWeeklyAnalysis, onOpenTutorial }: HeaderProps) {
         </div>
       </div>
       <div className="flex md:hidden w-full items-center gap-1 relative z-10">
-        <Button
-          variant="outline"
-          onClick={goToToday}
-          className="min-h-11 min-w-11 px-2 text-xs font-semibold"
-          aria-label="Go to today"
-        >
-          Today
-        </Button>
-        <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" onClick={goToPreviousDay} aria-label="Previous day">
+        <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={goToPreviousDay} aria-label="Previous day">
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant="ghost"
-              className="h-11 min-w-0 flex-1 justify-center px-1 text-sm font-bold"
+              className="h-10 min-w-0 flex-1 justify-center px-1 text-sm font-bold"
               aria-label="Choose date"
             >
               <CalendarIcon className="mr-1 h-4 w-4 shrink-0" />
@@ -143,17 +135,26 @@ export function Header({ onOpenWeeklyAnalysis, onOpenTutorial }: HeaderProps) {
             <Calendar mode="single" selected={currentDate} onSelect={date => date && setCurrentDate(date)} initialFocus className="rounded-2xl border-0" />
           </PopoverContent>
         </Popover>
-        <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" onClick={goToNextDay} aria-label="Next day">
+        <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={goToNextDay} aria-label="Next day">
           <ChevronRight className="h-5 w-5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={undo} disabled={!canUndo} aria-label="Undo">
+          <Undo2 className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={redo} disabled={!canRedo} aria-label="Redo">
+          <Redo2 className="h-4 w-4" />
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" aria-label="More app actions">
+            <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" aria-label="More app actions">
               <MoreHorizontal className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="max-h-[80dvh] w-64 overflow-y-auto">
             <DropdownMenuLabel>{user?.displayName || user?.email || 'TimeBubble'}</DropdownMenuLabel>
+            <DropdownMenuItem className="min-h-11" onSelect={goToToday}>
+              <CalendarIcon /> Today
+            </DropdownMenuItem>
             <DropdownMenuItem className="min-h-11" disabled={!canUndo} onSelect={undo}>
               <Undo2 /> Undo
             </DropdownMenuItem>

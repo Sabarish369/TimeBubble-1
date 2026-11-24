@@ -34,7 +34,12 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
     setNewBubbleStartTime
   } = useTimeBubbles();
   const timelineRef = React.useRef<HTMLDivElement>(null);
+  const [selectedBubbleId, setSelectedBubbleId] = React.useState<string | null>(null);
   const { toast } = useToast();
+
+  React.useEffect(() => {
+    setSelectedBubbleId(null);
+  }, [currentDate]);
   
   // Auto-schedule suggestions
   const {
@@ -248,6 +253,9 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDoubleClick={handleDoubleClick}
+      onPointerDown={event => {
+        if (!(event.target as Element).closest('[data-bubble-id]')) setSelectedBubbleId(null);
+      }}
       onDragLeave={handleDragLeave}
       onMouseMove={handleMouseMove}
       onMouseEnter={showSuggestionsOnHover}
@@ -256,7 +264,14 @@ export function Timeline({ scrollContainerRef }: TimelineProps) {
       <TimelineGrid />
       <CurrentTimeIndicator />
       {isLoaded && timeBlocks.map(block => (
-        <TimeBubble key={block.id} block={block} timelineRef={timelineRef} scrollContainerRef={scrollContainerRef} />
+        <TimeBubble
+          key={block.id}
+          block={block}
+          timelineRef={timelineRef}
+          scrollContainerRef={scrollContainerRef}
+          isSelected={selectedBubbleId === block.id}
+          onSelect={setSelectedBubbleId}
+        />
       ))}
       
       {/* Ghost Bubble for drag preview */}
