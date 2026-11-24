@@ -130,6 +130,7 @@ interface TimeBubblesContextType {
   isLoaded: boolean;
   currentDate: Date;
   setCurrentDate: (date: Date) => void;
+  setBubbleDragInProgress: (isDragging: boolean) => void;
   goToToday: () => void;
   goToNextDay: () => void;
   goToPreviousDay: () => void;
@@ -200,6 +201,7 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([]);
   const [history, setHistory] = useState<HistoryState>({});
   const [isSyncing, setIsSyncing] = useState(false);
+  const isAnyBubbleDraggingRef = useRef(false);
 
   const [templates, setTemplates] = useState<BubbleTemplate[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -228,6 +230,10 @@ export const TimeBubblesProvider = ({ children }: { children: ReactNode }) => {
   const isApplyingExternalUpdateRef = useRef(false);
 
   const { toast } = useToast();
+
+  const setBubbleDragInProgress = useCallback((isDragging: boolean) => {
+    isAnyBubbleDraggingRef.current = isDragging;
+  }, []);
 
   const saveTimeBlocksToFirestore = useCallback(async (blocks: TimeBlock[], date: Date) => {
     if (!user || !blocks) return;
@@ -622,7 +628,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     const dayDocRef = doc(db, 'users', user.uid, 'daily_data', dateKey);
 
     const unsubscribe = onSnapshot(dayDocRef, (docSnap) => {
-        if (isSyncing) return;
+        if (isSyncing || isAnyBubbleDraggingRef.current) return;
 
         let blocksFromDb: TimeBlock[] = [];
         if (docSnap.exists() && docSnap.data().blocks) {
@@ -645,6 +651,12 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
 
     return () => unsubscribe();
   }, [user, currentDate, toast, isLoaded, setTimeBlocksWithHistory, isSyncing]);
+
+  useEffect(() => {
+    return () => {
+      isAnyBubbleDraggingRef.current = false;
+    };
+  }, [currentDate]);
 
   useEffect(() => {
     if (!user || !db) return;
@@ -1687,6 +1699,7 @@ const setTimeBlocksWithHistory = useCallback((newBlocks: TimeBlock[] | ((prev: T
     isLoaded,
     currentDate,
     setCurrentDate,
+    setBubbleDragInProgress,
     goToToday,
     goToNextDay,
     goToPreviousDay,

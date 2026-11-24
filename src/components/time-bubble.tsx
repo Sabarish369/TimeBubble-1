@@ -48,7 +48,7 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
 };
 
 function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBubbleProps) {
-  const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setEditingBlock, setSelectedBlock, setReschedulingBlock, zoomLevel, currentDate, syncRecurringBubbles, deleteAllFutureRecurringBubbles } = useTimeBubbles();
+  const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setEditingBlock, setSelectedBlock, setReschedulingBlock, setBubbleDragInProgress, zoomLevel, currentDate, syncRecurringBubbles, deleteAllFutureRecurringBubbles } = useTimeBubbles();
   // Smart suggestions integration
   const {
     suggestions,
@@ -128,6 +128,8 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
 
 
   const dragStartRef = useRef({ y: 0, initialTop: 0, initialHeight: 0 });
+  const isDraggingRef = useRef(false);
+  const isResizingRef = useRef<'top' | 'bottom' | null>(null);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!e.isPrimary) return;
@@ -150,6 +152,9 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch (_) {}
 
+    isDraggingRef.current = true;
+    isResizingRef.current = null;
+    setBubbleDragInProgress(true);
     setIsDragging(true);
     setDidMove(false);
     const top = (ensureDateObject(block.startTime).getHours() * 60 + ensureDateObject(block.startTime).getMinutes()) * pixelsPerMinute;
@@ -171,6 +176,9 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch (_) {}
 
+    isDraggingRef.current = false;
+    isResizingRef.current = direction;
+    setBubbleDragInProgress(true);
     setIsResizing(direction);
     setDidMove(false);
     const top = (ensureDateObject(block.startTime).getHours() * 60 + ensureDateObject(block.startTime).getMinutes()) * pixelsPerMinute;
@@ -200,7 +208,9 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
   }, []);
 
   const handlePointerUp = useCallback(() => {
-    if (isDragging || isResizing) {
+    const wasDragging = isDraggingRef.current;
+    const resizeDirection = isResizingRef.current;
+    if (wasDragging || resizeDirection) {
       const hasChanged = 
         liveStartTime.getTime() !== ensureDateObject(block.startTime).getTime() ||
         liveDuration !== block.duration;
@@ -208,7 +218,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
       if (hasChanged && block.recurringId) {
         // Store the pending update and show confirmation modal
         setPendingUpdate({ startTime: liveStartTime, duration: liveDuration });
-        setChangeType(isDragging ? 'moved' : 'resized');
+        setChangeType(wasDragging ? 'moved' : 'resized');
         setIsSyncConfirmationOpen(true);
       } else {
         // Apply update immediately for non-recurring bubbles or no changes
@@ -231,16 +241,21 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
         }, 50);
       }
     }
+    isDraggingRef.current = false;
+    isResizingRef.current = null;
+    setBubbleDragInProgress(false);
     setIsDragging(false);
     setIsResizing(null);
     setDragOffset({ x: 0, y: 0 });
     setShowSuggestions(false);
     stopAutoScroll();
-  }, [isResizing, isDragging, block.id, block.recurringId, liveStartTime, liveDuration, updateBlock, stopAutoScroll, block.startTime, block.duration]);
+  }, [block.id, block.recurringId, liveStartTime, liveDuration, updateBlock, stopAutoScroll, block.startTime, block.duration, setBubbleDragInProgress]);
 
 
   const handlePointerMove = useCallback((e: PointerEvent) => {
-    if (!isDragging && !isResizing) return;
+    const isDraggingNow = isDraggingRef.current;
+    const resizeDirection = isResizingRef.current;
+    if (!isDraggingNow && !resizeDirection) return;
     
     const deltaY = e.clientY - dragStartRef.current.y;
     if (Math.abs(deltaY) > 3) { // Threshold to detect actual movement
@@ -255,7 +270,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
     const timelineRect = timeline.getBoundingClientRect();
     const timelineEndMinutes = TOTAL_HOURS * 60;
 
-    if (isDragging) {
+    if (isDraggingNow) {
       const maxMinutes = timelineEndMinutes - liveDuration;
       const newTop = dragStartRef.current.initialTop + deltaY;
       const newMinutesRaw = newTop / pixelsPerMinute;
@@ -266,15 +281,15 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
       setLiveStartTime(newStartTime);
     }
 
-    if (isResizing) {
-      if (isResizing === 'bottom') {
+    if (resizeDirection) {
+      if (resizeDirection === 'bottom') {
         const newHeight = dragStartRef.current.initialHeight + deltaY;
         const currentStartMinutes = liveStartTime.getHours() * 60 + liveStartTime.getMinutes();
         const maxDuration = timelineEndMinutes - currentStartMinutes;
         const newDuration = Math.min(maxDuration, Math.max(15, newHeight / pixelsPerMinute));
         setLiveDuration(newDuration);
       }
-      if (isResizing === 'top') {
+      if (resizeDirection === 'top') {
         const newHeight = dragStartRef.current.initialHeight - deltaY;
         
         if (newHeight >= 15 * pixelsPerMinute) {
@@ -316,7 +331,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
     }
 
 
-  }, [isDragging, isResizing, pixelsPerMinute, scrollContainerRef, stopAutoScroll, liveStartTime, block, liveDuration, timelineRef]);
+  }, [pixelsPerMinute, scrollContainerRef, stopAutoScroll, liveStartTime, block, liveDuration, timelineRef]);
 
 
   useEffect(() => {
@@ -332,6 +347,15 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
       stopAutoScroll();
     };
   }, [isDragging, isResizing, handlePointerMove, handlePointerUp, stopAutoScroll]);
+
+  useEffect(() => {
+    return () => {
+      isDraggingRef.current = false;
+      isResizingRef.current = null;
+      setBubbleDragInProgress(false);
+      stopAutoScroll();
+    };
+  }, [setBubbleDragInProgress, stopAutoScroll]);
   
   const startTimeToDisplay = isDragging || isResizing ? liveStartTime : ensureDateObject(block.startTime);
   const durationToDisplay = isDragging || isResizing ? liveDuration : block.duration;
@@ -367,6 +391,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
         ? `drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1))`
         : `drop-shadow(0 2px 8px rgba(0, 0, 0, 0.08))`,
     overflow: 'hidden',
+    touchAction: 'none',
     // Set the CSS variable for the glow color to match the bubble's color
     '--bubble-glow-color': `var(--bubble-${block.color})`
   } as React.CSSProperties;
