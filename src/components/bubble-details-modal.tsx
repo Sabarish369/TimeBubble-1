@@ -8,11 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { Badge } from './ui/badge';
-import { Calendar, Clock, Trash2, MessageSquare, Edit3 } from 'lucide-react';
+import { Calendar, Clock, Trash2, MessageSquare, Edit3, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function BubbleDetailsModal() {
-  const { selectedBlock, setSelectedBlock, setEditingBlock, setReflectingBlock } = useTimeBubbles();
+  const { selectedBlock, setSelectedBlock, setEditingBlock, setReflectingBlock, deleteBlock, duplicateBlock } = useTimeBubbles();
   
   if (!selectedBlock) return null;
 
@@ -32,8 +32,12 @@ export function BubbleDetailsModal() {
   };
 
   const handleDelete = () => {
-    // Delete functionality would be implemented here
-    console.log('Delete time block:', selectedBlock.id);
+    deleteBlock(selectedBlock.id);
+    setSelectedBlock(null);
+  };
+
+  const handleDuplicate = () => {
+    duplicateBlock(selectedBlock.id);
     setSelectedBlock(null);
   };
 
@@ -52,7 +56,7 @@ export function BubbleDetailsModal() {
 
   return (
     <Dialog open={!!selectedBlock} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
+      <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-[500px] max-md:fixed max-md:bottom-0 max-md:left-0 max-md:top-auto max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-b-none max-md:rounded-t-2xl max-md:pb-safe max-md:max-h-[85dvh] max-sm:!top-auto max-sm:!rounded-t-2xl max-sm:!rounded-b-none">
         <DialogHeader className="space-y-3 shrink-0">
           <div className="flex items-center gap-3">
             <div className={cn(
@@ -140,30 +144,28 @@ export function BubbleDetailsModal() {
         </div>
 
         <DialogFooter className="shrink-0 border-t pt-4 flex-col sm:flex-row gap-2">
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button variant="outline" size="sm" onClick={handleReschedule} className="flex-1 sm:flex-none">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+            <Button variant="outline" onClick={handleReschedule} className="min-h-11 flex-1 sm:flex-none">
               <Calendar className="h-4 w-4 mr-2" />
               Reschedule
             </Button>
-            {needsReflection && (
-              <Button 
-                size="sm" 
-                onClick={handleReflect} 
-                className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Reflect
-              </Button>
-            )}
+            <Button variant="outline" onClick={handleDuplicate} className="min-h-11 flex-1 sm:flex-none">
+              <Copy className="h-4 w-4 mr-2" />
+              Duplicate
+            </Button>
+            <Button onClick={handleReflect} className="min-h-11 flex-1 sm:flex-none">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Log mood
+            </Button>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button variant="outline" onClick={handleEdit} className="flex-1 sm:flex-none">
+            <Button variant="outline" onClick={handleEdit} className="min-h-11 flex-1 sm:flex-none">
               <Edit3 className="h-4 w-4 mr-2" />
               Edit
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm" className="flex-1 sm:flex-none">
+                <Button variant="destructive" size="sm" className="min-h-11 flex-1 sm:flex-none">
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
                 </Button>

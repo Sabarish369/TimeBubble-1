@@ -14,6 +14,12 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
+html,
+body {
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -207,6 +213,14 @@ body {
   input, textarea, select {
     font-size: 16px; /* Prevents zoom on iOS */
   }
+
+  @media screen and (max-width: 767px) {
+    input,
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+  }
   
   /* Modern scrollbar */
   ::-webkit-scrollbar {
@@ -229,6 +243,21 @@ body {
 }
 
 @layer utilities {
+  .pt-safe {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+
+  .pb-safe {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .bubble-touch-surface {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+  }
+
   .celebration-popper {
     position: absolute;
     top: 0;

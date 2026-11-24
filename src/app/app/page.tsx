@@ -21,9 +21,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useNotifications } from "@/hooks/use-notifications";
 import { AIOptimizerDrawer } from "@/components/ai-optimizer-drawer";
 import { WeeklyAnalysis } from "@/components/weekly-analysis";
-import { HelpCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
 const TUTORIAL_STORAGE_KEY = 'timebubble_tutorial_completed_interactive_v2';
@@ -37,8 +34,6 @@ export default function AppPage() {
     currentDate, 
     actionableBlock, 
     setActionableBlock, 
-    timeBlocks, 
-    updateBlock,
     isBubbleCreateModalOpen,
     setIsBubbleCreateModalOpen,
     newBubbleStartTime
@@ -79,21 +74,8 @@ export default function AppPage() {
   }, [isLoaded, zoomLevel, currentDate]);
 
   useEffect(() => {
-    if (!isMobile) {
-      setIsSidebarOpen(true);
-    } else {
-      // For tutorial purposes on mobile, we might want it open initially
-      if (!showTutorial) {
-        setIsSidebarOpen(false);
-      }
-    }
-  }, [isMobile, showTutorial]);
-  
-  useEffect(() => {
-    if (showTutorial && isMobile) {
-      setIsSidebarOpen(true);
-    }
-  }, [showTutorial, isMobile]);
+    setIsSidebarOpen(!isMobile);
+  }, [isMobile]);
 
   if (!isLoaded) {
     return (
@@ -120,46 +102,23 @@ export default function AppPage() {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-background text-foreground font-body overflow-hidden">
-      <Header 
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+    <div className="flex flex-col h-dvh bg-background text-foreground font-body overflow-hidden">
+    <Header
         onOpenWeeklyAnalysis={() => setIsWeeklyAnalysisOpen(true)}
+      onOpenTutorial={() => setShowTutorial(true)}
       />
       <div className="flex flex-1 overflow-hidden relative">
+      <div className="hidden md:block">
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      </div>
         <main 
           ref={mainRef} 
           id="timeline-main"
-          className={cn(
-            "flex-1 overflow-y-auto no-scrollbar transition-all duration-300",
-            isSidebarOpen && isMobile && "opacity-50 pointer-events-none"
-          )}
+        className={cn("flex-1 overflow-y-auto no-scrollbar pb-24 transition-all duration-300 md:pb-0")}
         >
           <Timeline scrollContainerRef={mainRef} />
         </main>
         <FloatingToolbar />
-
-        {/* Discreet corner button to launch tutorial on demand without interrupting the user */}
-        <div className="fixed bottom-4 left-4 z-40">
-          <TooltipProvider>
-            <Tooltip delayDuration={200}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 rounded-full shadow-md bg-background/80 backdrop-blur border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
-                  onClick={() => setShowTutorial(true)}
-                  aria-label="Interactive Tour"
-                >
-                  <HelpCircle className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p className="text-xs">Take interactive tour</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
       </div>
       <ActionPromptModal
         isOpen={!!blockToShow}

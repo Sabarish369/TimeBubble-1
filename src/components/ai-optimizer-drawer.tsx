@@ -65,10 +65,21 @@ export function AIOptimizerDrawer() {
     const handleOpenApiKeyModal = () => {
       setIsApiKeyModalOpen(true);
     };
+    const handleOpenAIOptimizer = () => {
+      if (!geminiApiKey) {
+        setIsApiKeyModalOpen(true);
+      } else {
+        setIsOpen(true);
+      }
+    };
     
     window.addEventListener('openApiKeyModal', handleOpenApiKeyModal);
-    return () => window.removeEventListener('openApiKeyModal', handleOpenApiKeyModal);
-  }, []);
+    window.addEventListener('openAIOptimizer', handleOpenAIOptimizer);
+    return () => {
+      window.removeEventListener('openApiKeyModal', handleOpenApiKeyModal);
+      window.removeEventListener('openAIOptimizer', handleOpenAIOptimizer);
+    };
+  }, [geminiApiKey]);
 
   const handleOpen = (e: React.MouseEvent) => {
     if (!geminiApiKey) {

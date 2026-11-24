@@ -35,7 +35,7 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
   health: Heart,
 };
 
-const defaultTemplates: BubbleTemplate[] = [
+export const defaultTemplates: BubbleTemplate[] = [
   { id: 'default-1', title: 'Focus Work', description: 'Deep work session on a key project.', category: 'work', duration: 90, color: 'mint', isDefault: true },
   { id: 'default-2', title: 'Study Session', description: 'Review notes and practice problems.', category: 'study', duration: 120, color: 'sky-blue', isDefault: true },
   { id: 'default-3', title: 'Short Break', description: 'Step away from the screen, stretch, or meditate.', category: 'break', duration: 15, color: 'peach', isDefault: true },
@@ -236,6 +236,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     setEditingTemplate(undefined);
     setIsTemplateModalOpen(true);
   }
+
+  useEffect(() => {
+    const handleOpenTemplateModal = () => handleOpenCreateTemplateModal();
+    window.addEventListener('openTemplateModal', handleOpenTemplateModal);
+    return () => window.removeEventListener('openTemplateModal', handleOpenTemplateModal);
+  }, []);
 
   const handleOpenEditModal = (template: BubbleTemplate) => {
     setEditingTemplate(template);

@@ -13,6 +13,7 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 import TextPressure from "@/components/text-pressure";
 import ClickSpark from "@/components/click-spark";
 import FloatingBubbles from "@/components/floating-bubbles";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 function FeatureCard({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) {
   return (
@@ -48,6 +49,7 @@ function FeatureCard({ icon: Icon, title, description }: { icon: React.ElementTy
 export default function LandingPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   useEffect(() => {
@@ -118,15 +120,15 @@ export default function LandingPage() {
           {/* Hero Section */}
           <section className="relative pt-32 pb-24 md:pt-40 md:pb-32 text-center overflow-hidden">
             {/* Floating Bubbles Background */}
-            <FloatingBubbles count={20} />
+            <FloatingBubbles count={isMobile ? 6 : 20} />
             
             {/* Enhanced animated background with gradient */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-background to-accent/8">
               {/* Background Elements */}
               <div className="absolute inset-0">
                 {/* Gradient Orbs */}
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse hidden md:block" />
+                <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent/5 rounded-full blur-3xl animate-pulse hidden md:block" style={{ animationDelay: '2s' }} />
               </div>
             </div>  
             <div className="container mx-auto px-4 relative z-10 max-w-6xl">
@@ -134,7 +136,23 @@ export default function LandingPage() {
                 <div className="relative text-center">
                   {/* Main TimeBubble Interactive Text with Click Sparks */}
                   <div style={{ height: '140px', width: '100%', position: 'relative', marginBottom: '6rem', overflow: 'visible' }}>
-                    <ClickSpark
+                    {isMobile ? (
+                      <TextPressure
+                        text="TimeBubble"
+                        flex={false}
+                        alpha={false}
+                        stroke={false}
+                        width={true}
+                        weight={true}
+                        italic={false}
+                        textColor="currentColor"
+                        strokeColor="hsl(var(--accent))"
+                        minFontSize={24}
+                        fontFamily="system-ui, -apple-system, sans-serif"
+                        fontUrl=""
+                        className=""
+                      />
+                    ) : <ClickSpark
                       sparkColor="#3b82f6"
                       sparkSize={15}
                       sparkRadius={30}
@@ -158,7 +176,7 @@ export default function LandingPage() {
                         fontUrl=""
                         className=""
                       />
-                    </ClickSpark>
+                    </ClickSpark>}
                   </div>
                   
                   {/* TimeBubble Screenshot */}
@@ -184,9 +202,9 @@ export default function LandingPage() {
                   </div>
                   
                   {/* Decorative elements */}
-                  <div className="absolute -top-12 -right-12 w-20 h-20 bg-gradient-to-br from-primary/15 to-accent/15 rounded-full blur-3xl animate-pulse" />
-                  <div className="absolute -bottom-8 -left-8 w-16 h-16 bg-gradient-to-br from-accent/15 to-primary/15 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1.5s' }} />
-                  <div className="absolute top-1/2 -right-6 w-12 h-12 bg-gradient-to-br from-primary/10 to-accent/10 rounded-full blur-xl animate-pulse" style={{ animationDelay: '3s' }} />
+                  <div className="absolute -top-12 -right-12 w-20 h-20 bg-gradient-to-br from-primary/15 to-accent/15 rounded-full blur-3xl animate-pulse hidden md:block" />
+                  <div className="absolute -bottom-8 -left-8 w-16 h-16 bg-gradient-to-br from-accent/15 to-primary/15 rounded-full blur-2xl animate-pulse hidden md:block" style={{ animationDelay: '1.5s' }} />
+                  <div className="absolute top-1/2 -right-6 w-12 h-12 bg-gradient-to-br from-primary/10 to-accent/10 rounded-full blur-xl animate-pulse hidden md:block" style={{ animationDelay: '3s' }} />
                 </div>
                 
                 <p className="text-lg md:text-xl lg:text-2xl text-muted-foreground max-w-4xl mx-auto leading-relaxed font-medium">

@@ -48,7 +48,7 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
 };
 
 function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBubbleProps) {
-  const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setEditingBlock, setSelectedBlock, setReschedulingBlock, setBubbleDragInProgress, zoomLevel, currentDate, syncRecurringBubbles, deleteAllFutureRecurringBubbles } = useTimeBubbles();
+  const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setEditingBlock, setSelectedBlock, selectedBlock, setReschedulingBlock, setBubbleDragInProgress, zoomLevel, currentDate, syncRecurringBubbles, deleteAllFutureRecurringBubbles } = useTimeBubbles();
   // Smart suggestions integration
   const {
     suggestions,
@@ -130,6 +130,59 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
   const dragStartRef = useRef({ y: 0, initialTop: 0, initialHeight: 0 });
   const isDraggingRef = useRef(false);
   const isResizingRef = useRef<'top' | 'bottom' | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchPointerTrackingRef = useRef<{
+    pointerId: number;
+    startY: number;
+    lastY: number;
+    mode: 'pending' | 'scrolling';
+    scrollContainer: HTMLElement | null;
+  } | null>(null);
+
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handlePendingTouchMove = useCallback((e: PointerEvent) => {
+    const tracking = touchPointerTrackingRef.current;
+    if (!tracking || tracking.pointerId !== e.pointerId) return;
+
+    if (tracking.mode === 'pending') {
+      if (Math.abs(e.clientY - tracking.startY) <= 8) return;
+      clearLongPressTimer();
+      tracking.mode = 'scrolling';
+      setDidMove(true);
+      if (tracking.scrollContainer) {
+        tracking.scrollContainer.scrollTop -= e.clientY - tracking.startY;
+      }
+    } else if (tracking.scrollContainer) {
+      tracking.scrollContainer.scrollTop -= e.clientY - tracking.lastY;
+    }
+
+    tracking.lastY = e.clientY;
+    e.preventDefault();
+  }, [clearLongPressTimer]);
+
+  const finishPendingTouch = useCallback((e: PointerEvent) => {
+    if (touchPointerTrackingRef.current?.pointerId !== e.pointerId) return;
+    clearLongPressTimer();
+    touchPointerTrackingRef.current = null;
+  }, [clearLongPressTimer]);
+
+  useEffect(() => {
+    window.addEventListener('pointermove', handlePendingTouchMove, { passive: false });
+    window.addEventListener('pointerup', finishPendingTouch);
+    window.addEventListener('pointercancel', finishPendingTouch);
+    return () => {
+      window.removeEventListener('pointermove', handlePendingTouchMove);
+      window.removeEventListener('pointerup', finishPendingTouch);
+      window.removeEventListener('pointercancel', finishPendingTouch);
+      clearLongPressTimer();
+    };
+  }, [clearLongPressTimer, finishPendingTouch, handlePendingTouchMove]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!e.isPrimary) return;
@@ -142,27 +195,59 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
         }
     }
     
-    const rect = e.currentTarget.getBoundingClientRect();
-    setDragOffset({
+    const currentTarget = e.currentTarget;
+    const pointerId = e.pointerId;
+    const pointerY = e.clientY;
+    const isTouchPointer = e.pointerType === 'touch';
+    const rect = currentTarget.getBoundingClientRect();
+    const offset = {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top
-    });
-
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch (_) {}
-
-    isDraggingRef.current = true;
-    isResizingRef.current = null;
-    setBubbleDragInProgress(true);
-    setIsDragging(true);
-    setDidMove(false);
+    };
     const top = (ensureDateObject(block.startTime).getHours() * 60 + ensureDateObject(block.startTime).getMinutes()) * pixelsPerMinute;
-    dragStartRef.current = { y: e.clientY, initialTop: top, initialHeight: 0 };
-    
-    // Generate suggestions when starting to move a bubble
-    generateSuggestions('moving', block);
-    setShowSuggestions(true);
+
+    const activateDrag = () => {
+      try {
+        currentTarget.setPointerCapture(pointerId);
+      } catch (_) {}
+
+      isDraggingRef.current = true;
+      isResizingRef.current = null;
+      setBubbleDragInProgress(true);
+      setDragOffset(offset);
+      setIsDragging(true);
+      setDidMove(false);
+      dragStartRef.current = { y: pointerY, initialTop: top, initialHeight: 0 };
+
+      if (window.innerWidth >= 768) {
+        generateSuggestions('moving', block);
+        setShowSuggestions(true);
+      }
+
+      if (isTouchPointer && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate(12);
+      }
+    };
+
+    if (isTouchPointer) {
+      clearLongPressTimer();
+      const tracking = {
+        pointerId,
+        startY: pointerY,
+        lastY: pointerY,
+        mode: 'pending' as const,
+        scrollContainer: scrollContainerRef.current,
+      };
+      touchPointerTrackingRef.current = tracking;
+      longPressTimerRef.current = setTimeout(() => {
+        if (touchPointerTrackingRef.current !== tracking || tracking.mode !== 'pending') return;
+        touchPointerTrackingRef.current = null;
+        longPressTimerRef.current = null;
+        activateDrag();
+      }, 160);
+    } else {
+      activateDrag();
+    }
   };
 
   const handleResizePointerDown = (e: React.PointerEvent<HTMLDivElement>, direction: 'top' | 'bottom') => {
@@ -178,6 +263,8 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
 
     isDraggingRef.current = false;
     isResizingRef.current = direction;
+    clearLongPressTimer();
+    touchPointerTrackingRef.current = null;
     setBubbleDragInProgress(true);
     setIsResizing(direction);
     setDidMove(false);
@@ -243,6 +330,8 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
     }
     isDraggingRef.current = false;
     isResizingRef.current = null;
+    clearLongPressTimer();
+    touchPointerTrackingRef.current = null;
     setBubbleDragInProgress(false);
     setIsDragging(false);
     setIsResizing(null);
@@ -374,6 +463,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
   const isOverdue = isPast && !block.completed;
   const isInteractive = !isDragging && !isResizing;
   const showAsCurrent = isCurrent && !block.completed;
+  const isSelected = selectedBlock?.id === block.id;
 
   const bubbleStyle: React.CSSProperties = {
     top: `${top}px`,
@@ -484,7 +574,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
       data-bubble-id={block.id}
       className={cn(
         'absolute left-[50px] md:left-[80px] w-[calc(100%-70px)] md:w-[calc(100%-100px)] rounded-xl p-2 md:p-3 flex flex-col items-start time-bubble',
-        'select-none border border-white/10',
+        'bubble-touch-surface select-none border border-white/10',
         isDragging && 'cursor-grabbing drag-active time-bubble-dragging',
         isResizing && 'resize-active',
         isHovering && !isDragging && !isResizing && 'hover-active',
@@ -540,7 +630,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
         </div>
       )}
       
-      <div className="absolute top-1 right-1 z-20 flex items-center" style={{ opacity: isOverdue ? 0 : 1}}>
+      <div className="absolute top-1 right-1 z-20 hidden items-center md:flex" style={{ opacity: isOverdue ? 0 : 1}}>
         <Button variant="ghost" size="icon" className="h-6 w-6 opacity-70 hover:opacity-100 cursor-pointer" onClick={(e) => {e.stopPropagation(); setEditingBlock(block)}}>
             <Edit className="w-4 h-4 text-slate-700 dark:text-white" />
         </Button>
@@ -604,7 +694,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
       <div className={cn("w-full h-full pointer-events-none relative z-10 flex-1")}>
         {showFullContent ? (
           <div className={cn("flex-grow overflow-hidden flex items-center gap-2 md:gap-3 h-full")}>
-            <Icon className="h-5 w-5 md:h-6 md:w-6 text-white drop-shadow-sm shrink-0" />
+            <Icon className="hidden h-5 w-5 shrink-0 text-white drop-shadow-sm md:block md:h-6 md:w-6" />
             <div className="flex-1 overflow-hidden">
               <p className="text-sm md:text-base font-semibold text-white drop-shadow-sm pointer-events-none truncate">{block.title}</p>
               <p className="text-xs md:text-sm text-white/90 drop-shadow-sm pointer-events-none">
@@ -614,7 +704,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
           </div>
         ) : showCompactContent ? (
            <div className={cn("flex-grow overflow-hidden flex items-center gap-2 md:gap-3 h-full")}>
-            <Icon className="h-5 w-5 text-white drop-shadow-sm shrink-0" />
+            <Icon className="hidden h-5 w-5 shrink-0 text-white drop-shadow-sm md:block" />
             <p className="text-sm font-semibold text-white drop-shadow-sm pointer-events-none truncate">{block.title}</p>
           </div>
         ) : (
@@ -631,7 +721,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
       )}
 
       {isOverdue && (
-        <div className="absolute inset-0 z-20 rounded-lg flex flex-col items-center justify-center gap-2 bg-black/70 text-white p-4 text-center">
+        <div className="absolute inset-0 z-20 hidden rounded-lg flex-col items-center justify-center gap-2 bg-black/70 p-4 text-center text-white md:flex">
             <p className="text-sm font-medium mb-2">This bubble is overdue. What's next?</p>
             <div className="flex items-center gap-3">
                 <Button variant="reflect" size="sm" onClick={() => setReflectingBlock(block)}>
@@ -665,23 +755,25 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
 
       <div
         className={cn(
-          "absolute -top-3 left-0 w-full h-6 cursor-n-resize z-20 resize-handle flex items-center justify-center touch-none",
+          "resize-handle absolute -top-3 left-0 z-20 hidden h-8 w-8 cursor-n-resize items-center justify-center rounded-full touch-none md:left-0 md:flex md:h-6 md:w-full md:rounded-none",
           "hover:bg-blue-400/20 active:bg-blue-400/40 transition-all duration-200",
+          isSelected && "max-md:flex",
           isResizing === 'top' && "bg-blue-400/40"
         )}
         onPointerDown={isInteractive ? (e) => handleResizePointerDown(e, 'top') : undefined}
       >
-        <div className="w-12 h-1 rounded-full bg-white/40 shadow-sm" />
+        <div className="h-2 w-2 rounded-full bg-white/80 shadow-sm md:h-1 md:w-12" />
       </div>
       <div
         className={cn(
-          "absolute -bottom-3 left-0 w-full h-6 cursor-s-resize z-20 resize-handle flex items-center justify-center touch-none",
+          "resize-handle absolute -bottom-3 right-0 z-20 hidden h-8 w-8 cursor-s-resize items-center justify-center rounded-full touch-none md:flex md:h-6 md:w-full md:rounded-none",
           "hover:bg-blue-400/20 active:bg-blue-400/40 transition-all duration-200",
+          isSelected && "max-md:flex",
           isResizing === 'bottom' && "bg-blue-400/40"
         )}
         onPointerDown={isInteractive ? (e) => handleResizePointerDown(e, 'bottom') : undefined}
       >
-        <div className="w-12 h-1 rounded-full bg-white/40 shadow-sm" />
+        <div className="h-2 w-2 rounded-full bg-white/80 shadow-sm md:h-1 md:w-12" />
       </div>
     </div>
     <RecurringSyncConfirmationModal

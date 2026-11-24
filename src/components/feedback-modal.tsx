@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,12 @@ import { SimpleFeedback } from './simple-feedback';
 
 export function FeedbackModal() {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenFeedback = () => setIsOpen(true);
+    window.addEventListener('openFeedbackModal', handleOpenFeedback);
+    return () => window.removeEventListener('openFeedbackModal', handleOpenFeedback);
+  }, []);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
