@@ -17,9 +17,6 @@ import { cn } from '@/lib/utils';
 import { UserProfile } from './user-profile';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-import { UpgradeBadge } from './upgrade-badge';
-import { ProBadge } from './pro-badge';
-import { useAuth } from '@/context/auth-context';
 import { AtmosphericLights } from './atmospheric-lights';
 import { BarChart3 } from 'lucide-react';
 import { FeedbackModal } from './feedback-modal';
@@ -38,12 +35,10 @@ export function Header({ onToggleSidebar, onOpenWeeklyAnalysis }: HeaderProps) {
     goToPreviousDay,
   } = useTimeBubbles();
   const isMobile = useIsMobile();
-  const { isPro } = useAuth();
-
   return (
     <header className={cn(
       "relative flex items-center justify-between p-3 md:p-6 border-b border-border/40 shrink-0 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 touch-friendly overflow-hidden isolation",
-      isPro && "pro-header-gradient"
+      "pro-header-gradient"
     )}>
       {/* Atmospheric floating bubbles behind header content */}
       <AtmosphericLights className="z-0 absolute inset-0" count={8} speed={0.5} size={14} />
@@ -56,7 +51,6 @@ export function Header({ onToggleSidebar, onOpenWeeklyAnalysis }: HeaderProps) {
         )}
         <div className="flex items-center gap-2">
           <TimeBubbleLogo className="h-6 w-auto" />
-          <ProBadge />
         </div>
       </div>
       <div id="date-navigation" className="flex-1 flex justify-center items-center gap-1 md:gap-2 relative z-10">
@@ -127,7 +121,6 @@ export function Header({ onToggleSidebar, onOpenWeeklyAnalysis }: HeaderProps) {
             <span className="absolute -top-0.5 -right-0.5 text-[8px] px-1 py-0.5 rounded-full bg-primary/20 text-primary font-medium border border-primary/30 shadow-sm">Beta</span>
           </div>
         <FeedbackModal />
-        <UpgradeBadge />
         <ThemeToggle />
         <UserProfile />
 

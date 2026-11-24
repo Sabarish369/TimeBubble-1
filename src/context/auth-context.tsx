@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isPro, setIsPro] = useState(true); // Pro is free for everyone
+  const isPro = true;
   const [isAdmin, setIsAdmin] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
   const [geminiApiKey, setGeminiApiKeyState] = useState<string | null>(null);
@@ -66,7 +66,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         const data = userDoc.data();
-        setIsPro(true); // Pro is free for everyone
         setGeminiApiKeyState(data.geminiApiKey || null);
       }
     }
@@ -92,14 +91,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setIsPro(true); // Pro is free for everyone
           setIsAdmin(!!data.isAdmin);
           // Check if geminiApiKey is null or undefined before setting state
           setGeminiApiKeyState(data.geminiApiKey || null);
         } else {
           // New user, create their doc
           setDoc(userDocRef, { email: user.email, displayName: user.displayName, isPro: true, isAdmin: false }, { merge: true });
-          setIsPro(true); // Pro is free for everyone
           setIsAdmin(false);
           setGeminiApiKeyState(null);
         }
@@ -120,7 +117,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     } else {
       // User logged out, clear state
-      setIsPro(true); // Pro is free for everyone - keep pro on logout too
       setIsAdmin(false);
       setIsNewUser(false);
       setGeminiApiKeyState(null);

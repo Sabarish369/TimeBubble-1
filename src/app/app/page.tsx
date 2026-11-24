@@ -19,8 +19,6 @@ import { useAuth } from "@/context/auth-context";
 import { InteractiveTutorial } from "@/components/interactive-tutorial";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNotifications } from "@/hooks/use-notifications";
-import { EnhancedProWelcomeModal } from "@/components/enhanced-pro-welcome-modal";
-import { ApiKeyModal } from "@/components/api-key-modal";
 import { AIOptimizerDrawer } from "@/components/ai-optimizer-drawer";
 import { WeeklyAnalysis } from "@/components/weekly-analysis";
 import { HelpCircle } from "lucide-react";
@@ -29,7 +27,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 
 const TUTORIAL_STORAGE_KEY = 'timebubble_tutorial_completed_interactive_v2';
-const PRO_WELCOME_KEY = 'timebubble_pro_welcome_seen';
 
 
 export default function AppPage() {
@@ -47,33 +44,18 @@ export default function AppPage() {
     newBubbleStartTime
   } = useTimeBubbles();
   
-  const { user, isPro } = useAuth();
+  const { user } = useAuth();
   useNotifications(); // Initialize notification system
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
-  const [isProWelcomeModalOpen, setIsProWelcomeModalOpen] = useState(false);
-  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [isWeeklyAnalysisOpen, setIsWeeklyAnalysisOpen] = useState(false);
 
   useEffect(() => {
     // This logic might be redundant if AuthGuard is used, but can be a fallback.
     setIsLoginModalOpen(!user);
   }, [user]);
-
-  useEffect(() => {
-    if (isLoaded) {
-      // Auto-launch of interactive tutorial is disabled to keep UI clean.
-      // Accessible on-demand via the corner help button.
-
-      // Check if user is Pro and hasn't seen the welcome modal yet
-      const proWelcomeSeen = localStorage.getItem(PRO_WELCOME_KEY);
-      if (isPro && !proWelcomeSeen) {
-        setIsProWelcomeModalOpen(true);
-      }
-    }
-  }, [isLoaded, isPro]);
 
   // Use the actionableBlock from context as the source of truth for the modal
   const blockToShow = actionableBlock;
@@ -137,14 +119,6 @@ export default function AppPage() {
     }
   }
 
-  const handleCloseProWelcome = () => {
-    setIsProWelcomeModalOpen(false);
-    localStorage.setItem(PRO_WELCOME_KEY, 'true');
-    // After closing the welcome modal, open the API key modal
-    setIsApiKeyModalOpen(true);
-  };
-
-
   return (
     <div className="flex flex-col h-[100dvh] bg-background text-foreground font-body overflow-hidden">
       <Header 
@@ -204,14 +178,6 @@ export default function AppPage() {
         onClose={() => setIsLoginModalOpen(false)}
       />
       {showTutorial && <InteractiveTutorial onFinish={handleFinishTutorial} />}
-              <EnhancedProWelcomeModal
-          isOpen={isProWelcomeModalOpen}
-          onClose={handleCloseProWelcome}
-        />
-       <ApiKeyModal
-        isOpen={isApiKeyModalOpen}
-        onClose={() => setIsApiKeyModalOpen(false)}
-      />
       <WeeklyAnalysis
         isOpen={isWeeklyAnalysisOpen}
         onClose={() => setIsWeeklyAnalysisOpen(false)}

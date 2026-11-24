@@ -5,7 +5,7 @@ import type { TimeBlock as TimeBlockType } from '@/types';
 import type { MouseEvent, RefObject } from 'react';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
-import { BUBBLE_COLORS, HOUR_HEIGHT, TOTAL_HOURS, FREE_COLOR_NAMES, PRO_COLOR_NAMES } from '@/lib/constants';
+import { BUBBLE_COLORS, HOUR_HEIGHT, TOTAL_HOURS, BUBBLE_COLOR_NAMES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { Check, Copy, MoreVertical, Trash2, MessageSquareText, Edit, Briefcase, BookOpen, Coffee, User, Heart, type LucideIcon, History, Undo, Repeat } from 'lucide-react';
 import { Button } from './ui/button';
@@ -26,9 +26,7 @@ import {
 import { ActiveBubbleAnimation } from './active-bubble-animation';
 import { ensureDateObject } from '@/lib/time-bubbles-utils';
 import { TaskCompletionCelebration } from './task-completion-celebration';
-import { useAuth } from '@/context/auth-context';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
-import { ProModal } from './pro-modal';
 import { RecurringSyncConfirmationModal } from './recurring-sync-confirmation-modal';
 import { ConflictNotificationModal } from './conflict-notification-modal';
 import { RecurringDeleteConfirmationModal } from './recurring-delete-confirmation-modal';
@@ -51,8 +49,6 @@ const categoryIcons: Record<BubbleCategory, LucideIcon> = {
 
 function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBubbleProps) {
   const { updateBlock, deleteBlock, duplicateBlock, setReflectingBlock, setEditingBlock, setSelectedBlock, setReschedulingBlock, zoomLevel, currentDate, syncRecurringBubbles, deleteAllFutureRecurringBubbles } = useTimeBubbles();
-  const { isPro } = useAuth();
-  
   // Smart suggestions integration
   const {
     suggestions,
@@ -69,7 +65,6 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
   const [didMove, setDidMove] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [isSyncConfirmationOpen, setIsSyncConfirmationOpen] = useState(false);
   const [isConflictNotificationOpen, setIsConflictNotificationOpen] = useState(false);
   const [pendingUpdate, setPendingUpdate] = useState<{ startTime: Date; duration: number } | null>(null);
@@ -567,7 +562,7 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
             <DropdownMenuGroup>
                 <div className="text-xs text-muted-foreground px-2 pt-1 pb-2">Colors</div>
                 <div className="flex flex-wrap gap-2 p-2 max-w-[200px]">
-                {FREE_COLOR_NAMES.map((colorName) => (
+                {BUBBLE_COLOR_NAMES.map((colorName) => (
                     <button
                     key={colorName}
                     className={cn("w-6 h-6 rounded-full border", block.color === colorName && "ring-2 ring-ring")}
@@ -664,7 +659,6 @@ function TimeBubbleComponent({ block, timelineRef, scrollContainerRef }: TimeBub
         <div className="w-12 h-1 rounded-full bg-white/40 shadow-sm" />
       </div>
     </div>
-    <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
     <RecurringSyncConfirmationModal
       isOpen={isSyncConfirmationOpen}
       onClose={handleSyncCancel}

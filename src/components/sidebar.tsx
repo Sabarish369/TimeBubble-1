@@ -23,9 +23,6 @@ import { MissedTasksDrawer } from './missed-tasks-drawer';
 import { DailySidebarTip } from './daily-sidebar-tip';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/context/auth-context';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { ProModal } from './pro-modal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { GhostBubble } from './ghost-bubble';
@@ -53,10 +50,8 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { templates, updateTemplate, deleteTemplate, setIsBubbleCreateModalOpen, timeBlocks, addBlock, currentDate } = useTimeBubbles();
-  const { user, isPro, isAdmin } = useAuth();
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [isMissedTasksDrawerOpen, setIsMissedTasksDrawerOpen] = useState(false);
-  const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<BubbleTemplate | undefined>(undefined);
   const isMobile = useIsMobile();
   const { toast } = useToast();
@@ -77,9 +72,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const userOverride = templates.find(ut => ut.id === t.id);
     return userOverride ? { ...t, ...userOverride, isDefault: true } : t;
   }), ...templates.filter(t => !t.isDefault)];
-
-  const userCreatedTemplatesCount = templates.filter(t => !t.isDefault).length;
-  const templateLimitReached = false; // Pro is free for everyone - no limit
 
   useEffect(() => {
     if (isMobile && isOpen) {
@@ -318,23 +310,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       <div className="flex items-center justify-between" id="templates-header">
         <h2 className="text-xl font-semibold text-center">Templates</h2>
-        <TooltipProvider>
-            <Tooltip delayDuration={100}>
-                <TooltipTrigger asChild>
-                    <div className={cn(templateLimitReached && 'cursor-not-allowed')}>
-                        <Button variant="ghost" size="icon" onClick={handleOpenCreateTemplateModal} disabled={templateLimitReached}>
-                            <Plus className="h-5 w-5" />
-                            <span className="sr-only">Create New Template</span>
-                        </Button>
-                    </div>
-                </TooltipTrigger>
-                {templateLimitReached && (
-                    <TooltipContent side="bottom">
-                        <p>Upgrade to Pro for unlimited templates.</p>
-                    </TooltipContent>
-                )}
-            </Tooltip>
-        </TooltipProvider>
+        <Button variant="ghost" size="icon" onClick={handleOpenCreateTemplateModal}>
+          <Plus className="h-5 w-5" />
+          <span className="sr-only">Create New Template</span>
+        </Button>
       </div>
 
       <div id="templates-list" className={cn("space-y-3 overflow-y-auto flex-1 no-scrollbar px-1")}>
@@ -416,8 +395,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       isOpen={isMissedTasksDrawerOpen}
       onClose={() => setIsMissedTasksDrawerOpen(false)}
     />
-    <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
-    
     {/* Ghost Bubble for drag preview */}
     {ghostBubble && (
       <GhostBubble

@@ -83,10 +83,6 @@ jest.mock('../components/ui/checkbox', () => ({
   Checkbox: () => <input type="checkbox" />,
 }));
 
-jest.mock('../components/pro-modal', () => ({
-  ProModal: () => <div></div>,
-}));
-
 jest.mock('lucide-react', () => ({
   CalendarIcon: () => <div>Calendar</div>,
   Lock: () => <div>Lock</div>,

@@ -11,15 +11,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { LogOut, User, Star, KeyRound } from 'lucide-react';
+import { LogOut, User, KeyRound } from 'lucide-react';
 import { useState } from 'react';
-import { ProModal } from './pro-modal';
-import Link from 'next/link';
 import { ApiKeyModal } from './api-key-modal';
 
 export function UserProfile() {
-  const { user, signOut, isPro } = useAuth();
-  const [isProModalOpen, setIsProModalOpen] = useState(false);
+  const { user, signOut } = useAuth();
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
   if (!user) {
@@ -54,19 +51,10 @@ export function UserProfile() {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {isPro ? (
-             <DropdownMenuItem onClick={() => setIsApiKeyModalOpen(true)}>
-                <KeyRound className="mr-2 h-4 w-4" />
-                <span>Manage API Key</span>
-              </DropdownMenuItem>
-          ) : (
-            <DropdownMenuItem asChild>
-              <Link href="/upgrade">
-                <Star className="mr-2 h-4 w-4 text-amber-500" />
-                <span>Upgrade to Pro</span>
-              </Link>
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem onClick={() => setIsApiKeyModalOpen(true)}>
+            <KeyRound className="mr-2 h-4 w-4" />
+            <span>Manage API Key</span>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={signOut}>
             <LogOut className="mr-2 h-4 w-4" />
@@ -74,7 +62,6 @@ export function UserProfile() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
       <ApiKeyModal isOpen={isApiKeyModalOpen} onClose={() => setIsApiKeyModalOpen(false)} />
     </>
   );

@@ -9,14 +9,12 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescri
 import { Skeleton } from './ui/skeleton';
 import { DailyInsights } from '@/types/ai-types';
 import { useAuth } from '@/context/auth-context';
-import { ProModal } from './pro-modal';
 import { useState, useEffect } from 'react';
 import { ApiKeyModal } from './api-key-modal';
 
 export function SmartSuggestions() {
   const { getDailyInsights, dailyInsights, isLoadingInsights, clearDailyInsights } = useTimeBubbles();
-  const { isPro, geminiApiKey } = useAuth();
-  const [isProModalOpen, setIsProModalOpen] = useState(false);
+  const { geminiApiKey } = useAuth();
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
   // Listen for API key modal events
@@ -104,7 +102,6 @@ export function SmartSuggestions() {
           </div>
         </SheetContent>
       </Sheet>
-      <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
       <ApiKeyModal isOpen={isApiKeyModalOpen} onClose={() => setIsApiKeyModalOpen(false)} />
     </>
   );

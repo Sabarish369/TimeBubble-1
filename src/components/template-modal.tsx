@@ -31,12 +31,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
-import { BUBBLE_COLORS, FREE_COLOR_NAMES, PRO_COLOR_NAMES } from '@/lib/constants';
+import { BUBBLE_COLORS, BUBBLE_COLOR_NAMES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type { BubbleCategory, BubbleTemplate, BubbleColor } from '@/types';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/context/auth-context';
-import { ProModal } from './pro-modal';
 
 interface TemplateModalProps {
   isOpen: boolean;
@@ -59,8 +57,6 @@ const colorNames = Object.keys(BUBBLE_COLORS) as (keyof typeof BUBBLE_COLORS)[];
 
 export function TemplateModal({ isOpen, onClose, template }: TemplateModalProps) {
   const { addTemplate, updateTemplate } = useTimeBubbles();
-  const { isPro } = useAuth();
-  const [isProModalOpen, setIsProModalOpen] = useState(false);
   const isEditMode = !!template;
   
   const form = useForm<TemplateFormValues>({
@@ -197,7 +193,7 @@ export function TemplateModal({ isOpen, onClose, template }: TemplateModalProps)
                     <FormControl>
                       <div className="p-2 rounded-lg border">
                         <div className="flex flex-wrap gap-2">
-                          {FREE_COLOR_NAMES.map((name) => (
+                          {BUBBLE_COLOR_NAMES.map((name) => (
                             <button
                               type="button"
                               key={name}
@@ -223,7 +219,6 @@ export function TemplateModal({ isOpen, onClose, template }: TemplateModalProps)
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
     </>
   );
 }

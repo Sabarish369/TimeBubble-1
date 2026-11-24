@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
-import { BUBBLE_COLORS, DEFAULT_BUBBLE_COLOR, FREE_COLOR_NAMES, PRO_COLOR_NAMES } from '@/lib/constants';
+import { BUBBLE_COLORS, BUBBLE_COLOR_NAMES, DEFAULT_BUBBLE_COLOR } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type { BubbleCategory, BubbleColor } from '@/types';
 import { useEffect, useState, useRef } from 'react';
@@ -34,8 +34,6 @@ import { useSmartSuggestions } from '@/hooks/use-smart-suggestions';
 import { SmartSuggestionOverlay } from './smart-suggestion-overlay';
 import { format, setHours, setMinutes, startOfDay, getHours, getMinutes, addHours, addDays, isSameDay } from 'date-fns';
 import { Calendar } from './ui/calendar';
-import { useAuth } from '@/context/auth-context';
-import { ProModal } from './pro-modal';
 import { Switch } from './ui/switch';
 import { Checkbox } from './ui/checkbox';
 
@@ -88,7 +86,6 @@ const dayNamesLong = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'F
 
 export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime }: BubbleCreateModalProps) {
   const { addBlockOnDate, currentDate } = useTimeBubbles();
-  const [isProModalOpen, setIsProModalOpen] = useState(false); // kept for ProModal render
   const modalRef = useRef<HTMLDivElement>(null);
   
   // Smart suggestions deactivated - using auto-schedule on timeline instead
@@ -398,9 +395,9 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
                   <FormLabel>Color</FormLabel>
                   <FormControl>
                     <div className="p-2 rounded-lg border">
-                      <div className="text-xs text-muted-foreground mb-2">Free Colors</div>
+                      <div className="text-xs text-muted-foreground mb-2">Colors</div>
                       <div className="flex flex-wrap gap-2">
-                        {FREE_COLOR_NAMES.map((name) => (
+                        {BUBBLE_COLOR_NAMES.map((name) => (
                           <button
                             type="button"
                             key={name}
@@ -410,26 +407,6 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
                           />
                         ))}
                       </div>
-                      {PRO_COLOR_NAMES.length > 0 && (
-                        <>
-                          <div className="text-xs text-muted-foreground mt-3 mb-2">More Colors</div>
-                           <div className="flex flex-wrap gap-2">
-                            {PRO_COLOR_NAMES.map((name) => (
-                              <button
-                                type="button"
-                                key={name}
-                                className={cn(
-                                  "w-8 h-8 rounded-full border-2 relative group", 
-                                  field.value === name ? "border-ring ring-2 ring-ring" : "border-transparent",
-                                )}
-                                style={{ backgroundColor: `hsl(var(--bubble-${name}))` }}
-                                onClick={() => handleColorSelect(name, field.onChange)}
-                              >
-                              </button>
-                            ))}
-                          </div>
-                        </>
-                      )}
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -566,7 +543,6 @@ export function BubbleCreateModal({ isOpen, onClose, startTime: initialStartTime
         </div>
       </div>
     </div>
-    <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
     </>
   );
 }

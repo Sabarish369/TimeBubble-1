@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
-import { BUBBLE_COLORS, FREE_COLOR_NAMES, PRO_COLOR_NAMES } from '@/lib/constants';
+import { BUBBLE_COLORS, BUBBLE_COLOR_NAMES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type { BubbleCategory, BubbleColor, TimeBlock } from '@/types';
 import { useEffect, useState } from 'react';
@@ -38,8 +38,6 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { AlertTriangle, CalendarIcon, Copy, Palette, Repeat, Sparkles, Trash2, X } from 'lucide-react';
 import { format, setHours, setMinutes, startOfDay, getHours, getMinutes, addDays, isSameDay } from 'date-fns';
 import { Calendar } from './ui/calendar';
-import { useAuth } from '@/context/auth-context';
-import { ProModal } from './pro-modal';
 import { Switch } from './ui/switch';
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
@@ -95,8 +93,6 @@ const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export function BubbleEditModal() {
   const { editingBlock, setEditingBlock, updateBlock, addBlockOnDate, deleteBlock, clearAllBlocks, syncRecurringBubbles, getRecurringPattern } = useTimeBubbles();
-  const { isPro } = useAuth();
-  const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [isDeleteAllModalOpen, setIsDeleteAllModalOpen] = useState(false);
   const [isQuickDeleteModalOpen, setIsQuickDeleteModalOpen] = useState(false);
   const [isSyncConfirmationOpen, setIsSyncConfirmationOpen] = useState(false);
@@ -526,9 +522,9 @@ export function BubbleEditModal() {
                       <FormLabel>Color</FormLabel>
                       <FormControl>
                         <div className="p-2 rounded-lg border">
-                          <div className="text-xs text-muted-foreground mb-2">Free Colors</div>
+                          <div className="text-xs text-muted-foreground mb-2">Colors</div>
                           <div className="flex flex-wrap gap-2">
-                            {FREE_COLOR_NAMES.map((name) => (
+                            {BUBBLE_COLOR_NAMES.map((name) => (
                               <button
                                 type="button"
                                 key={name}
@@ -536,22 +532,6 @@ export function BubbleEditModal() {
                                 style={{ backgroundColor: `hsl(var(--bubble-${name}))` }}
                                 onClick={() => handleColorSelect(name, field.onChange)}
                               />
-                            ))}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-3 mb-2">More Colors</div>
-                          <div className="flex flex-wrap gap-2">
-                            {PRO_COLOR_NAMES.map((name) => (
-                              <button
-                                type="button"
-                                key={name}
-                                className={cn(
-                                  "w-8 h-8 rounded-full border-2 relative group", 
-                                  field.value === name ? "border-ring ring-2 ring-ring" : "border-transparent",
-                                )}
-                                style={{ backgroundColor: `hsl(var(--bubble-${name}))` }}
-                                onClick={() => handleColorSelect(name, field.onChange)}
-                              >
-                              </button>
                             ))}
                           </div>
                         </div>
@@ -732,7 +712,6 @@ export function BubbleEditModal() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
       <DeleteAllBubblesModal 
         isOpen={isDeleteAllModalOpen} 
         onClose={() => setIsDeleteAllModalOpen(false)} 

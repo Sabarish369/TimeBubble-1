@@ -1,7 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useAuth } from '@/context/auth-context';
+import React, { createContext, useContext } from 'react';
 
 interface PremiumThemeContextType {
   isPremium: boolean;
@@ -15,13 +14,13 @@ interface PremiumThemeContextType {
 }
 
 const PremiumThemeContext = createContext<PremiumThemeContextType>({
-  isPremium: false,
+  isPremium: true,
   premiumFeatures: {
-    advancedColors: false,
-    customThemes: false,
-    aiInsights: false,
-    habitStacking: false,
-    energyTracking: false,
+    advancedColors: true,
+    customThemes: true,
+    aiInsights: true,
+    habitStacking: true,
+    energyTracking: true,
   },
 });
 
@@ -38,38 +37,15 @@ interface PremiumThemeProviderProps {
 }
 
 export function PremiumThemeProvider({ children }: PremiumThemeProviderProps) {
-  const { isPro } = useAuth();
-  const [premiumFeatures, setPremiumFeatures] = useState({
-    advancedColors: false,
-    customThemes: false,
-    aiInsights: false,
-    habitStacking: false,
-    energyTracking: false,
-  });
-
-  useEffect(() => {
-    if (isPro) {
-      setPremiumFeatures({
-        advancedColors: true,
-        customThemes: true,
-        aiInsights: true,
-        habitStacking: true,
-        energyTracking: true,
-      });
-    } else {
-      setPremiumFeatures({
-        advancedColors: false,
-        customThemes: false,
-        aiInsights: false,
-        habitStacking: false,
-        energyTracking: false,
-      });
-    }
-  }, [isPro]);
-
   const value: PremiumThemeContextType = {
-    isPremium: isPro,
-    premiumFeatures,
+    isPremium: true,
+    premiumFeatures: {
+      advancedColors: true,
+      customThemes: true,
+      aiInsights: true,
+      habitStacking: true,
+      energyTracking: true,
+    },
   };
 
   return (

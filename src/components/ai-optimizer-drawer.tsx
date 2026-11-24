@@ -21,7 +21,6 @@ import type { EnhancedTip } from '@/types/ai-types';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from './ui/carousel';
 import { Card, CardContent } from './ui/card';
 import { useAuth } from '@/context/auth-context';
-import { ProModal } from './pro-modal';
 import { ApiKeyModal } from './api-key-modal';
 import { SmartSuggestions } from './smart-suggestions';
 import { HabitStackingModal } from './habit-stacking-modal';
@@ -53,8 +52,7 @@ export function AIOptimizerDrawer() {
     timeBlocks
   } = useTimeBubbles();
   
-  const { isPro, geminiApiKey } = useAuth();
-  const [isProModalOpen, setIsProModalOpen] = useState(false);
+  const { geminiApiKey } = useAuth();
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
   const [isHabitStackingOpen, setIsHabitStackingOpen] = useState(false);
 
@@ -192,12 +190,10 @@ export function AIOptimizerDrawer() {
         </div>
       </div>
       
-      {isPro && (
-        <div className="flex items-center justify-center space-x-2 p-4 rounded-lg bg-gradient-to-r from-amber-400/20 to-orange-500/20 border border-amber-400/30">
-          <Star className="h-4 w-4 text-amber-400" />
-          <span className="text-amber-400 font-medium">Pro Features Active</span>
-        </div>
-      )}
+      <div className="flex items-center justify-center space-x-2 p-4 rounded-lg bg-gradient-to-r from-amber-400/20 to-orange-500/20 border border-amber-400/30">
+        <Star className="h-4 w-4 text-amber-400" />
+        <span className="text-amber-400 font-medium">All Features Included</span>
+      </div>
     </div>
   );
   
@@ -564,13 +560,11 @@ export function AIOptimizerDrawer() {
         </SheetContent>
       </Sheet>
 
-      <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
       <ApiKeyModal isOpen={isApiKeyModalOpen} onClose={() => setIsApiKeyModalOpen(false)} />
-      {isPro && (
-        <HabitStackingModal 
-          isOpen={isHabitStackingOpen} 
-          onClose={() => setIsHabitStackingOpen(false)}
-          routineBubbles={timeBlocks.filter(b => {
+      <HabitStackingModal
+        isOpen={isHabitStackingOpen}
+        onClose={() => setIsHabitStackingOpen(false)}
+        routineBubbles={timeBlocks.filter(b => {
             const title = b.title.toLowerCase();
             const category = b.category.toLowerCase();
             
@@ -592,9 +586,8 @@ export function AIOptimizerDrawer() {
               title.includes('reading') ||
               b.duration >= 15 // Activities longer than 15 minutes are good anchors
             );
-          })}
-        />
-      )}
+        })}
+      />
     </>
   );
 }

@@ -9,7 +9,6 @@ import { format, isToday } from 'date-fns';
 import type { DailySidebarTip as DailySidebarTipType } from '@/types';
 import { useTimeBubbles } from '@/context/time-bubbles-context';
 import { useAuth } from '@/context/auth-context';
-import { ProModal } from './pro-modal';
 import { ApiKeyModal } from './api-key-modal';
 import { cn } from '@/lib/utils';
 
@@ -23,7 +22,6 @@ export function DailySidebarTip() {
   
   const { timeBlocks, currentDate, getNewDailySidebarTip } = useTimeBubbles();
   const { user, isPro, geminiApiKey } = useAuth();
-  const [isProModalOpen, setIsProModalOpen] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
   useEffect(() => {
@@ -295,7 +293,6 @@ export function DailySidebarTip() {
           </CardContent>
         </Card>
       </div>
-      <ProModal isOpen={isProModalOpen} onClose={() => setIsProModalOpen(false)} />
       <ApiKeyModal isOpen={isApiKeyModalOpen} onClose={() => setIsApiKeyModalOpen(false)} error={error ?? undefined}/>
     </>
   );
